@@ -1,3 +1,9 @@
+/*
+Mastalgia - a (soon to be) Sega Master System emulator.
+Lisenced under the GPLv3 license.
+@author: Peter Savory
+ */
+
 #define PROJECT_NAME "Mastalgia"
 #define PROJECT_VERSION "v0.0.1"
 

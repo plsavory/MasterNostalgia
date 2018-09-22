@@ -32,3 +32,17 @@
 #else
 #define PROJECT_OS "-unknown-os"
 #endif
+
+#ifdef CURRENT_BRANCH
+#define MAKE_STRING2(x) #x
+#define MAKE_STRING(x) MAKE_STRING2(x)
+#define BRANCH_STRING MAKE_STRING(CURRENT_BRANCH)
+#else
+#define BRANCH_STRING "unknown"
+#endif
+
+#ifdef CURRENT_COMMIT
+#define CURRENT_COMMIT_STRING MAKE_STRING(CURRENT_COMMIT)
+#else
+#define CURRENT_COMMIT_STRING "none"
+#endif

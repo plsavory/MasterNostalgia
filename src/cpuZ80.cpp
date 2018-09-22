@@ -25,7 +25,7 @@ void cpuZ80::reset()
   #endif
 
   programCounter = 0x0; // TODO: Give this the real value of the entry point of the Z80 binaries when I actually learn what that is.
-  stackPointer = 0xFF;
+  stackPointer = 0xFFFF;
 
   for (int i = 0; i<9;i++) {
     gpRegisters[i].whole = 0x0;

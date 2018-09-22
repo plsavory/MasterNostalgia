@@ -2,7 +2,7 @@ CC = g++
 CFLAGS = -std=c++17 -g -Wall -O3
 GITVER = $(shell git rev-parse --abbrev-ref HEAD)
 REVISION = $(shell git rev-parse HEAD)
-FILES_TO_COMPILE = src\entryPoint.cpp src\cpuZ80.cpp src\cpuTester.cpp
+FILES_TO_COMPILE = src\entryPoint.cpp src\cpuZ80.cpp src\cpuTester.cpp src\cpuInstructionHandlers.cpp
 
 all:
 

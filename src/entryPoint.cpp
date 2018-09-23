@@ -6,7 +6,7 @@ Lisenced under the GPLv3 license.
 
 #include <iostream>
 #include "projectInfo.h"
-#include "cpuTester.h"
+#include "masterSystem.h"
 
 int main()
 {
@@ -14,8 +14,10 @@ int main()
   std::cout<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__
     << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: " << CURRENT_COMMIT_STRING <<" starting..." << std::endl;
 
-  // Test the CPU
-  cpuTester* test = new cpuTester();
+  // Start the Emulator
+  masterSystem *emulator = new masterSystem();
+
+  emulator->start("roms/test.bin");
 
   return 0;
 }

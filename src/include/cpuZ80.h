@@ -43,11 +43,12 @@ public:
 // TODO: Make these private when testing is done
   unsigned short programCounter;
   unsigned short stackPointer;
-  cpuRegister gpRegisters[9]; // General purpose CPU registers
+  cpuRegister gpRegisters[9]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
   cpuState state;
   // Instruction handler functions
   void ldReg8(unsigned char &dest, unsigned char value);
   void ldReg16(cpuRegister &dest, unsigned short value);
   void adc(unsigned char &dest, unsigned char value);
   void sbc(unsigned char &dest, unsigned char value);
+  void executeOpcode();
 };

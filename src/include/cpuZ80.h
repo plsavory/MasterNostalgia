@@ -40,7 +40,8 @@ public:
   cpuZ80();
   ~cpuZ80();
   void reset();
-// TODO: Make these private when testing is done
+  int execute();
+private:
   unsigned short programCounter;
   unsigned short stackPointer;
   cpuRegister gpRegisters[9]; // General purpose CPU registers TODO: Handle shadow register updating each cycle

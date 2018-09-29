@@ -10,4 +10,5 @@ public:
   ~memory();
   unsigned char read(unsigned short location);
   void write(unsigned short location, unsigned char value);
+private:
 };

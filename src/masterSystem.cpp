@@ -28,6 +28,33 @@ masterSystem::~masterSystem()
 
 bool masterSystem::start(std::string romFilename)
 {
-  // TODO: Implement this.
-  return false;
+  // TODO: Load a ROM into memory
+
+  // Enter the main loop
+  run();
+
+  return true;
+}
+
+void masterSystem::tick()
+{
+
+int z80ClockCycles = smsCPU->execute();
+
+int machineClicks = z80ClockCycles*3;
+
+float vdpCycles = machineClicks/2;
+
+int soundCycles = z80ClockCycles;
+
+smsVdp->execute(vdpCycles);
+
+// TODO: Update sound when it exists
+
+  return;
+}
+
+void masterSystem::run()
+{
+  // TODO: Implement this
 }

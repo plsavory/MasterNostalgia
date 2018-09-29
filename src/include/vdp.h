@@ -8,4 +8,5 @@ class vdp {
 public:
   vdp();
   ~vdp();
+  void execute(float cycles);
 };

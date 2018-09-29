@@ -14,6 +14,8 @@ public:
   masterSystem();
   ~masterSystem();
   bool start(std::string romFilename);
+  void tick();
+  void run();
 private:
   cpuZ80 *smsCPU;
   memory *smsMemory;

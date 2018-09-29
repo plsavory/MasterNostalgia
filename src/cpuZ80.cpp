@@ -31,3 +31,10 @@ void cpuZ80::reset()
     gpRegisters[i].whole = 0x0;
   }
 }
+
+
+int cpuZ80::execute()
+{
+  // TODO: Implement this
+  return 0;
+}

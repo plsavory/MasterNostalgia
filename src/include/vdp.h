@@ -4,9 +4,9 @@ Lisenced under the GPLv3 license.
 @author: Peter Savory
  */
 
-class vdp {
+class VDP {
 public:
-  vdp();
-  ~vdp();
+  VDP();
+  ~VDP();
   void execute(float cycles);
 };

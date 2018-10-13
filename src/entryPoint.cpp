@@ -5,19 +5,27 @@ Lisenced under the GPLv3 license.
  */
 
 #include <iostream>
-#include "projectInfo.h"
-#include "masterSystem.h"
+#include "ProjectInfo.h"
+#include "MasterSystem.h"
 
-int main()
+int main(int argc, char* argv[])
 {
   // Todo: Hide the long build string on master builds when the emulator is actually functional.
   std::cout<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__
     << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: " << CURRENT_COMMIT_STRING <<" starting..." << std::endl;
 
   // Start the Emulator
-  masterSystem *emulator = new masterSystem();
+  MasterSystem *emulator = new MasterSystem();
 
-  emulator->start("roms/test.bin");
+  std::string romFile;
+
+  if (argc == 1) {
+    romFile = "roms\test.sms";
+  } else {
+    romFile = argv[1];
+  }
+
+  emulator->start(romFile);
 
   return 0;
 }

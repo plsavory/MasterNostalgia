@@ -5,20 +5,20 @@ Lisenced under the GPLv3 license.
  */
 
 #include <iostream>
-#include "cpuZ80.h"
+#include "CPUZ80.h"
 
-cpuZ80::cpuZ80()
+CPUZ80::CPUZ80()
 {
   // Reset the CPU to its initial state
   reset();
 }
 
-cpuZ80::~cpuZ80()
+CPUZ80::~CPUZ80()
 {
 
 }
 
-void cpuZ80::reset()
+void CPUZ80::reset()
 {
   #ifdef VERBOSE_MODE
   std::cout<<"Resetting CPU..."<<std::endl;
@@ -33,7 +33,7 @@ void cpuZ80::reset()
 }
 
 
-int cpuZ80::execute()
+int CPUZ80::execute()
 {
   // TODO: Implement this
   return 0;

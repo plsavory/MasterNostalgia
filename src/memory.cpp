@@ -12,14 +12,14 @@ Master System memory map:
 0xC000-0xDFFF : RAM
 0xE000-0xFFFF : Mirrored RAM
  */
-#include "memory.h"
+#include "Memory.h"
 
-memory::memory()
+Memory::Memory()
 {
 
 }
 
-memory::~memory()
+Memory::~Memory()
 {
 
 }

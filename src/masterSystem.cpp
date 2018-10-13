@@ -5,9 +5,9 @@ Lisenced under the GPLv3 license.
  */
 
 #include <iostream>
-#include "masterSystem.h"
+#include "MasterSystem.h"
 
-masterSystem::masterSystem()
+MasterSystem::MasterSystem()
 {
   // Initialize the Emulator
 
@@ -15,18 +15,18 @@ masterSystem::masterSystem()
   std::cout<<"Initializing Emulator..."<<std::endl;
   #endif
 
-  smsCartridge = new cartridge();
-  smsMemory = new memory();
-  smsCPU = new cpuZ80();
-  smsVdp = new vdp();
+  smsCartridge = new Cartridge();
+  smsMemory = new Memory();
+  smsCPU = new CPUZ80();
+  smsVdp = new VDP();
 }
 
-masterSystem::~masterSystem()
+MasterSystem::~MasterSystem()
 {
 
 }
 
-bool masterSystem::start(std::string romFilename)
+bool MasterSystem::start(std::string romFilename)
 {
   // TODO: Load a ROM into memory
 
@@ -36,7 +36,7 @@ bool masterSystem::start(std::string romFilename)
   return true;
 }
 
-void masterSystem::tick()
+void MasterSystem::tick()
 {
 
 int z80ClockCycles = smsCPU->execute();
@@ -54,7 +54,7 @@ smsVdp->execute(vdpCycles);
   return;
 }
 
-void masterSystem::run()
+void MasterSystem::run()
 {
   // TODO: Implement this
 }

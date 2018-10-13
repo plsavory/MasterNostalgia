@@ -4,21 +4,21 @@ Lisenced under the GPLv3 license.
 @author: Peter Savory
  */
 
- #include "memory.h"
- #include "cpuZ80.h"
- #include "cartridge.h"
- #include "vdp.h"
+ #include "Memory.h"
+ #include "CPUZ80.h"
+ #include "Cartridge.h"
+ #include "VDP.h"
 
-class masterSystem {
+class MasterSystem {
 public:
-  masterSystem();
-  ~masterSystem();
+  MasterSystem();
+  ~MasterSystem();
   bool start(std::string romFilename);
   void tick();
   void run();
 private:
-  cpuZ80 *smsCPU;
-  memory *smsMemory;
-  cartridge *smsCartridge;
-  vdp *smsVdp;
+  CPUZ80 *smsCPU;
+  Memory *smsMemory;
+  Cartridge *smsCartridge;
+  VDP *smsVdp;
 };

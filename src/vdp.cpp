@@ -1,11 +1,11 @@
-#include "vdp.h"
+#include "VDP.h"
 
-vdp::vdp()
+VDP::VDP()
 {
 
 }
 
-vdp::~vdp()
+VDP::~VDP()
 {
 
 }
@@ -14,7 +14,7 @@ vdp::~vdp()
  * [vdp::execute Update the graphics chip]
  * @param cycles [description]
  */
-void vdp::execute(float cycles)
+void VDP::execute(float cycles)
 {
   // TODO: Implement this
 }

@@ -6,10 +6,10 @@ Lisenced under the GPLv3 license.
 
 #define MAX_CARTRIDGE_SIZE 0x100000
 
-class cartridge {
+class Cartridge {
 public:
-  cartridge();
-  ~cartridge();
+  Cartridge();
+  ~Cartridge();
   bool load(std::string fileName);
 private:
   int currentBankState;

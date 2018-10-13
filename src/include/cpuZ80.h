@@ -35,10 +35,10 @@ union cpuRegister {
     };
 };
 
-class cpuZ80 {
+class CPUZ80 {
 public:
-  cpuZ80();
-  ~cpuZ80();
+  CPUZ80();
+  ~CPUZ80();
   void reset();
   int execute();
 private:

@@ -110,6 +110,31 @@ bool Cartridge::load(std::string fileName)
     }
   }
 
+  /* Determine whether the cartridge is a Codemasters cartridge or not
+  Codemasters ROMs include an extra header at 0x7FE0-0x7FE8 including some information, we only care about the checksum.
+
+  Had trouble working out this bit myself, this bit is based on a solution from the following source:
+  http://www.codeslinger.co.uk/pages/projects/mastersystem/starting.html
+
+  This check is required as these games use their own separate memory mapper which does not work like the standard one.
+  */
+
+  unsigned short checksum = tempStorage[0x7FE7] << 8;
+  checksum |= tempStorage[0x7FE6];
+
+  if (checksum == 0x0) {
+    isCodemasters = false;
+  } else {
+
+    unsigned short checksumTest = 0x10000 - checksum;
+
+    unsigned short answer = tempStorage[0x7FE9] << 8;
+
+    answer |= tempStorage[0x7FE8];
+
+    isCodemasters = (checksumTest == answer);
+  }
+
   // Determine region of the cartridge (TODO: Make this work better in future, relying on the TMR SEGA text being present is not really a reliable way)
   if (headerFound) {
     region = CartridgeRegion::USA; // Assume USA for now, TODO: add some detection for PAL regions
@@ -125,9 +150,33 @@ bool Cartridge::load(std::string fileName)
   }
 
   // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
-  for (int i = 512; i<= ROMSize-512;i++) {
-    cartridgeData[i-512] = tempStorage[i];
+
+  // Strip the ROM's header if required
+  if ((ROMSize % 0x4000) == 512) {
+
+    #ifdef VERBOSE_MODE
+      std::cout<<"Stripping ROM header"<<std::endl;
+    #endif
+
+    for (int i = 512; i<= ROMSize-512;i++) {
+      cartridgeData[i-512] = tempStorage[i];
+    }
+
+  } else {
+
+    for (int i = 0; i<= ROMSize;i++) {
+      cartridgeData[i] = tempStorage[i];
+    }
+
   }
+
+  #ifdef VERBOSE_MODE
+
+  if (isCodemasters) {
+    std::cout<<"Codemasters ROM Found"<<std::endl;
+  }
+
+  #endif
 
   return true;
 }

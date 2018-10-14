@@ -1,6 +1,6 @@
 /*
 Mastalgia - a (soon to be) Sega Master System emulator.
-Lisenced under the GPLv3 license.
+Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
@@ -29,6 +29,7 @@ MasterSystem::~MasterSystem()
 bool MasterSystem::start(std::string romFilename)
 {
   // Load a ROM into memory
+
   if (!smsCartridge->load(romFilename)) {
 
     #ifdef VERBOSE_MODE
@@ -36,6 +37,14 @@ bool MasterSystem::start(std::string romFilename)
     #endif
 
     // TODO: Send some kind of message to the UI (When it exists) to display an error
+    return false;
+
+  } else {
+
+    #ifdef VERBOSE_MODE
+      std::cout<<"ROM Loaded successfully"<<std::endl;
+    #endif
+
   };
 
   // Enter the main loop

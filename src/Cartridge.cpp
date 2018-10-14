@@ -1,6 +1,6 @@
 /*
 Mastalgia - a (soon to be) Sega Master System emulator.
-Lisenced under the GPLv3 license.
+Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
@@ -37,6 +37,7 @@ bool Cartridge::load(std::string fileName)
 
   // Determine the size of the ROM file
   struct stat fileStat;
+  int ROMSize;
 
   int fileStatus = stat(fileName.c_str(),&fileStat);
 
@@ -44,7 +45,7 @@ bool Cartridge::load(std::string fileName)
   if (fileStatus == 0) {
 
     // Figure out the size of the ROM
-    int ROMSize = fileStat.st_size;
+    ROMSize = fileStat.st_size;
 
     if (ROMSize > MAX_CARTRIDGE_SIZE)
     {
@@ -80,14 +81,15 @@ bool Cartridge::load(std::string fileName)
   // Locate the ROM header (3 possible locations, might not be 100% needed as it is said to be always located at 7FF0, but check anyway just in case one of some of the cartridges wanted to be special)
   unsigned short romHeaderPossibleLocations[3] = {0x1FF0,0x3FF0,0x7FF0};
 
-  unsigned short validRomText[8] = {0x54,0x4D,0x52,0x20,0x53,0x45,0x47,0x41}; // TMR SEGA in hex
+  unsigned char validRomText[8] = {0x54,0x4D,0x52,0x20,0x53,0x45,0x47,0x41}; // TMR SEGA in hex
 
-  unsigned short headerLocation = 0x0;
+  bool headerFound;
 
+  // Note: This 'header' isn't an actual file header, it is a piece of information included in the game ROMs for the USA/EU SMS/GG BIOS to varify the validity of the game.
   for (unsigned int i = 0; i<=2;i++) {
 
     // Search for the usual ASCII text which should be present in all ROM headers to determine where it is.
-    bool headerFound = false;
+    headerFound = false;
     int matchCount = 0;
 
     for (int i2 = 0; i2<8; i2++) {
@@ -98,7 +100,6 @@ bool Cartridge::load(std::string fileName)
 
     if (matchCount == 8) {
       // Valid ROM header found
-      headerLocation = romHeaderPossibleLocations[i];
       headerFound = true;
 
       #ifdef VERBOSE_MODE
@@ -109,19 +110,26 @@ bool Cartridge::load(std::string fileName)
     }
   }
 
-  // Process the ROM header - this will also check to see if the ROM is valid
-  unsigned char romHeader[0xF];
-  int headerMessage = processHeader(romHeader);
-
-  if (!headerMessage) {
-
-    #ifdef VERBOSE_MODE
-      std::cout<<"Error: ROM is not a valid Master System ROM"<<std::endl;
-    #endif
-
+  // Determine region of the cartridge (TODO: Make this work better in future, relying on the TMR SEGA text being present is not really a reliable way)
+  if (headerFound) {
+    region = CartridgeRegion::USA; // Assume USA for now, TODO: add some detection for PAL regions
+  } else {
+    region = CartridgeRegion::Japan;
   }
 
-  return false;
+  // Figure out if the cartridge is larger than 1mb, needed later for memory paging
+  if (ROMSize > 0x80000) {
+    megCartridge = true;
+  } else {
+    megCartridge = false;
+  }
+
+  // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
+  for (int i = 512; i<= ROMSize-512;i++) {
+    cartridgeData[i-512] = tempStorage[i];
+  }
+
+  return true;
 }
 
 /**
@@ -136,14 +144,4 @@ void Cartridge::clearCartridge()
   #ifdef VERBOSE_MODE
     std::cout<<"Clearing cartridge data..."<<std::endl;
   #endif
-}
-
-/**
- * [Cartridge::processHeader Process the ROM header - Returns false upon invalid SMS ROM header]
- * @return [description]
- */
-int Cartridge::processHeader(unsigned char romHeader[0xF])
-{
-  // TODO: Implement this
-  return 0;
 }

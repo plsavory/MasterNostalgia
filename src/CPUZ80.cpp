@@ -1,6 +1,6 @@
 /*
 Mastalgia - a (soon to be) Sega Master System emulator.
-Lisenced under the GPLv3 license.
+Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
@@ -31,7 +31,6 @@ void CPUZ80::reset()
     gpRegisters[i].whole = 0x0;
   }
 }
-
 
 int CPUZ80::execute()
 {

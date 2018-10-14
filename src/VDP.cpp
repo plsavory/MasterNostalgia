@@ -1,3 +1,8 @@
+/*
+Mastalgia - a (soon to be) Sega Master System emulator.
+Licensed under the GPLv3 license.
+@author: Peter Savory
+ */
 #include "VDP.h"
 
 VDP::VDP()

@@ -16,4 +16,5 @@ private:
   bool isCodemasters;
   unsigned char cartridgeData[MAX_CARTRIDGE_SIZE];
   void clearCartridge();
+  int processHeader(unsigned char romHeader[0xF]);
 };

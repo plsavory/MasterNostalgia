@@ -6,9 +6,12 @@ Licensed under the GPLv3 license.
 
 class Memory {
 public:
-  Memory();
+  Memory(Cartridge *cart);
   ~Memory();
   unsigned char read(unsigned short location);
   void write(unsigned short location, unsigned char value);
 private:
+  Cartridge *smsCartridge;
+  unsigned char ram[0x4000];
+  bool ramBanked; // Does cartridge include additional RAM?
 };

@@ -4,9 +4,9 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+ #include "Cartridge.h"
  #include "Memory.h"
  #include "CPUZ80.h"
- #include "Cartridge.h"
  #include "VDP.h"
 
 class MasterSystem {

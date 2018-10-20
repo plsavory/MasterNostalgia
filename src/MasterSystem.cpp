@@ -16,7 +16,7 @@ MasterSystem::MasterSystem()
   #endif
 
   smsCartridge = new Cartridge();
-  smsMemory = new Memory();
+  smsMemory = new Memory(smsCartridge);
   smsCPU = new CPUZ80();
   smsVdp = new VDP();
 }

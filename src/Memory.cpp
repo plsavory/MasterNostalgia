@@ -12,11 +12,20 @@ Master System memory map:
 0xC000-0xDFFF : RAM
 0xE000-0xFFFF : Mirrored RAM
  */
+#include <iostream>
+#include "Cartridge.h"
 #include "Memory.h"
 
-Memory::Memory()
+Memory::Memory(Cartridge *cart)
 {
+  smsCartridge = cart;
 
+  // Clear memory
+  for (int i = 0; i<0x4000;i++) {
+    ram[i] = 0x0;
+  }
+
+  ramBanked = false;
 }
 
 Memory::~Memory()

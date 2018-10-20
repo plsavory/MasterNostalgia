@@ -4,7 +4,10 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#include <iostream>
 #include "Utils.h"
+#include "ProjectInfo.h"
+#include <sstream>
 
 /**
  * [Utils::setBit Sets or unsets a bit on the provided 8-bit variable]
@@ -52,7 +55,7 @@ void Utils::setBit(int bit, bool val, unsigned short &variable)
  * @param  variable [The data to do the test on]
  * @return          [True if bit is set, otherwise false]
  */
-bool Utils::testBit(int bit, unsigned char variable)
+bool Utils::testBit(int bit, const unsigned char variable)
 {
   if (bit > 7)
     return false;
@@ -66,10 +69,29 @@ bool Utils::testBit(int bit, unsigned char variable)
  * @param  variable [The data to do the test on]
  * @return          [True if bit is set, otherwise false]
  */
-bool Utils::testBit(int bit, unsigned short variable)
+bool Utils::testBit(int bit, const unsigned short variable)
 {
   if (bit > 15)
     return false;
 
   return (variable & (1 << bit));
+}
+
+/**
+ * [getVersionString Returns a version string for the project, relies on ProjectInfo.h]
+ * @param  verboseString [Whether to post the long string with OS/CPU info]
+ * @return               [The string]
+ */
+std::string Utils::getVersionString(bool verboseString)
+{
+  std::stringstream stringStream;
+
+  if (verboseString) {
+    stringStream<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__
+      << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: " << CURRENT_COMMIT_STRING;
+  } else {
+    stringStream<<PROJECT_NAME<<" "<<PROJECT_VERSION;
+  }
+
+    return stringStream.str();
 }

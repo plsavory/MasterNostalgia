@@ -123,7 +123,7 @@ bool Cartridge::load(std::string fileName)
   checksum |= tempStorage[0x7FE6];
 
   if (checksum == 0x0) {
-    isCodemasters = false;
+    isCodemastersCart = false;
   } else {
 
     unsigned short checksumTest = 0x10000 - checksum;
@@ -132,7 +132,7 @@ bool Cartridge::load(std::string fileName)
 
     answer |= tempStorage[0x7FE8];
 
-    isCodemasters = (checksumTest == answer);
+    isCodemastersCart = (checksumTest == answer);
   }
 
   // Determine region of the cartridge (TODO: Make this work better in future, relying on the TMR SEGA text being present is not really a reliable way)
@@ -172,7 +172,7 @@ bool Cartridge::load(std::string fileName)
 
   #ifdef VERBOSE_MODE
 
-  if (isCodemasters) {
+  if (isCodemastersCart) {
     std::cout<<"Codemasters ROM Found"<<std::endl;
   }
 
@@ -193,4 +193,27 @@ void Cartridge::clearCartridge()
   #ifdef VERBOSE_MODE
     std::cout<<"Clearing cartridge data..."<<std::endl;
   #endif
+}
+
+/**
+ * [Cartridge::isCodemasters Return if the cartridge is a Codemasters cartridge]
+ * @return [True if cartridge is a Codemasters one]
+ */
+bool Cartridge::isCodemasters()
+{
+  return isCodemastersCart;
+}
+
+/**
+ * [Cartridge::isMegCartridge Is the cartridge a megabit cartridge or not]
+ * @return [description]
+ */
+bool Cartridge::isMegCartridge()
+{
+  return megCartridge;
+}
+
+unsigned char Cartridge::read(unsigned short location)
+{
+  return cartridgeData[location];  
 }

@@ -15,9 +15,12 @@ public:
   Cartridge();
   ~Cartridge();
   bool load(std::string fileName);
+  bool isCodemasters();
+  bool isMegCartridge();
+  unsigned char read(unsigned short location);
 private:
   int currentBankState;
-  bool isCodemasters;
+  bool isCodemastersCart;
   unsigned char cartridgeData[MAX_CARTRIDGE_SIZE];
   void clearCartridge();
   CartridgeRegion region;

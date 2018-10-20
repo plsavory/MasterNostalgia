@@ -5,14 +5,13 @@ Licensed under the GPLv3 license.
  */
 
 #include <iostream>
-#include "ProjectInfo.h"
+#include "Utils.h"
 #include "MasterSystem.h"
 
 int main(int argc, char* argv[])
 {
   // Todo: Hide the long build string on master builds when the emulator is actually functional.
-  std::cout<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__
-    << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: " << CURRENT_COMMIT_STRING <<" starting..." << std::endl;
+  std::cout<<Utils::getVersionString(true)<<" starting..." << std::endl;
 
   // Start the Emulator
   MasterSystem *emulator = new MasterSystem();

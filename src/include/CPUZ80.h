@@ -37,7 +37,7 @@ union cpuRegister {
 
 class CPUZ80 {
 public:
-  CPUZ80();
+  CPUZ80(Memory *smsMemory);
   ~CPUZ80();
   void reset();
   int execute();
@@ -52,4 +52,6 @@ private:
   void adc(unsigned char &dest, unsigned char value);
   void sbc(unsigned char &dest, unsigned char value);
   void executeOpcode();
+  Memory *memory;
+  unsigned char NB();
 };

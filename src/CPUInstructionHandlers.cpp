@@ -4,6 +4,9 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#include <iostream>
+#include "Cartridge.h"
+#include "Memory.h"
 #include "CPUZ80.h"
 
 /**

@@ -17,8 +17,9 @@ MasterSystem::MasterSystem()
 
   smsCartridge = new Cartridge();
   smsMemory = new Memory(smsCartridge);
-  smsCPU = new CPUZ80();
+  smsCPU = new CPUZ80(smsMemory);
   smsVdp = new VDP();
+  smsPSG = new PSG();
 }
 
 MasterSystem::~MasterSystem()
@@ -66,12 +67,16 @@ int soundCycles = z80ClockCycles;
 
 smsVdp->execute(vdpCycles);
 
-// TODO: Update sound when it exists
+smsPSG->execute(soundCycles);
 
   return;
 }
 
 void MasterSystem::run()
 {
-  // TODO: Implement this
+  bool running = true;
+
+  while (running) {
+    tick();
+  }
 }

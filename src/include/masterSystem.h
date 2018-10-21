@@ -4,10 +4,11 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
- #include "Cartridge.h"
- #include "Memory.h"
- #include "CPUZ80.h"
- #include "VDP.h"
+#include "Cartridge.h"
+#include "Memory.h"
+#include "CPUZ80.h"
+#include "VDP.h"
+#include "PSG.h"
 
 class MasterSystem {
 public:
@@ -21,4 +22,5 @@ private:
   Memory *smsMemory;
   Cartridge *smsCartridge;
   VDP *smsVdp;
+  PSG *smsPSG;
 };

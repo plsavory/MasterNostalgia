@@ -56,8 +56,6 @@ unsigned char Memory::read(unsigned short location)
   // Handle mirroring
   if (location >= 0xFFFC) {
     location-=0x2000;
-  } else if (!smsCartridge->isCodemasters() && (location < 0x400)) {
-    return ram[location];
   } else if (location < 0x4000) {
     // Page 1
     unsigned short address = location + (0x4000 * memoryPages[0]);

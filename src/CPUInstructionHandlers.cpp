@@ -48,3 +48,9 @@ void CPUZ80::sbc(unsigned char &dest, unsigned char value)
 {
 // TODO: Implement this
 }
+
+void CPUZ80::setInterruptMode(int mode)
+{
+  interruptMode = mode;
+  cyclesTaken = 8; // All im operations (as far as I know) take 8 cycles
+}

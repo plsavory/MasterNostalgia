@@ -44,14 +44,19 @@ public:
 private:
   unsigned short programCounter;
   unsigned short stackPointer;
-  cpuRegister gpRegisters[9]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
+  cpuRegister gpRegisters[10]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
   cpuState state;
+  void extendedOpcodes(unsigned char opcode);
+  void executeOpcode();
+  Memory *memory;
+  int cyclesTaken;
+  unsigned char NB();
+  int interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
+  void logCPUState(unsigned char opcode, std::string prefix);
   // Instruction handler functions
   void ldReg8(unsigned char &dest, unsigned char value);
   void ldReg16(cpuRegister &dest, unsigned short value);
   void adc(unsigned char &dest, unsigned char value);
   void sbc(unsigned char &dest, unsigned char value);
-  void executeOpcode();
-  Memory *memory;
-  unsigned char NB();
+  void setInterruptMode(int mode);
 };

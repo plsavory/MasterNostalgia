@@ -76,6 +76,10 @@ void MasterSystem::run()
 {
   bool running = true;
 
+  #ifdef VERBOSE_MODE
+    std::cout<<std::endl<<"--- Starting code execution ---"<<std::endl;
+  #endif
+
   while (running) {
     tick();
   }

@@ -8,6 +8,7 @@ Licensed under the GPLv3 license.
 #include "Cartridge.h"
 #include "Memory.h"
 #include "CPUZ80.h"
+#include "Utils.h"
 
 CPUZ80::CPUZ80(Memory *smsMemory)
 {
@@ -61,7 +62,10 @@ void CPUZ80::executeOpcode()
 
   switch (opcode)
   {
-    case 0xed:
+    case 0xC3:
+    jpCondition(JPCondition::NZ,NB());
+    break;
+    case 0xED:
     upperOpcode = NB();
     extendedOpcodes(upperOpcode);
 
@@ -75,7 +79,7 @@ void CPUZ80::executeOpcode()
     state = cpuState::Error;
 
     #ifdef VERBOSE_MODE
-      std::cout<<"Error: Unknown opcode: 0x"<<std::hex<<(int)opcode<<std::endl;
+      std::cout<<"Error: Unknown opcode: 0x"<<std::hex<<(int)opcode<<"-  At PC: 0x"<<(int)programCounter<<std::endl;
     #endif
 
     break;
@@ -144,5 +148,38 @@ void CPUZ80::extendedOpcodes(unsigned char opcode)
  */
 void CPUZ80::logCPUState(unsigned char opcode, std::string prefix)
 {
-  std::cout<<"Opcode: 0x"<<prefix<<std::hex<<(int)opcode<<" Registers: AF=0x"<<(int)gpRegisters[cpuReg::AF].whole<<" BC=0x"<<(int)gpRegisters[cpuReg::BC].whole<<" DE=0x"<<(int)gpRegisters[cpuReg::DE].whole<< " HL=0x"<<(int)gpRegisters[cpuReg::HL].whole<<" IX=0x"<<(int)gpRegisters[cpuReg::rIX].whole<<" IY=0x"<<(int)gpRegisters[cpuReg::rIY].whole<<std::endl;
+  std::cout<<std::uppercase<<"PC: 0x"<<std::hex<<(int)programCounter<<" Opcode: 0x"<<prefix<<(int)opcode<<" Registers: AF=0x"<<(int)gpRegisters[cpuReg::AF].whole<<" BC=0x"<<(int)gpRegisters[cpuReg::BC].whole<<" DE=0x"<<(int)gpRegisters[cpuReg::DE].whole<< " HL=0x"<<(int)gpRegisters[cpuReg::HL].whole<<" IX=0x"<<(int)gpRegisters[cpuReg::rIX].whole<<" IY=0x"<<(int)gpRegisters[cpuReg::rIY].whole<<std::endl;
+}
+
+/**
+ * [CPUZ80::setFlag Sets a flag - Definitely redundant... just saves me some extra typing]
+ * @param flag  [The flag to set a value on]
+ * @param value [The value to set on the flag]
+ */
+void CPUZ80::setFlag(CPUFlag flag, bool value)
+{
+  Utils::setBit(flag, value, flags);
+}
+
+/**
+ * [CPUZ80::getFlag Gets a flag - Definitely redundant... just saves me some extra typing]
+ * @param  flag [The flag to get the value of]
+ * @return      [The value of the flag]
+ */
+bool CPUZ80::getFlag(CPUFlag flag)
+{
+  return Utils::testBit(flag, flags);
+}
+
+/**
+ * [CPUZ80::build16BitAddress When called, increments the pc by 4 and builds a 16-bit memory address]
+ * @return [The memory address]
+ */
+unsigned short CPUZ80::build16BitAddress()
+{
+  // TODO: Make sure this is correct
+  unsigned char addrLo = NB();
+  unsigned char addrHi = NB();
+
+  return (addrLo + (addrHi << 8));
 }

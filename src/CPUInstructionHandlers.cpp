@@ -8,6 +8,7 @@ Licensed under the GPLv3 license.
 #include "Cartridge.h"
 #include "Memory.h"
 #include "CPUZ80.h"
+#include "Utils.h"
 
 /**
  * [cpuZ80::ldReg8 Load 8-bit value into destination]
@@ -53,4 +54,32 @@ void CPUZ80::setInterruptMode(int mode)
 {
   interruptMode = mode;
   cyclesTaken = 8; // All im operations (as far as I know) take 8 cycles
+}
+
+/**
+ * [CPUZ80::jpCondition Perform a conditional jump]
+ * @param condition [The condition which needs to be true]
+ * @param location  [Memory location to jump to]
+ */
+void CPUZ80::jpCondition(JPCondition condition, unsigned char location)
+{
+
+  bool conditionMet = false;
+
+  switch (condition) {
+    case JPCondition::NZ:
+      conditionMet = !getFlag(CPUFlag::zero);
+    break;
+    case JPCondition::Z:
+      conditionMet = getFlag(CPUFlag::zero);
+    break;
+    default:
+    return;
+
+    if (conditionMet) {
+      // Get the next two bytes in memory and build an address to jump to
+      unsigned short address = build16BitAddress();
+      programCounter = address;
+    }
+  }
 }

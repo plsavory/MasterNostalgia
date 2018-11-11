@@ -62,7 +62,12 @@ void CPUZ80::executeOpcode()
 
   switch (opcode)
   {
-    case 0xC3:
+    case 0xAE: // XOR (hl)
+    break;
+    case 0xC3: // JP (nn)
+    jpImm();
+    break;
+    case 0xC2:
     jpCondition(JPCondition::NZ,NB());
     break;
     case 0xED:
@@ -158,7 +163,7 @@ void CPUZ80::logCPUState(unsigned char opcode, std::string prefix)
  */
 void CPUZ80::setFlag(CPUFlag flag, bool value)
 {
-  Utils::setBit(flag, value, flags);
+  Utils::setBit(flag, value, gpRegisters[cpuReg::AF].lo);
 }
 
 /**
@@ -168,7 +173,7 @@ void CPUZ80::setFlag(CPUFlag flag, bool value)
  */
 bool CPUZ80::getFlag(CPUFlag flag)
 {
-  return Utils::testBit(flag, flags);
+  return Utils::testBit(flag, gpRegisters[cpuReg::AF].lo);
 }
 
 /**
@@ -177,9 +182,72 @@ bool CPUZ80::getFlag(CPUFlag flag)
  */
 unsigned short CPUZ80::build16BitAddress()
 {
-  // TODO: Make sure this is correct
   unsigned char addrLo = NB();
   unsigned char addrHi = NB();
 
   return (addrLo + (addrHi << 8));
+}
+
+/**
+ * [CPUZ80::get16BitRelativeValue Returns the value stored within the given memory address]
+ * @return [description]
+ */
+unsigned char CPUZ80::getIndirectValue()
+{
+  return memory->read(build16BitAddress());
+}
+
+/**
+ * [CPUZ80::get16BitRelativeValue Returns the value stored within the given memory address]
+ * @return [description]
+ */
+unsigned char CPUZ80::getIndirectValue(unsigned short address)
+{
+  return memory->read(address);
+}
+
+/**
+ * [CPUZ80::handleSignFlag Set the sign flag if value could be interpreted as negative (If the most significant bit of the value is set)]
+ * @param value [The value to operate on]
+ */
+void CPUZ80::handleSignFlag(unsigned char value)
+{
+  setFlag(CPUFlag::sign, value > 0x7F);
+}
+
+/**
+ * [CPUZ80::handleZeroFlag Set the zero flag if the value is zero]
+ * @param value [The value to operate on]
+ */
+void CPUZ80::handleZeroFlag(unsigned char value)
+{
+  setFlag(CPUFlag::zero, value == 0x0);
+}
+
+/**
+ * [CPUZ80::handleOverflowFlag Sets the overflow flag if the given number can't fit in the register]
+ * @param value [The value to operate on]
+ */
+void CPUZ80::handleOverflowFlag(unsigned short value)
+{
+  // TODO: Handle this properly
+  setFlag(CPUFlag::overflow, value > 0xFF);
+}
+
+/**
+ * [CPUZ80::handleCarryFlag Sets the overflow flag if the given number can't fit in the register]
+ * @param value [The value to operate on]
+ */
+void CPUZ80::handleCarryFlag(unsigned short value)
+{
+  setFlag(CPUFlag::carry, value > 0xFF);
+}
+
+/**
+ * [CPUZ80::handleCarryFlag Sets the overflow flag if the given number can't fit in the register]
+ * @param value [The value to operate on]
+ */
+void CPUZ80::handleHalfCarryFlag(unsigned char value)
+{
+  setFlag(CPUFlag::halfCarry, value > 0xF);
 }

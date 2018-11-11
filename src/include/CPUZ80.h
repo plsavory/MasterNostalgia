@@ -57,7 +57,6 @@ public:
 private:
   unsigned short programCounter;
   unsigned short stackPointer;
-  unsigned char flags;
   cpuRegister gpRegisters[10]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
   cpuState state;
   void extendedOpcodes(unsigned char opcode);
@@ -68,15 +67,24 @@ private:
   int interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
   void logCPUState(unsigned char opcode, std::string prefix);
   void jpCondition(JPCondition condition, unsigned char location);
+  void jpImm();
   // Instruction handler functions
   void ldReg8(unsigned char &dest, unsigned char value);
   void ldReg16(cpuRegister &dest, unsigned short value);
   void adc(unsigned char &dest, unsigned char value);
   void sbc(unsigned char &dest, unsigned char value);
   void setInterruptMode(int mode);
-  // To make flag handling easier...
+  void exclusiveOr(unsigned char value);
+  // To make flag handling easier and to prevent repetitive typing
   void setFlag(CPUFlag flag, bool value);
   bool getFlag(CPUFlag flag);
+  void handleZeroFlag(unsigned char value);
+  void handleSignFlag(unsigned char value);
+  void handleOverflowFlag(unsigned short value);
+  void handleCarryFlag(unsigned short value);
+  void handleHalfCarryFlag(unsigned char value);
   // Memory management
   unsigned short build16BitAddress();
+  unsigned char getIndirectValue();
+  unsigned char getIndirectValue(unsigned short address);
 };

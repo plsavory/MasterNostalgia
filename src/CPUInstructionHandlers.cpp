@@ -73,13 +73,57 @@ void CPUZ80::jpCondition(JPCondition condition, unsigned char location)
     case JPCondition::Z:
       conditionMet = getFlag(CPUFlag::zero);
     break;
+    case JPCondition::NC:
+      conditionMet = !getFlag(CPUFlag::carry);
+    break;
+    case JPCondition::C:
+      conditionMet = getFlag(CPUFlag::carry);
+    break;
+    case JPCondition::PO:
+      conditionMet = !getFlag(CPUFlag::overflow);
+    break;
+    case JPCondition::PE:
+      conditionMet = getFlag(CPUFlag::overflow);
+    break;
+    case JPCondition::P:
+      conditionMet = !getFlag(CPUFlag::sign);
+    break;
+    case JPCondition::M:
+      conditionMet = getFlag(CPUFlag::sign);
+    break;
     default:
     return;
 
+    // Get the next two bytes in memory and build an address to jump to
+    unsigned short address = build16BitAddress();
+
+    // Only jump if the condition is met
     if (conditionMet) {
-      // Get the next two bytes in memory and build an address to jump to
-      unsigned short address = build16BitAddress();
       programCounter = address;
     }
+
+    cyclesTaken = 10; // TODO: Ensure that this is the same for all conditional jump instructions
   }
+}
+
+/**
+ * [CPUZ80::jpImm Jumps to the given memory location immediately following the opcode]
+ */
+void CPUZ80::jpImm()
+{
+  unsigned short address = build16BitAddress();
+  programCounter = address;
+  cyclesTaken = 10;
+}
+
+/**
+ * [CPUZ80::xor XOR value with register A]
+ * @param value [description]
+ */
+void CPUZ80::exclusiveOr(unsigned char value)
+{
+  unsigned char result = gpRegisters[cpuReg::AF].hi ^ value;
+
+  // TODO: Perform flag checks on result.
+  gpRegisters[cpuReg::AF].hi = result;
 }

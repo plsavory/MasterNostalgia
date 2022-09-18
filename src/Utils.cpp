@@ -15,18 +15,17 @@ Licensed under the GPLv3 license.
  * @param val      [New value]
  * @param variable [The variable to set/unset the bit on]
  */
-void Utils::setBit(int bit, bool val, unsigned char &variable)
-{
-  // Can't set a bit greater than the size of the variable
-  if (bit > 7) {
-    return;
-  }
+void Utils::setBit(int bit, bool val, unsigned char &variable) {
+    // Can't set a bit greater than the size of the variable
+    if (bit > 7) {
+        return;
+    }
 
-  if (val) {
-    variable |= (1 << bit);
-  } else {
-    variable &= ~(1 << bit);
-  }
+    if (val) {
+        variable |= (1 << bit);
+    } else {
+        variable &= ~(1 << bit);
+    }
 }
 
 /**
@@ -35,18 +34,17 @@ void Utils::setBit(int bit, bool val, unsigned char &variable)
  * @param val      [New value]
  * @param variable [The variable to set/unset the bit on]
  */
-void Utils::setBit(int bit, bool val, unsigned short &variable)
-{
-  // Can't set a bit greater than the size of the variable
-  if (bit > 15) {
-    return;
-  }
+void Utils::setBit(int bit, bool val, unsigned short &variable) {
+    // Can't set a bit greater than the size of the variable
+    if (bit > 15) {
+        return;
+    }
 
-  if (val) {
-    variable |= (1 << bit);
-  } else {
-    variable &= ~(1 << bit);
-  }
+    if (val) {
+        variable |= (1 << bit);
+    } else {
+        variable &= ~(1 << bit);
+    }
 }
 
 /**
@@ -55,12 +53,11 @@ void Utils::setBit(int bit, bool val, unsigned short &variable)
  * @param  variable [The data to do the test on]
  * @return          [True if bit is set, otherwise false]
  */
-bool Utils::testBit(int bit, const unsigned char variable)
-{
-  if (bit > 7)
-    return false;
+bool Utils::testBit(int bit, const unsigned char variable) {
+    if (bit > 7)
+        return false;
 
-  return (variable & (1 << bit));
+    return (variable & (1 << bit));
 }
 
 /**
@@ -69,12 +66,11 @@ bool Utils::testBit(int bit, const unsigned char variable)
  * @param  variable [The data to do the test on]
  * @return          [True if bit is set, otherwise false]
  */
-bool Utils::testBit(int bit, const unsigned short variable)
-{
-  if (bit > 15)
-    return false;
+bool Utils::testBit(int bit, const unsigned short variable) {
+    if (bit > 15)
+        return false;
 
-  return (variable & (1 << bit));
+    return (variable & (1 << bit));
 }
 
 /**
@@ -82,16 +78,17 @@ bool Utils::testBit(int bit, const unsigned short variable)
  * @param  verboseString [Whether to post the long string with OS/CPU info]
  * @return               [The string]
  */
-std::string Utils::getVersionString(bool verboseString)
-{
-  std::stringstream stringStream;
+std::string Utils::getVersionString(bool verboseString) {
+    std::stringstream stringStream;
 
-  if (verboseString) {
-    stringStream<<PROJECT_NAME<<" "<<PROJECT_VERSION<<PROJECT_OS<<PROJECT_ARCH<< " (Compiled: " << __DATE__
-      << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: " << CURRENT_COMMIT_STRING;
-  } else {
-    stringStream<<PROJECT_NAME<<" "<<PROJECT_VERSION;
-  }
+    if (verboseString) {
+        stringStream << PROJECT_NAME << " " << PROJECT_VERSION << PROJECT_OS << PROJECT_ARCH << " (Compiled: "
+                     << __DATE__
+                     << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: "
+                     << CURRENT_COMMIT_STRING;
+    } else {
+        stringStream << PROJECT_NAME << " " << PROJECT_VERSION;
+    }
 
     return stringStream.str();
 }

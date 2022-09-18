@@ -15,13 +15,11 @@ Licensed under the GPLv3 license.
 #include <iterator>
 #include "Cartridge.h"
 
-Cartridge::Cartridge()
-{
-  clearCartridge();
+Cartridge::Cartridge() {
+    clearCartridge();
 }
 
-Cartridge::~Cartridge()
-{
+Cartridge::~Cartridge() {
 
 }
 
@@ -29,191 +27,184 @@ Cartridge::~Cartridge()
  * [cartridge::load Loads a cartridge into memory]
  * @param fileName [the path to the file]
  */
-bool Cartridge::load(std::string fileName)
-{
-  #ifdef VERBOSE_MODE
+bool Cartridge::load(std::string fileName) {
+#ifdef VERBOSE_MODE
     std::cout<<"Loading ROM: "<<fileName<<std::endl;
-  #endif
+#endif
 
-  // Determine the size of the ROM file
-  struct stat fileStat;
-  int ROMSize;
+    // Determine the size of the ROM file
+    struct stat fileStat;
+    int ROMSize;
 
-  int fileStatus = stat(fileName.c_str(),&fileStat);
+    int fileStatus = stat(fileName.c_str(), &fileStat);
 
-  // Do some standard checks on the file to decide on whether it is kosher or not (This is not 100%, but we at least should check obvious stuff)
-  if (fileStatus == 0) {
+    // Do some standard checks on the file to decide on whether it is kosher or not (This is not 100%, but we at least should check obvious stuff)
+    if (fileStatus == 0) {
 
-    // Figure out the size of the ROM
-    ROMSize = fileStat.st_size;
+        // Figure out the size of the ROM
+        ROMSize = fileStat.st_size;
 
-    if (ROMSize > MAX_CARTRIDGE_SIZE)
-    {
-      // ROM file too large - abort
-      std::cout << "Error - ROM file is too large (" << ROMSize << ") bytes" << std::endl;
-      return false;
-    }
-    else
-    {
-      std::cout << ROMSize << " byte ROM found..." << std::endl;
-    }
+        if (ROMSize > MAX_CARTRIDGE_SIZE) {
+            // ROM file too large - abort
+            std::cout << "Error - ROM file is too large (" << ROMSize << ") bytes" << std::endl;
+            return false;
+        } else {
+            std::cout << ROMSize << " byte ROM found..." << std::endl;
+        }
 
-  } else {
+    } else {
 
-    // File does not exist
-    #ifdef VERBOSE_MODE
-      std::cout<<"Error: ROM file does not exist"<<std::endl;
-    #endif
+        // File does not exist
+#ifdef VERBOSE_MODE
+        std::cout<<"Error: ROM file does not exist"<<std::endl;
+#endif
 
-    return false;
+        return false;
 
-  }
-
-  // Fill temp storage with data from ROM file
-  typedef std::istream_iterator<unsigned char> istream_iterator;
-
-  std::ifstream romStream(fileName,std::ios::binary); // file stream for reading file contents
-	std::vector<unsigned char> tempStorage; // temporary storage for data - will be copied into cartridge struct later
-
-  romStream >> std::noskipws; // Do not skip white space, we want every single character of the file.
-	std::copy(istream_iterator(romStream),istream_iterator(),std::back_inserter(tempStorage)); // Copy the contents of the file into the temporary storage vector
-
-  // Locate the ROM header (3 possible locations, might not be 100% needed as it is said to be always located at 7FF0, but check anyway just in case one of some of the cartridges wanted to be special)
-  unsigned short romHeaderPossibleLocations[3] = {0x1FF0,0x3FF0,0x7FF0};
-
-  unsigned char validRomText[8] = {0x54,0x4D,0x52,0x20,0x53,0x45,0x47,0x41}; // TMR SEGA in hex
-
-  bool headerFound;
-
-  // Note: This 'header' isn't an actual file header, it is a piece of information included in the game ROMs for the USA/EU SMS/GG BIOS to varify the validity of the game.
-  for (unsigned int i = 0; i<=2;i++) {
-
-    // Search for the usual ASCII text which should be present in all ROM headers to determine where it is.
-    headerFound = false;
-    int matchCount = 0;
-
-    for (int i2 = 0; i2<8; i2++) {
-      if (tempStorage[romHeaderPossibleLocations[i]+i2] == validRomText[i2]) {
-        matchCount++;
-      }
     }
 
-    if (matchCount == 8) {
-      // Valid ROM header found
-      headerFound = true;
+    // Fill temp storage with data from ROM file
+    typedef std::istream_iterator<unsigned char> istream_iterator;
 
-      #ifdef VERBOSE_MODE
-        std::cout<<"ROM Header found at: "<<std::hex<<"0x"<<romHeaderPossibleLocations[i]<<std::endl;
-      #endif
+    std::ifstream romStream(fileName, std::ios::binary); // file stream for reading file contents
+    std::vector<unsigned char> tempStorage; // temporary storage for data - will be copied into cartridge struct later
 
-      break;
-    }
-  }
+    romStream >> std::noskipws; // Do not skip white space, we want every single character of the file.
+    std::copy(istream_iterator(romStream), istream_iterator(),
+              std::back_inserter(tempStorage)); // Copy the contents of the file into the temporary storage vector
 
-  /* Determine whether the cartridge is a Codemasters cartridge or not
-  Codemasters ROMs include an extra header at 0x7FE0-0x7FE8 including some information, we only care about the checksum.
+    // Locate the ROM header (3 possible locations, might not be 100% needed as it is said to be always located at 7FF0, but check anyway just in case one of some of the cartridges wanted to be special)
+    unsigned short romHeaderPossibleLocations[3] = {0x1FF0, 0x3FF0, 0x7FF0};
 
-  Had trouble working out this bit myself, this bit is based on a solution from the following source:
-  http://www.codeslinger.co.uk/pages/projects/mastersystem/starting.html
+    unsigned char validRomText[8] = {0x54, 0x4D, 0x52, 0x20, 0x53, 0x45, 0x47, 0x41}; // TMR SEGA in hex
 
-  This check is required as these games use their own separate memory mapper which does not work like the standard one.
-  */
+    bool headerFound;
 
-  unsigned short checksum = tempStorage[0x7FE7] << 8;
-  checksum |= tempStorage[0x7FE6];
+    // Note: This 'header' isn't an actual file header, it is a piece of information included in the game ROMs for the USA/EU SMS/GG BIOS to varify the validity of the game.
+    for (unsigned int i = 0; i <= 2; i++) {
 
-  if (checksum == 0x0) {
-    isCodemastersCart = false;
-  } else {
+        // Search for the usual ASCII text which should be present in all ROM headers to determine where it is.
+        headerFound = false;
+        int matchCount = 0;
 
-    unsigned short checksumTest = 0x10000 - checksum;
+        for (int i2 = 0; i2 < 8; i2++) {
+            if (tempStorage[romHeaderPossibleLocations[i] + i2] == validRomText[i2]) {
+                matchCount++;
+            }
+        }
 
-    unsigned short answer = tempStorage[0x7FE9] << 8;
+        if (matchCount == 8) {
+            // Valid ROM header found
+            headerFound = true;
 
-    answer |= tempStorage[0x7FE8];
+#ifdef VERBOSE_MODE
+            std::cout<<"ROM Header found at: "<<std::hex<<"0x"<<romHeaderPossibleLocations[i]<<std::endl;
+#endif
 
-    isCodemastersCart = (checksumTest == answer);
-  }
-
-  // Determine region of the cartridge (TODO: Make this work better in future, relying on the TMR SEGA text being present is not really a reliable way)
-  if (headerFound) {
-    region = CartridgeRegion::USA; // Assume USA for now, TODO: add some detection for PAL regions
-  } else {
-    region = CartridgeRegion::Japan;
-  }
-
-  // Figure out if the cartridge is larger than 1mb, needed later for memory paging
-  if (ROMSize > 0x80000) {
-    megCartridge = true;
-  } else {
-    megCartridge = false;
-  }
-
-  // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
-
-  // Strip the ROM's header if required
-  if ((ROMSize % 0x4000) == 512) {
-
-    #ifdef VERBOSE_MODE
-      std::cout<<"Stripping ROM header"<<std::endl;
-    #endif
-
-    for (int i = 512; i<= ROMSize-512;i++) {
-      cartridgeData[i-512] = tempStorage[i];
+            break;
+        }
     }
 
-  } else {
+    /* Determine whether the cartridge is a Codemasters cartridge or not
+    Codemasters ROMs include an extra header at 0x7FE0-0x7FE8 including some information, we only care about the checksum.
 
-    for (int i = 0; i<= ROMSize;i++) {
-      cartridgeData[i] = tempStorage[i];
+    Had trouble working out this bit myself, this bit is based on a solution from the following source:
+    http://www.codeslinger.co.uk/pages/projects/mastersystem/starting.html
+
+    This check is required as these games use their own separate memory mapper which does not work like the standard one.
+    */
+
+    unsigned short checksum = tempStorage[0x7FE7] << 8;
+    checksum |= tempStorage[0x7FE6];
+
+    if (checksum == 0x0) {
+        isCodemastersCart = false;
+    } else {
+
+        unsigned short checksumTest = 0x10000 - checksum;
+
+        unsigned short answer = tempStorage[0x7FE9] << 8;
+
+        answer |= tempStorage[0x7FE8];
+
+        isCodemastersCart = (checksumTest == answer);
     }
 
-  }
+    // Determine region of the cartridge (TODO: Make this work better in future, relying on the TMR SEGA text being present is not really a reliable way)
+    if (headerFound) {
+        region = CartridgeRegion::USA; // Assume USA for now, TODO: add some detection for PAL regions
+    } else {
+        region = CartridgeRegion::Japan;
+    }
 
-  #ifdef VERBOSE_MODE
+    // Figure out if the cartridge is larger than 1mb, needed later for memory paging
+    if (ROMSize > 0x80000) {
+        megCartridge = true;
+    } else {
+        megCartridge = false;
+    }
 
-  if (isCodemastersCart) {
-    std::cout<<"Codemasters ROM Found"<<std::endl;
-  }
+    // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
 
-  #endif
+    // Strip the ROM's header if required
+    if ((ROMSize % 0x4000) == 512) {
 
-  return true;
+#ifdef VERBOSE_MODE
+        std::cout<<"Stripping ROM header"<<std::endl;
+#endif
+
+        for (int i = 512; i <= ROMSize - 512; i++) {
+            cartridgeData[i - 512] = tempStorage[i];
+        }
+
+    } else {
+
+        for (int i = 0; i < ROMSize; i++) {
+            cartridgeData[i] = tempStorage[i];
+        }
+
+    }
+
+#ifdef VERBOSE_MODE
+
+    if (isCodemastersCart) {
+      std::cout<<"Codemasters ROM Found"<<std::endl;
+    }
+
+#endif
+
+    return true;
 }
 
 /**
  * [cartridge::clearCartridge Clear cartridge data so that nothing remains upon reload]
  */
-void Cartridge::clearCartridge()
-{
-  for (int i = 0; i<MAX_CARTRIDGE_SIZE;i++) {
-    cartridgeData[i] = 0x0;
-  }
+void Cartridge::clearCartridge() {
+    for (int i = 0; i < MAX_CARTRIDGE_SIZE; i++) {
+        cartridgeData[i] = 0x0;
+    }
 
-  #ifdef VERBOSE_MODE
+#ifdef VERBOSE_MODE
     std::cout<<"Clearing cartridge data..."<<std::endl;
-  #endif
+#endif
 }
 
 /**
  * [Cartridge::isCodemasters Return if the cartridge is a Codemasters cartridge]
  * @return [True if cartridge is a Codemasters one]
  */
-bool Cartridge::isCodemasters()
-{
-  return isCodemastersCart;
+bool Cartridge::isCodemasters() {
+    return isCodemastersCart;
 }
 
 /**
  * [Cartridge::isMegCartridge Is the cartridge a megabit cartridge or not]
  * @return [description]
  */
-bool Cartridge::isMegCartridge()
-{
-  return megCartridge;
+bool Cartridge::isMegCartridge() {
+    return megCartridge;
 }
 
-unsigned char Cartridge::read(unsigned short location)
-{
-  return cartridgeData[location];  
+unsigned char Cartridge::read(unsigned short location) {
+    return cartridgeData[location];
 }

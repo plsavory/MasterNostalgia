@@ -5,13 +5,11 @@ Licensed under the GPLv3 license.
  */
 #include "VDP.h"
 
-VDP::VDP()
-{
+VDP::VDP() {
 
 }
 
-VDP::~VDP()
-{
+VDP::~VDP() {
 
 }
 
@@ -19,7 +17,6 @@ VDP::~VDP()
  * [vdp::execute Update the graphics chip]
  * @param cycles [description]
  */
-void VDP::execute(float cycles)
-{
-  // TODO: Implement this
+void VDP::execute(float cycles) {
+    // TODO: Implement this
 }

@@ -6,8 +6,11 @@ Licensed under the GPLv3 license.
 
 class PSG {
 public:
-  PSG();
-  ~PSG();
-  void execute(int cycles);
+    PSG();
+
+    ~PSG();
+
+    void execute(int cycles);
+
 private:
 };

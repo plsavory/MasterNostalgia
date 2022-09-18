@@ -8,7 +8,6 @@ Lisenced under the GPLv3 license.
 #define PROJECT_VERSION "v0.0.1"
 
 
-
 #ifdef __i386__
 #define PROJECT_ARCH "-x86"
 #elif __amd64__
@@ -29,7 +28,7 @@ Lisenced under the GPLv3 license.
 #define PROJECT_OS "-gnu-hurd"
 #elif __linux__
 #define PROJECT_OS "-linux"
-#elif __APPLE__&&__MACH__
+#elif __APPLE__ && __MACH__
 #define PROJECT_OS "-osx"
 #elif __minix
 #define PROJECT_OS "-minix"

@@ -12,15 +12,23 @@ Licensed under the GPLv3 license.
 
 class MasterSystem {
 public:
-  MasterSystem();
-  ~MasterSystem();
-  bool start(std::string romFilename);
-  void tick();
-  void run();
+    MasterSystem();
+
+    ~MasterSystem();
+
+    bool start(std::string romFilename);
+
+    void tick();
+
+    void run();
+
+    bool isRunning();
+
 private:
-  CPUZ80 *smsCPU;
-  Memory *smsMemory;
-  Cartridge *smsCartridge;
-  VDP *smsVdp;
-  PSG *smsPSG;
+    CPUZ80 *smsCPU;
+    Memory *smsMemory;
+    Cartridge *smsCartridge;
+    VDP *smsVdp;
+    PSG *smsPSG;
+    bool running;
 };

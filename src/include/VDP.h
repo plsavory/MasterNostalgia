@@ -6,7 +6,9 @@ Licensed under the GPLv3 license.
 
 class VDP {
 public:
-  VDP();
-  ~VDP();
-  void execute(float cycles);
+    VDP();
+
+    ~VDP();
+
+    void execute(float cycles);
 };

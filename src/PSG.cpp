@@ -6,17 +6,14 @@ Licensed under the GPLv3 license.
 
 #include "PSG.h"
 
-PSG::PSG()
-{
+PSG::PSG() {
 
 }
 
-PSG::~PSG()
-{
+PSG::~PSG() {
 
 }
 
-void PSG::execute(int cycles)
-{
-  // TODO: Implement this
+void PSG::execute(int cycles) {
+    // TODO: Implement this
 }

@@ -7,6 +7,8 @@ Lisenced under the GPLv3 license.
 #define PROJECT_NAME "Mastalgia"
 #define PROJECT_VERSION "v0.0.1"
 
+#define MAKE_STRING2(x) #x
+#define MAKE_STRING(x) MAKE_STRING2(x)
 
 #ifdef __i386__
 #define PROJECT_ARCH "-x86"
@@ -14,6 +16,10 @@ Lisenced under the GPLv3 license.
 #define PROJECT_ARCH "-x86-64"
 #elif __arm__
 #define PROJECT_ARCH "-arm"
+#define ARM_VERSION MAKE_STRING(__ARM_ARCH)
+#elif __aarch64__
+#define PROJECT_ARCH "-arm64"
+#define ARM_VERSION MAKE_STRING(__ARM_ARCH)
 #else
 #define PROJECT_ARCH "unknown-arch"
 #endif
@@ -28,7 +34,7 @@ Lisenced under the GPLv3 license.
 #define PROJECT_OS "-gnu-hurd"
 #elif __linux__
 #define PROJECT_OS "-linux"
-#elif __APPLE__ && __MACH__
+#elif __APPLE__&&__MACH__
 #define PROJECT_OS "-osx"
 #elif __minix
 #define PROJECT_OS "-minix"
@@ -39,8 +45,6 @@ Lisenced under the GPLv3 license.
 #endif
 
 #ifdef CURRENT_BRANCH
-#define MAKE_STRING2(x) #x
-#define MAKE_STRING(x) MAKE_STRING2(x)
 #define BRANCH_STRING MAKE_STRING(CURRENT_BRANCH)
 #else
 #define BRANCH_STRING "unknown"

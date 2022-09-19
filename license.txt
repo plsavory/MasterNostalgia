@@ -619,4 +619,4 @@ Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
 <Mastalgia - Master System game console emulator>
-Copyright (C) <2018>  <Peter Savory>
+Copyright (C) <2018-2022>  <Peter Savory>

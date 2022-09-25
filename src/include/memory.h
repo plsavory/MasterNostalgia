@@ -16,11 +16,11 @@ public:
 
 private:
     Cartridge *smsCartridge;
-    unsigned char ram[0x10000];
+    unsigned char ram[0x10000]{};
     bool ramBanked; // Does cartridge include additional RAM?
     void memoryPage(bool Codemasters, unsigned short location, unsigned char value);
 
-    unsigned char ramBank[2][0x4000];
+    unsigned char ramBank[2][0x4000]{};
     int currentRamBank;
-    unsigned short memoryPages[3];
+    unsigned short memoryPages[3]{};
 };

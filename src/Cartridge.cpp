@@ -33,35 +33,28 @@ bool Cartridge::load(std::string fileName) {
 #endif
 
     // Determine the size of the ROM file
-    struct stat fileStat;
+    struct stat fileStat{};
     int ROMSize;
 
     int fileStatus = stat(fileName.c_str(), &fileStat);
 
     // Do some standard checks on the file to decide on whether it is kosher or not (This is not 100%, but we at least should check obvious stuff)
-    if (fileStatus == 0) {
-
-        // Figure out the size of the ROM
-        ROMSize = fileStat.st_size;
-
-        if (ROMSize > MAX_CARTRIDGE_SIZE) {
-            // ROM file too large - abort
-            std::cout << "Error - ROM file is too large (" << ROMSize << ") bytes" << std::endl;
-            return false;
-        } else {
-            std::cout << ROMSize << " byte ROM found..." << std::endl;
-        }
-
-    } else {
-
+    if (fileStatus != 0) {
         // File does not exist
-#ifdef VERBOSE_MODE
         std::cout<<"Error: ROM file does not exist"<<std::endl;
-#endif
-
         return false;
-
     }
+
+    // Figure out the size of the ROM
+    ROMSize = fileStat.st_size;
+
+    if (ROMSize > MAX_CARTRIDGE_SIZE) {
+        // ROM file too large - abort
+        std::cout << "Error - ROM file is too large (" << ROMSize << ") bytes" << std::endl;
+        return false;
+    }
+
+    std::cout << ROMSize << " byte ROM found..." << std::endl;
 
     // Fill temp storage with data from ROM file
     typedef std::istream_iterator<unsigned char> istream_iterator;
@@ -138,20 +131,12 @@ bool Cartridge::load(std::string fileName) {
     }
 
     // Figure out if the cartridge is larger than 1mb, needed later for memory paging
-    if (ROMSize > 0x80000) {
-        megCartridge = true;
-    } else {
-        megCartridge = false;
-    }
+    megCartridge = ROMSize > 0x80000;
 
     // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
 
     // Strip the ROM's header if required
     if ((ROMSize % 0x4000) == 512) {
-
-#ifdef VERBOSE_MODE
-        std::cout<<"Stripping ROM header"<<std::endl;
-#endif
 
         for (int i = 512; i <= ROMSize - 512; i++) {
             cartridgeData[i - 512] = tempStorage[i];
@@ -165,14 +150,6 @@ bool Cartridge::load(std::string fileName) {
 
     }
 
-#ifdef VERBOSE_MODE
-
-    if (isCodemastersCart) {
-      std::cout<<"Codemasters ROM Found"<<std::endl;
-    }
-
-#endif
-
     return true;
 }
 
@@ -180,8 +157,8 @@ bool Cartridge::load(std::string fileName) {
  * [cartridge::clearCartridge Clear cartridge data so that nothing remains upon reload]
  */
 void Cartridge::clearCartridge() {
-    for (int i = 0; i < MAX_CARTRIDGE_SIZE; i++) {
-        cartridgeData[i] = 0x0;
+    for (unsigned char & i : cartridgeData) {
+        i = 0x0;
     }
 
 #ifdef VERBOSE_MODE

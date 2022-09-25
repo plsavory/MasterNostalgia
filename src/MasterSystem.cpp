@@ -8,12 +8,6 @@ Licensed under the GPLv3 license.
 #include "MasterSystem.h"
 
 MasterSystem::MasterSystem() {
-    // Initialize the Emulator
-
-#ifdef VERBOSE_MODE
-    std::cout<<"Initializing Emulator..."<<std::endl;
-#endif
-
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
     smsCPU = new CPUZ80(smsMemory);
@@ -30,23 +24,11 @@ bool MasterSystem::start(std::string romFilename) {
 
     running = true;
     // Load a ROM into memory
-
     if (!smsCartridge->load(romFilename)) {
-
-#ifdef VERBOSE_MODE
         std::cout<<"Error: Unable to load ROM - exiting."<<std::endl;
-#endif
-
         // TODO: Send some kind of message to the UI (When it exists) to display an error
         return false;
-
-    } else {
-
-#ifdef VERBOSE_MODE
-        std::cout<<"ROM Loaded successfully"<<std::endl;
-#endif
-
-    };
+    }
 
     // Enter the main loop
     run();
@@ -82,5 +64,5 @@ void MasterSystem::run() {
 }
 
 bool MasterSystem::isRunning() {
-    return running && smsCPU->getState() != cpuState::Error && smsCPU->getState() != cpuState::Halt;
+    return running && smsCPU->getState() != CPUState::Error && smsCPU->getState() != CPUState::Halt;
 }

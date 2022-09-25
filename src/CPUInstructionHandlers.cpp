@@ -24,7 +24,7 @@ void CPUZ80::ldReg8(unsigned char &dest, unsigned char value) {
  * @param dest  [Reference to destination location]
  * @param value [Value to be inserted into destination]
  */
-void CPUZ80::ldReg16(cpuRegister &dest, unsigned short value) {
+void CPUZ80::ldReg16(CPURegister &dest, unsigned short value) {
     dest.whole = value;
 }
 
@@ -33,8 +33,10 @@ void CPUZ80::ldReg16(cpuRegister &dest, unsigned short value) {
  * @param dest  [Destination (Usually register A)]
  * @param value [Value to add with what is stored in dest]
  */
-void CPUZ80::adc(unsigned char &dest, unsigned char value) {
-// TODO: Implement this
+void CPUZ80::add8Bit(unsigned char &dest, unsigned char value) {
+    unsigned char originalValue = dest;
+    dest+=value;
+    handleArithmeticFlags(originalValue, dest, false);
 }
 
 /**
@@ -42,8 +44,19 @@ void CPUZ80::adc(unsigned char &dest, unsigned char value) {
  * @param dest  [Destination (Usually register A)]
  * @param value [Value to subtract with what is stored in dest]
  */
-void CPUZ80::sbc(unsigned char &dest, unsigned char value) {
-// TODO: Implement this
+void CPUZ80::sub8Bit(unsigned char &dest, unsigned char value) {
+    unsigned char originalValue = dest;
+    dest-=value;
+    handleArithmeticFlags(originalValue, dest, true);
+}
+
+void CPUZ80::handleArithmeticFlags(unsigned char originalValue, unsigned char newValue, bool subtraction) {
+    setFlag(CPUFlag::zero, newValue == 0);
+    setFlag(CPUFlag::overflow, newValue < originalValue);
+    setFlag(CPUFlag::subtract, subtraction);
+    setFlag(CPUFlag::halfCarry, !(originalValue & 0x0F));
+    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
+    setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
 }
 
 void CPUZ80::setInterruptMode(int mode) {

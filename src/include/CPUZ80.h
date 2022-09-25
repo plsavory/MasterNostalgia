@@ -4,7 +4,7 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
-enum cpuState {
+enum CPUState {
     Halt, Running, Error, Step
 };
 
@@ -39,7 +39,7 @@ enum CPUFlag : unsigned char {
 };
 
 // Force these variables to use the same memory space - a handy way of emulating the CPU registers.
-union cpuRegister {
+union CPURegister {
     unsigned short whole;
 
     struct {
@@ -58,15 +58,15 @@ public:
 
     int execute();
 
-    cpuState getState() {
+    CPUState getState() {
         return this->state;
     }
 
 private:
     unsigned short programCounter;
     unsigned short stackPointer;
-    cpuRegister gpRegisters[10]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
-    cpuState state;
+    CPURegister gpRegisters[10]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
+    CPUState state;
 
     void extendedOpcodes(unsigned char opcode);
 
@@ -78,6 +78,7 @@ private:
     unsigned char NB();
 
     int interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
+
     void logCPUState(unsigned char opcode, std::string prefix);
 
     void jpCondition(JPCondition condition, unsigned char location);
@@ -87,30 +88,24 @@ private:
     // Instruction handler functions
     void ldReg8(unsigned char &dest, unsigned char value);
 
-    void ldReg16(cpuRegister &dest, unsigned short value);
+    void ldReg16(CPURegister &dest, unsigned short value);
 
-    void adc(unsigned char &dest, unsigned char value);
+    void add8Bit(unsigned char &dest, unsigned char value);
 
-    void sbc(unsigned char &dest, unsigned char value);
+    void sub8Bit(unsigned char &dest, unsigned char value);
 
     void setInterruptMode(int mode);
 
     void exclusiveOr(unsigned char value);
+
+    void inc16Bit(unsigned short &target);
 
     // To make flag handling easier and to prevent repetitive typing
     void setFlag(CPUFlag flag, bool value);
 
     bool getFlag(CPUFlag flag);
 
-    void handleZeroFlag(unsigned char value);
-
-    void handleSignFlag(unsigned char value);
-
-    void handleOverflowFlag(unsigned short value);
-
-    void handleCarryFlag(unsigned short value);
-
-    void handleHalfCarryFlag(unsigned char value);
+    void handleArithmeticFlags(unsigned char originalValue, unsigned char newValue, bool subtraction);
 
     // Memory management
     unsigned short build16BitAddress();

@@ -16,6 +16,8 @@ CPUZ80::CPUZ80(Memory *smsMemory) {
     // Store a pointer to the memory object
     memory = smsMemory;
 
+    cyclesTaken = 0;
+
     // Reset the CPU to its initial state
     reset();
 }
@@ -36,12 +38,12 @@ void CPUZ80::reset() {
         gpRegisters[i].whole = 0x0;
     }
 
-    state = cpuState::Running;
+    state = CPUState::Running;
 }
 
 int CPUZ80::execute() {
     // This function may be redundant - TODO: Call executeOpcode directly from MasterSystem class if this turns out to be the case in the future.
-    if (state == cpuState::Running) {
+    if (state == CPUState::Running) {
         executeOpcode();
     }
 
@@ -51,6 +53,7 @@ int CPUZ80::execute() {
 void CPUZ80::executeOpcode() {
     unsigned char opcode = NB();
     unsigned char upperOpcode; // Use for 2-byte instructions
+    cyclesTaken = 0;
 
 #ifdef VERBOSE_MODE
     std::string prefix = "";
@@ -58,6 +61,54 @@ void CPUZ80::executeOpcode() {
 #endif
 
     switch (opcode) {
+        case 0x30:
+            // inc bc
+            inc16Bit(gpRegisters[cpuReg::BC].whole);
+            cyclesTaken = 6;
+            break;
+        case 0x31:
+            // inc de
+            inc16Bit(gpRegisters[cpuReg::DE].whole);
+            cyclesTaken = 6;
+            break;
+        case 0x32:
+            // inc hl
+            inc16Bit(gpRegisters[cpuReg::HL].whole);
+            cyclesTaken = 6;
+            break;
+        case 0x33:
+            // inc sp
+            inc16Bit(stackPointer);
+            cyclesTaken = 6;
+            break;
+        case 0x34:
+            // ld b, e
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x35:
+            // ld d, e
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
+            break;
+        case 0x36:
+            // ld h, e
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].lo);
+            break;
+        case 0x37:
+            // ld (hl), e
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 7;
+            break;
+        case 0x38:
+            // add a, e
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x39:
+            // sub e
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
         case 0xAE: // XOR (hl)
             break;
         case 0xC3: // JP (nn)
@@ -77,18 +128,15 @@ void CPUZ80::executeOpcode() {
 
             break;
         default:
-            state = cpuState::Error;
+            state = CPUState::Error;
 
-#ifdef VERBOSE_MODE
             std::cout << "Error: Unknown opcode: 0x" << std::hex << (int) opcode << "-  At PC: 0x"
                       << (int) programCounter << std::endl;
-#endif
-
             break;
     }
 
 #ifdef VERBOSE_MODE
-    if (state != cpuState::Error)
+    if (state != CPUState::Error)
         logCPUState(displayOpcode, prefix);
 #endif
 }
@@ -134,7 +182,7 @@ void CPUZ80::extendedOpcodes(unsigned char opcode) {
             setInterruptMode(2);
             break;
         default:
-            state = cpuState::Error;
+            state = CPUState::Error;
 
 #ifdef VERBOSE_MODE
             std::cout << "Error: Unknown extended opcode: 0x" << std::hex << (int) opcode << std::endl;
@@ -200,43 +248,7 @@ unsigned char CPUZ80::getIndirectValue(unsigned short address) {
     return memory->read(address);
 }
 
-/**
- * [CPUZ80::handleSignFlag Set the sign flag if value could be interpreted as negative (If the most significant bit of the value is set)]
- * @param value [The value to operate on]
- */
-void CPUZ80::handleSignFlag(unsigned char value) {
-    setFlag(CPUFlag::sign, value > 0x7F);
+void CPUZ80::inc16Bit(unsigned short &target) {
+    ++target;
 }
 
-/**
- * [CPUZ80::handleZeroFlag Set the zero flag if the value is zero]
- * @param value [The value to operate on]
- */
-void CPUZ80::handleZeroFlag(unsigned char value) {
-    setFlag(CPUFlag::zero, value == 0x0);
-}
-
-/**
- * [CPUZ80::handleOverflowFlag Sets the overflow flag if the given number can't fit in the register]
- * @param value [The value to operate on]
- */
-void CPUZ80::handleOverflowFlag(unsigned short value) {
-    // TODO: Handle this properly
-    setFlag(CPUFlag::overflow, value > 0xFF);
-}
-
-/**
- * [CPUZ80::handleCarryFlag Sets the overflow flag if the given number can't fit in the register]
- * @param value [The value to operate on]
- */
-void CPUZ80::handleCarryFlag(unsigned short value) {
-    setFlag(CPUFlag::carry, value > 0xFF);
-}
-
-/**
- * [CPUZ80::handleCarryFlag Sets the overflow flag if the given number can't fit in the register]
- * @param value [The value to operate on]
- */
-void CPUZ80::handleHalfCarryFlag(unsigned char value) {
-    setFlag(CPUFlag::halfCarry, value > 0xF);
-}

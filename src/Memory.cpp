@@ -26,23 +26,21 @@ Memory::Memory(Cartridge *cart) {
     }
 
     // Clear RAM banks
-    for (int bank = 0; bank < 2; bank++) {
-        for (int i = 0; i < 0x4000; i++) {
-            ramBank[bank][i] = 0x0;
+    for (auto &bank: ramBank) {
+        for (unsigned char &i: bank) {
+            i = 0x0;
         }
     }
 
-    for (int i = 0; i < 3; i++) {
-        memoryPages[i] = 0x0;
+    for (unsigned short &memoryPage: memoryPages) {
+        memoryPage = 0x0;
     }
 
     ramBanked = false;
     currentRamBank = 0;
 }
 
-Memory::~Memory() {
-
-}
+Memory::~Memory() = default;
 
 /**
  * [read Read from system memory]
@@ -57,20 +55,24 @@ unsigned char Memory::read(unsigned short location) {
         // Page 1
         unsigned short address = location + (0x4000 * memoryPages[0]);
         return smsCartridge->read(address);
-    } else if (location < 0x8000) {
+    }
+
+    if (location < 0x8000) {
         // Page 2
         unsigned short address = location + (0x4000 * memoryPages[1]);
         address -= 0x4000; // Remove offset
         return smsCartridge->read(address);
-    } else if (location < 0xC000) {
+    }
+
+    if (location < 0xC000) {
         // Page 3 (or extra RAM)
         if (ramBanked) {
             return ramBank[currentRamBank][location - 0x8000];
-        } else {
-            unsigned short address = location + (0x4000 * memoryPages[2]);
-            address -= 0x8000;
-            return smsCartridge->read(address);
         }
+
+        unsigned short address = location + (0x4000 * memoryPages[2]);
+        address -= 0x8000;
+        return smsCartridge->read(address);
     }
 
     return ram[location];
@@ -82,34 +84,41 @@ unsigned char Memory::read(unsigned short location) {
  * @param value    [The byte to write]
  */
 void Memory::write(unsigned short location, unsigned char value) {
-    if (smsCartridge->isCodemasters()) {
-        if (location == 0x0 || location == 0x4000 || location == 0x8000) {
-            memoryPage(true, location, value);
-        }
+    if (smsCartridge->isCodemasters() && (location == 0x0 || location == 0x4000 || location == 0x8000)) {
+        memoryPage(true, location, value);
     }
 
     if (location < 0x8000) {
         // Attempting to write to ROM, disallow this...
         return;
-    } else if (location < 0xC000) {
+    }
+
+    if (location < 0xC000) {
         // Allow a write if RAM is banked into this address range
-        if (ramBanked) {
-            ramBank[currentRamBank][location - 0x8000] = value;
-        } else {
+        if (!ramBanked) {
             return;
         }
+
+        ramBank[currentRamBank][location - 0x8000] = value;
     }
 
     // If we've reached this point, it's all good to write to RAM
     ram[location] = value;
 
+    if (location >= 0xFFFC) {
+        memoryPage(false, location, value);
+        return;
+    }
+
     // Handle mirrored addresses
     if (location >= 0xC000 && location < 0xDFFC) {
         ram[location - 0x2000] = value;
+        return;
     }
 
     if (location >= 0xE000) {
         ram[location - 0x2000] = value;
+        return;
     }
 
 }
@@ -119,24 +128,7 @@ void Memory::write(unsigned short location, unsigned char value) {
  * @param Codemasters [Whether the game is codemasters or not]
  */
 void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char value) {
-    if (Codemasters) {
-        unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
-
-        switch (location) {
-            case 0x0:
-                memoryPages[0] = page;
-                break;
-            case 0x4000:
-                memoryPages[1] = page;
-                break;
-            case 0x8000:
-                memoryPages[2] = page;
-                break;
-            default:
-                break;
-        }
-
-    } else {
+    if (!Codemasters) {
         unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
 
         switch (location) {
@@ -166,5 +158,23 @@ void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char
             default:
                 break;
         }
+
+        return;
+    }
+
+    unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
+
+    switch (location) {
+        case 0x0:
+            memoryPages[0] = page;
+            break;
+        case 0x4000:
+            memoryPages[1] = page;
+            break;
+        case 0x8000:
+            memoryPages[2] = page;
+            break;
+        default:
+            break;
     }
 }

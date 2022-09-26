@@ -31,11 +31,13 @@ void CPUZ80::reset() {
     std::cout << "Resetting CPU..." << std::endl;
 #endif
 
-    programCounter = 0x0; // TODO: Give this the real value of the entry point of the Z80 binaries when I actually learn what that is.
+    originalProgramCounterValue = programCounter = 0x0;
     stackPointer = 0xDFF0;
+    iff1 = iff2 = true;
+    enableInterrupts = false;
 
-    for (int i = 0; i < 10; i++) {
-        gpRegisters[i].whole = 0x0;
+    for (auto & gpRegister : gpRegisters) {
+        gpRegister.whole = 0x0;
     }
 
     state = CPUState::Running;
@@ -44,13 +46,14 @@ void CPUZ80::reset() {
 int CPUZ80::execute() {
     // This function may be redundant - TODO: Call executeOpcode directly from MasterSystem class if this turns out to be the case in the future.
     if (state == CPUState::Running) {
-        executeOpcode();
+        return executeOpcode();
     }
 
     return 0;
 }
 
-void CPUZ80::executeOpcode() {
+int CPUZ80::executeOpcode() {
+    originalProgramCounterValue = programCounter;
     unsigned char opcode = NB();
     unsigned char upperOpcode; // Use for 2-byte instructions
     cyclesTaken = 0;
@@ -60,62 +63,107 @@ void CPUZ80::executeOpcode() {
     unsigned char displayOpcode = opcode;
 #endif
 
+    if (enableInterrupts) {
+        iff1 = iff2 = true;
+        enableInterrupts = false;
+    }
+
     switch (opcode) {
-        case 0x30:
+        case 0x0:
+            // nop
+            cyclesTaken = 4;
+            break;
+        case 0x03:
             // inc bc
             inc16Bit(gpRegisters[cpuReg::BC].whole);
             cyclesTaken = 6;
             break;
-        case 0x31:
+        case 0x13:
             // inc de
             inc16Bit(gpRegisters[cpuReg::DE].whole);
             cyclesTaken = 6;
             break;
-        case 0x32:
+        case 0x23:
             // inc hl
             inc16Bit(gpRegisters[cpuReg::HL].whole);
             cyclesTaken = 6;
+            break;
+        case 0x31:
+            // ld sp, nn
+            ldReg16(stackPointer, build16BitNumber(), false);
+            cyclesTaken = 10;
+            break;
+        case 0x32:
+            // ld (nn), a
+            memory->write(build16BitNumber(), gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 13;
             break;
         case 0x33:
             // inc sp
             inc16Bit(stackPointer);
             cyclesTaken = 6;
             break;
-        case 0x34:
+        case 0x3C:
+            // inc a
+            inc8Bit(gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+             break;
+        case 0x3E:
+            // ld a, n
+            ldReg8(gpRegisters[cpuReg::AF].hi, NB());
+            cyclesTaken = 7;
+            break;
+        case 0x43:
             // ld b, e
             ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
-        case 0x35:
+        case 0x53:
             // ld d, e
             ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
             break;
-        case 0x36:
+        case 0x63:
             // ld h, e
             ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].lo);
             break;
-        case 0x37:
+        case 0x73:
             // ld (hl), e
             memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 7;
             break;
-        case 0x38:
+        case 0x83:
             // add a, e
             add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
-        case 0x39:
+        case 0x93:
             // sub e
             sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
-        case 0xAE: // XOR (hl)
+        case 0xA3:
+            // and e
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
             break;
-        case 0xC3: // JP (nn)
-            jpImm();
+        case 0xB3:
+            // or e
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
             break;
         case 0xC2:
             jpCondition(JPCondition::NZ, NB());
+            cyclesTaken = 10;
+            break;
+        case 0xC3:
+            // jp nn
+            jpImm();
+            cyclesTaken = 10;
+            break;
+        case 0xDB:
+            // in a, (n)
+            ldReg8(gpRegisters[cpuReg::AF].hi, readIOPort(NB()));
+            cyclesTaken = 11;
             break;
         case 0xED:
             upperOpcode = NB();
@@ -127,11 +175,21 @@ void CPUZ80::executeOpcode() {
 #endif
 
             break;
+        case 0xF3:
+            // di
+            iff1 = iff2 = false;
+            cyclesTaken = 4;
+            break;
+        case 0xFB:
+            // ei
+            enableInterrupts = true; // Interrupts should be re-enabled when executing the next instruction
+            cyclesTaken = 4;
+            break;
         default:
             state = CPUState::Error;
 
             std::cout << "Error: Unknown opcode: 0x" << std::hex << (int) opcode << "-  At PC: 0x"
-                      << (int) programCounter << std::endl;
+                      << (int) originalProgramCounterValue << std::endl;
             break;
     }
 
@@ -139,6 +197,8 @@ void CPUZ80::executeOpcode() {
     if (state != CPUState::Error)
         logCPUState(displayOpcode, prefix);
 #endif
+
+    return cyclesTaken;
 }
 
 /**
@@ -146,7 +206,7 @@ void CPUZ80::executeOpcode() {
  * @return [description]
  */
 unsigned char CPUZ80::NB() {
-    return memory->read(++programCounter);
+    return memory->read(programCounter++);
 }
 
 /**
@@ -156,29 +216,14 @@ void CPUZ80::extendedOpcodes(unsigned char opcode) {
 
     switch (opcode) {
         case 0x46:
+            // im 0
             setInterruptMode(0);
             break;
-        case 0x4E:
-            setInterruptMode(
-                    0); // TODO: Confirm whether this is correct, seems to be an instruction with undefined behaviour.
-            break;
         case 0x56:
+            // im 1
             setInterruptMode(1);
             break;
         case 0x5E:
-            setInterruptMode(2);
-            break;
-        case 0x66:
-            setInterruptMode(0);
-            break;
-        case 0x6E:
-            setInterruptMode(
-                    0); // TODO: Confirm whether this is correct, seems to be an instruction with undefined behaviour.
-            break;
-        case 0x76:
-            setInterruptMode(1);
-            break;
-        case 0x7E:
             setInterruptMode(2);
             break;
         default:
@@ -196,36 +241,26 @@ void CPUZ80::extendedOpcodes(unsigned char opcode) {
  * [logCPUState Log the CPU's current state to the console]
  */
 void CPUZ80::logCPUState(unsigned char opcode, std::string prefix) {
-    std::cout << std::uppercase << "PC: 0x" << std::hex << (int) programCounter << " Opcode: 0x" << prefix
+    std::cout << std::uppercase << "PC: 0x" << std::hex << (int) originalProgramCounterValue << " Opcode: 0x" << prefix
               << (int) opcode << " Registers: AF=0x" << (int) gpRegisters[cpuReg::AF].whole << " BC=0x"
               << (int) gpRegisters[cpuReg::BC].whole << " DE=0x" << (int) gpRegisters[cpuReg::DE].whole << " HL=0x"
               << (int) gpRegisters[cpuReg::HL].whole << " IX=0x" << (int) gpRegisters[cpuReg::rIX].whole << " IY=0x"
-              << (int) gpRegisters[cpuReg::rIY].whole << std::endl;
+              << (int) gpRegisters[cpuReg::rIY].whole << " SP=0x" << (int) stackPointer << std::endl;
 }
 
-/**
- * [CPUZ80::setFlag Sets a flag - Definitely redundant... just saves me some extra typing]
- * @param flag  [The flag to set a value on]
- * @param value [The value to set on the flag]
- */
 void CPUZ80::setFlag(CPUFlag flag, bool value) {
     Utils::setBit(flag, value, gpRegisters[cpuReg::AF].lo);
 }
 
-/**
- * [CPUZ80::getFlag Gets a flag - Definitely redundant... just saves me some extra typing]
- * @param  flag [The flag to get the value of]
- * @return      [The value of the flag]
- */
 bool CPUZ80::getFlag(CPUFlag flag) {
     return Utils::testBit(flag, gpRegisters[cpuReg::AF].lo);
 }
 
 /**
- * [CPUZ80::build16BitAddress When called, increments the pc by 4 and builds a 16-bit memory address]
+ * [CPUZ80::build16BitAddress When called, increments the pc by 4 and builds a 16-bit number]
  * @return [The memory address]
  */
-unsigned short CPUZ80::build16BitAddress() {
+unsigned short CPUZ80::build16BitNumber() {
     unsigned char addrLo = NB();
     unsigned char addrHi = NB();
 
@@ -237,7 +272,7 @@ unsigned short CPUZ80::build16BitAddress() {
  * @return [description]
  */
 unsigned char CPUZ80::getIndirectValue() {
-    return memory->read(build16BitAddress());
+    return memory->read(build16BitNumber());
 }
 
 /**
@@ -248,7 +283,56 @@ unsigned char CPUZ80::getIndirectValue(unsigned short address) {
     return memory->read(address);
 }
 
-void CPUZ80::inc16Bit(unsigned short &target) {
-    ++target;
+void CPUZ80::writeIOPort(unsigned char address, unsigned char value) {
+
+    // TODO handle the Game Gear I/O port map if I ever add support for it
+
+    if (address <= 0x3F) {
+        // TODO even address - write to memory control register
+        // TODO odd address - write to I/O control register
+        return;
+    }
+
+    if (address <= 0x7F) {
+        // TODO - write to SN76489 PSG
+        return;
+    }
+
+    if (address <= 0xBF) {
+        // TODO even address - write to VDP data port
+        // TODO odd address - write to VDP control port
+        return;
+    }
+
+    // TODO even address - return I/O port A/B register
+    // TODO odd address - return I/O port B/misc register
+
 }
 
+unsigned char CPUZ80::readIOPort(unsigned char address) {
+
+    // TODO handle the Game Gear I/O port map if I ever add support for it
+
+    if (address <= 0x3F) {
+        // Return the last byte of the instruction which read the port
+        // TODO or 0xFF if emulating Master System 2
+        return address;
+    }
+
+    if (address <= 0x7F) {
+        // TODO even address - return SN76489 PSG V counter
+        // TODO odd address - return SN76489 PSG H counter
+        return 0x0;
+    }
+
+    if (address <= 0xBF) {
+        // TODO even address - return VDP data port contents
+        // TODO odd address - return VDP status flags
+        return 0x0;
+    }
+
+    // TODO even address - return I/O port A/B register
+    // TODO odd address - return I/O port B/misc register
+    return 0x0;
+
+}

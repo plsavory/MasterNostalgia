@@ -64,20 +64,28 @@ public:
 
 private:
     unsigned short programCounter;
+    unsigned char originalProgramCounterValue;
     unsigned short stackPointer;
     CPURegister gpRegisters[10]; // General purpose CPU registers TODO: Handle shadow register updating each cycle
     CPUState state;
+    unsigned short registerI;
+    unsigned short RegisterR;
+
+    // Interrupt flip flops
+    bool iff1;
+    bool iff2;
+    bool enableInterrupts;
 
     void extendedOpcodes(unsigned char opcode);
 
-    void executeOpcode();
+    int executeOpcode();
 
     Memory *memory;
     int cyclesTaken;
 
     unsigned char NB();
 
-    int interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
+    unsigned char interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
 
     void logCPUState(unsigned char opcode, std::string prefix);
 
@@ -88,17 +96,23 @@ private:
     // Instruction handler functions
     void ldReg8(unsigned char &dest, unsigned char value);
 
-    void ldReg16(CPURegister &dest, unsigned short value);
+    void ldReg16(unsigned short &dest, unsigned short value, bool modifyFlags);
 
     void add8Bit(unsigned char &dest, unsigned char value);
 
     void sub8Bit(unsigned char &dest, unsigned char value);
 
-    void setInterruptMode(int mode);
+    void and8Bit(unsigned char &dest, unsigned char value);
+
+    void or8Bit(unsigned char &dest, unsigned char value);
+
+    void setInterruptMode(unsigned char mode);
 
     void exclusiveOr(unsigned char value);
 
     void inc16Bit(unsigned short &target);
+
+    void inc8Bit(unsigned char &target);
 
     // To make flag handling easier and to prevent repetitive typing
     void setFlag(CPUFlag flag, bool value);
@@ -108,9 +122,14 @@ private:
     void handleArithmeticFlags(unsigned char originalValue, unsigned char newValue, bool subtraction);
 
     // Memory management
-    unsigned short build16BitAddress();
+    unsigned short build16BitNumber();
 
     unsigned char getIndirectValue();
 
     unsigned char getIndirectValue(unsigned short address);
+
+    // IO
+    void writeIOPort(unsigned char address, unsigned char value);
+
+    unsigned char readIOPort(unsigned char address);
 };

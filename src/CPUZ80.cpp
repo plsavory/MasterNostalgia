@@ -53,40 +53,79 @@ int CPUZ80::execute() {
 }
 
 int CPUZ80::executeOpcode() {
+
+    cyclesTaken = 0;
     originalProgramCounterValue = programCounter;
+
+    // TODO handle interrupts
+    if (enableInterrupts) {
+        iff1 = iff2 = true;
+        enableInterrupts = false;
+    }
+
+    if (repeatLdir) {
+        ldir();
+        logCPUState(0xB0, "ED");
+        return cyclesTaken;
+    }
+
     unsigned char opcode = NB();
     unsigned char upperOpcode; // Use for 2-byte instructions
-    cyclesTaken = 0;
 
 #ifdef VERBOSE_MODE
     std::string prefix = "";
     unsigned char displayOpcode = opcode;
 #endif
 
-    if (enableInterrupts) {
-        iff1 = iff2 = true;
-        enableInterrupts = false;
-    }
-
     switch (opcode) {
         case 0x0:
             // nop
             cyclesTaken = 4;
+            break;
+        case 0x1:
+            // ld bc, nn
+            ldReg16(gpRegisters[cpuReg::BC].whole, build16BitNumber(), false);
+            cyclesTaken = 10;
             break;
         case 0x03:
             // inc bc
             inc16Bit(gpRegisters[cpuReg::BC].whole);
             cyclesTaken = 6;
             break;
+        case 0x11:
+            // ld de, nn
+            ldReg16(gpRegisters[cpuReg::DE].whole, build16BitNumber(), false);
+            cyclesTaken = 10;
+            break;
         case 0x13:
             // inc de
             inc16Bit(gpRegisters[cpuReg::DE].whole);
             cyclesTaken = 6;
             break;
+        case 0x1E:
+            // ld e, n
+            ldReg8(gpRegisters[cpuReg::DE].lo, NB());
+            cyclesTaken = 7;
+            break;
+        case 0x20:
+            // jr nz, d
+            jrCondition(JPCondition::NZ, programCounter, NB());
+            cyclesTaken = 12; // /7, TODO not sure what the /7 bit is yet though.
+            break;
+        case 0x21:
+            // ld hl, nn
+            ldReg16(gpRegisters[cpuReg::HL].whole, build16BitNumber(), false);
+            cyclesTaken = 10;
+            break;
         case 0x23:
             // inc hl
             inc16Bit(gpRegisters[cpuReg::HL].whole);
             cyclesTaken = 6;
+            break;
+        case 0x30:
+            // jr nc, d
+            jrCondition(JPCondition::NC, programCounter, NB());
+            cyclesTaken = 12; // /7, TODO not sure what the /7 bit is yet though.
             break;
         case 0x31:
             // ld sp, nn
@@ -103,6 +142,11 @@ int CPUZ80::executeOpcode() {
             inc16Bit(stackPointer);
             cyclesTaken = 6;
             break;
+        case 0x36:
+            // ld (hl), n
+            memory->write(gpRegisters[cpuReg::HL].whole, NB());
+            cyclesTaken = 10;
+            break;
         case 0x3C:
             // inc a
             inc8Bit(gpRegisters[cpuReg::AF].hi);
@@ -113,14 +157,89 @@ int CPUZ80::executeOpcode() {
             ldReg8(gpRegisters[cpuReg::AF].hi, NB());
             cyclesTaken = 7;
             break;
+        case 0x40:
+            // ld b, b (Why does this even exist?)
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x41:
+            // ld b, c
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+        case 0x42:
+            // ld b, d
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
         case 0x43:
             // ld b, e
             ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
+        case 0x44:
+            // ld b, h
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x45:
+            // ld b, l
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x46:
+            // ld b, (hl)
+            ldReg8(gpRegisters[cpuReg::BC].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x47:
+            // ld b, a
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x48:
+            // ld c, b
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x49:
+            // ld c, c
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x4A:
+            // ld c, d
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x4B:
+            // ld c, e
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x4C:
+            // ld c, h
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x4D:
+            // ld c, l
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x4E:
+            // ld c, (hl)
+            ldReg8(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x4F:
+            // ld c, a
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
         case 0x53:
             // ld d, e
             ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
             break;
         case 0x63:
             // ld h, e
@@ -160,10 +279,26 @@ int CPUZ80::executeOpcode() {
             jpImm();
             cyclesTaken = 10;
             break;
+        case 0xCC:
+            // call z, nn
+            call(build16BitNumber(), getFlag(CPUFlag::zero));
+            break;
+        case 0xCD:
+            // call nn
+            call(build16BitNumber());
+            break;
+        case 0xDC:
+            // call c, nn
+            call(build16BitNumber(), getFlag(CPUFlag::carry));
+            break;
         case 0xDB:
             // in a, (n)
             ldReg8(gpRegisters[cpuReg::AF].hi, readIOPort(NB()));
             cyclesTaken = 11;
+            break;
+        case 0xEC:
+            // call pe, nn
+            call(build16BitNumber(), getFlag(CPUFlag::overflow));
             break;
         case 0xED:
             upperOpcode = NB();
@@ -184,6 +319,11 @@ int CPUZ80::executeOpcode() {
             // ei
             enableInterrupts = true; // Interrupts should be re-enabled when executing the next instruction
             cyclesTaken = 4;
+            break;
+        case 0xFE:
+            // cp n
+            compare8Bit(NB());
+            cyclesTaken = 7;
             break;
         default:
             state = CPUState::Error;
@@ -225,6 +365,10 @@ void CPUZ80::extendedOpcodes(unsigned char opcode) {
             break;
         case 0x5E:
             setInterruptMode(2);
+            break;
+        case 0xB0:
+            // ldir
+            ldir();
             break;
         default:
             state = CPUState::Error;
@@ -335,4 +479,52 @@ unsigned char CPUZ80::readIOPort(unsigned char address) {
     // TODO odd address - return I/O port B/misc register
     return 0x0;
 
+}
+
+/**
+ * Returns true if the given jump condition is met
+ * @param condition
+ * @return
+ */
+bool CPUZ80::hasMetJumpCondition(JPCondition condition) {
+    switch (condition) {
+        case JPCondition::NZ:
+            return !getFlag(CPUFlag::zero);
+        case JPCondition::Z:
+            return getFlag(CPUFlag::zero);
+        case JPCondition::NC:
+            return !getFlag(CPUFlag::carry);
+        case JPCondition::C:
+            return getFlag(CPUFlag::carry);
+        case JPCondition::PO:
+            return !getFlag(CPUFlag::overflow);
+        case JPCondition::PE:
+            return getFlag(CPUFlag::overflow);
+        case JPCondition::P:
+            return !getFlag(CPUFlag::sign);
+        case JPCondition::M:
+            return getFlag(CPUFlag::sign);
+        default:
+            std::cout<<"Unhandled jump condition"<<std::endl;
+            throw std::exception(); // TODO build a custom exception class for storing and displaying error messages
+    }
+}
+
+void CPUZ80::pushStack(unsigned char value) {
+    memory->write(stackPointer--, value);
+}
+
+void CPUZ80::pushStack(unsigned short value) {
+    unsigned char hi = value >> 8;
+    unsigned char lo = value & 0x00FF;
+    pushStack(hi);
+    pushStack(lo);
+}
+
+unsigned char CPUZ80::popStack() {
+    return memory->read(++stackPointer);
+}
+
+unsigned short CPUZ80::popStack16() {
+    return (popStack() + (popStack()<<8));
 }

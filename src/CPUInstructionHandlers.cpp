@@ -37,25 +37,35 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value, bool modifyFlag
 }
 
 /**
- * [cpuZ80::adc ADC opcode handler]
+ * [cpuZ80::add ADD opcode handler]
  * @param dest  [Destination (Usually register A)]
  * @param value [Value to add with what is stored in dest]
  */
 void CPUZ80::add8Bit(unsigned char &dest, unsigned char value) {
     unsigned char originalValue = dest;
     dest+=value;
-    handleArithmeticFlags(originalValue, dest, false);
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::overflow, dest < originalValue);
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
+    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
 }
 
 /**
- * [cpuZ80::sbc SBC opcode handler]
+ * [cpuZ80::sub sub opcode handler]
  * @param dest  [Destination (Usually register A)]
  * @param value [Value to subtract with what is stored in dest]
  */
 void CPUZ80::sub8Bit(unsigned char &dest, unsigned char value) {
     unsigned char originalValue = dest;
     dest-=value;
-    handleArithmeticFlags(originalValue, dest, true);
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::overflow, dest < originalValue);
+    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
+    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
 }
 
 void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
@@ -78,15 +88,6 @@ void CPUZ80::or8Bit(unsigned char &dest, unsigned char value) {
     setFlag(CPUFlag::overflow, (dest % 2) == 0);
 }
 
-void CPUZ80::handleArithmeticFlags(unsigned char originalValue, unsigned char newValue, bool subtraction) {
-    setFlag(CPUFlag::zero, newValue == 0);
-    setFlag(CPUFlag::overflow, newValue < originalValue);
-    setFlag(CPUFlag::subtract, subtraction);
-    setFlag(CPUFlag::halfCarry, !(originalValue & 0x0F));
-    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
-    setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
-}
-
 void CPUZ80::setInterruptMode(unsigned char mode) {
     interruptMode = mode;
     cyclesTaken = 8; // All im operations (as far as I know) take 8 cycles
@@ -99,46 +100,23 @@ void CPUZ80::setInterruptMode(unsigned char mode) {
  */
 void CPUZ80::jpCondition(JPCondition condition, unsigned char location) {
 
-    bool conditionMet = false;
-
-    switch (condition) {
-        case JPCondition::NZ:
-            conditionMet = !getFlag(CPUFlag::zero);
-            break;
-        case JPCondition::Z:
-            conditionMet = getFlag(CPUFlag::zero);
-            break;
-        case JPCondition::NC:
-            conditionMet = !getFlag(CPUFlag::carry);
-            break;
-        case JPCondition::C:
-            conditionMet = getFlag(CPUFlag::carry);
-            break;
-        case JPCondition::PO:
-            conditionMet = !getFlag(CPUFlag::overflow);
-            break;
-        case JPCondition::PE:
-            conditionMet = getFlag(CPUFlag::overflow);
-            break;
-        case JPCondition::P:
-            conditionMet = !getFlag(CPUFlag::sign);
-            break;
-        case JPCondition::M:
-            conditionMet = getFlag(CPUFlag::sign);
-            break;
-        default:
-            return;
+    if (!hasMetJumpCondition(condition)) {
+        return;
     }
 
     // Get the next two bytes in memory and build an address to jump to
-    unsigned short address = build16BitNumber();
-
-    // Only jump if the condition is met
-    if (conditionMet) {
-        programCounter = address;
-    }
+    programCounter = build16BitNumber();
 
     cyclesTaken = 10; // TODO: Ensure that this is the same for all conditional jump instructions
+}
+
+void CPUZ80::jrCondition(JPCondition condition, unsigned short from, unsigned char offset) {
+
+    if (!hasMetJumpCondition(condition)) {
+        return;
+    }
+
+    programCounter += static_cast<signed char>(offset);
 }
 
 /**
@@ -172,4 +150,48 @@ void CPUZ80::inc8Bit(unsigned char &target) {
     setFlag(CPUFlag::carry, !(originalValue & 0xFF));
     setFlag(CPUFlag::sign, Utils::testBit(7, target));
     setFlag(CPUFlag::zero, target == 0);
+}
+
+void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
+    unsigned char originalValue = gpRegisters[cpuReg::AF].hi;
+    unsigned char comparisonResult = gpRegisters[cpuReg::AF].hi - valueToSubtract;
+    setFlag(CPUFlag::zero, comparisonResult == 0);
+    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::carry, originalValue < valueToSubtract);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ comparisonResult ^ valueToSubtract) & 0x10);
+    setFlag(CPUFlag::carry, originalValue < valueToSubtract);
+    setFlag(CPUFlag::sign, Utils::testBit(7, comparisonResult));
+    setFlag(CPUFlag::overflow, false);
+}
+
+void CPUZ80::ldir() {
+    memory->write(gpRegisters[cpuReg::DE].whole++, memory->read(gpRegisters[cpuReg::HL].whole++));
+
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflow, false);
+    setFlag(CPUFlag::halfCarry, false);
+
+    if ((--gpRegisters[cpuReg::BC].whole) != 0) {
+        repeatLdir = true;
+        cyclesTaken = 21;
+        return;
+    }
+
+    repeatLdir = false;
+    cyclesTaken = 16;
+}
+
+void CPUZ80::call(unsigned short location, bool conditionMet) {
+    if (!conditionMet) {
+        cyclesTaken = 10;
+        return;
+    }
+
+    pushStack(programCounter);
+    programCounter = location;
+    cyclesTaken = 17;
+}
+
+void CPUZ80::call(unsigned short location) {
+    call(location, true);
 }

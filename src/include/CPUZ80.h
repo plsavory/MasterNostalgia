@@ -28,14 +28,14 @@ enum JPCondition {
 
 // TODO: Ensure that the bits are actually in the correct orientation with testing
 enum CPUFlag : unsigned char {
-    carry = 1 << 0,
-    subtract = 1 << 1,
-    overflow = 1 << 2,
-    unused2 = 1 << 3,
-    halfCarry = 1 << 4,
-    unused = 1 << 5,
-    zero = 1 << 6,
-    sign = 1 << 7
+    carry = 0,
+    subtract = 1,
+    overflow = 2,
+    unused2 = 3,
+    halfCarry = 4,
+    unused = 5,
+    zero = 6,
+    sign = 7
 };
 
 // Force these variables to use the same memory space - a handy way of emulating the CPU registers.
@@ -76,6 +76,8 @@ private:
     bool iff2;
     bool enableInterrupts;
 
+    bool repeatLdir;
+
     void extendedOpcodes(unsigned char opcode);
 
     int executeOpcode();
@@ -90,6 +92,8 @@ private:
     void logCPUState(unsigned char opcode, std::string prefix);
 
     void jpCondition(JPCondition condition, unsigned char location);
+
+    void jrCondition(JPCondition condition, unsigned short from, unsigned char offset);
 
     void jpImm();
 
@@ -114,12 +118,16 @@ private:
 
     void inc8Bit(unsigned char &target);
 
+    void compare8Bit(unsigned char valueToSubtract);
+
+    void call(unsigned short location);
+
+    void call(unsigned short location, bool conditionMet);
+
     // To make flag handling easier and to prevent repetitive typing
     void setFlag(CPUFlag flag, bool value);
 
     bool getFlag(CPUFlag flag);
-
-    void handleArithmeticFlags(unsigned char originalValue, unsigned char newValue, bool subtraction);
 
     // Memory management
     unsigned short build16BitNumber();
@@ -132,4 +140,18 @@ private:
     void writeIOPort(unsigned char address, unsigned char value);
 
     unsigned char readIOPort(unsigned char address);
+
+    bool hasMetJumpCondition(JPCondition condition);
+
+    void ldir();
+
+    // Stack
+    void pushStack(unsigned char value);
+
+    void pushStack(unsigned short value);
+
+    unsigned char popStack();
+
+    unsigned short popStack16();
+
 };

@@ -10,5 +10,7 @@ public:
 
     static std::string getVersionString(bool verboseString);
 
+    static std::string padString(const std::string &string, int length);
+
 private:
 };

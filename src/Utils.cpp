@@ -92,3 +92,7 @@ std::string Utils::getVersionString(bool verboseString) {
 
     return stringStream.str();
 }
+
+std::string Utils::padString(const std::string &string, int length) {
+    return string.length() >= length ? string : string + std::string(length - string.size(), ' ');
+}

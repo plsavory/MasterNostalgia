@@ -11,6 +11,7 @@ Licensed under the GPLv3 license.
 #include "Memory.h"
 #include "CPUZ80.h"
 #include "Utils.h"
+#include "Exceptions.h"
 
 CPUZ80::CPUZ80(Memory *smsMemory) {
     // Store a pointer to the memory object
@@ -58,10 +59,14 @@ int CPUZ80::executeOpcode() {
     originalProgramCounterValue = programCounter;
     executedInstructionName = "";
 
-    // TODO handle interrupts
+    // TODO handle interrupts - if the CPU is halted, make it active again when an interrupt occurs
     if (enableInterrupts) {
         iff1 = iff2 = true;
         enableInterrupts = false;
+    }
+
+    if (state == CPUState::Halt) {
+        return 4; // TODO not sure what to return here in terms of cycles taken, look into it - assume 4 for now
     }
 
     unsigned char opcode = NB();
@@ -550,20 +555,120 @@ int CPUZ80::executeOpcode() {
             ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 4;
             break;
+        case 0x60:
+            // ld h, b
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x61:
+            // ld h, c
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x62:
+            // ld h, d
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
         case 0x63:
             // ld h, e
             ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
+            break;
+        case 0x64:
+            // ld h, h
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x65:
+            // ld h, l
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x66:
+            // ld h, (hl)
+            ldReg8(gpRegisters[cpuReg::HL].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x67:
+            // ld h, a
+            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x68:
+            // ld l, b
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x69:
+            // ld l, c
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x6A:
+            // ld l, d
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x6B:
+            // ld l, e
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x6C:
+            // ld l, h
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x6D:
+            // ld l, l
+            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x6E:
+            // ld l, (hl)
+            ldReg8(gpRegisters[cpuReg::HL].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
             break;
         case 0x6F:
             // ld l, a
             ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 4;
             break;
+        case 0x70:
+            // ld (hl), b
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 7;
+            break;
+        case 0x71:
+            // ld (hl), c
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 7;
+            break;
+        case 0x72:
+            // ld (hl), d
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 7;
+            break;
         case 0x73:
             // ld (hl), e
             memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 7;
+            break;
+        case 0x74:
+            // ld (hl), h
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 7;
+            break;
+        case 0x75:
+            // ld (hl), l
+            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 7;
+            break;
+        case 0x76:
+            // halt
+            state = CPUState::Halt;
+            cyclesTaken = 4;
             break;
         case 0x77:
             // ld (hl), a
@@ -605,19 +710,104 @@ int CPUZ80::executeOpcode() {
             ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
+        case 0x7F:
+            // ld a, a
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
         case 0x80:
             // add a, b
             add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 7;
+            cyclesTaken = 4;
+            break;
+        case 0x81:
+            // add a, c
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x82:
+            // add a, d
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
             break;
         case 0x83:
             // add a, e
             add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
+        case 0x84:
+            // add a, h
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x85:
+            // add a, l
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x86:
+            // add a, (hl)
+            add8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
         case 0x87:
             // add a, a
             add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x88:
+            // adc a, b
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x89:
+            // adc a, c
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x8A:
+            // adc a, d
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x8B:
+            // adc a, e
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x8C:
+            // adc a, h
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x8D:
+            // adc a, l
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x8E:
+            // adc a, (hl)
+            adc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x8F:
+            // adc a, a
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x90:
+            // sub b
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x91:
+            // sub c
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x92:
+            // sub d
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
             cyclesTaken = 4;
             break;
         case 0x93:
@@ -625,9 +815,99 @@ int CPUZ80::executeOpcode() {
             sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
             break;
+        case 0x94:
+            // sub h
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x95:
+            // sub l
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x96:
+            // sub (hl)
+            sub8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x97:
+            // sub a
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x98:
+            // sbc a, b
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x99:
+            // sbc a, c
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x9A:
+            // sbc a, d
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x9B:
+            // sbc a, e
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x9C:
+            // sbc a, h
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0x9D:
+            // sbc a, l
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0x9E:
+            // sbc a, (hl)
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0x9F:
+            // sbc a, a
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xA0:
+            // and b
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xA1:
+            // and c
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xA2:
+            // and d
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
         case 0xA3:
             // and e
             and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xA4:
+            // and h
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xA5:
+            // and l
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xA6:
+            // and (hl)
+            and8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 4;
             break;
         case 0xA7:
@@ -635,9 +915,49 @@ int CPUZ80::executeOpcode() {
             and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 4;
             break;
+        case 0xA8:
+            // xor b
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xA9:
+            // xor c
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xAA:
+            // xor d
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xAB:
+            // xor e
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xAC:
+            // xor h
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xAD:
+            // xor l
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xAE:
+            // xor (hl)
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
         case 0xAF:
             // xor a
             exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xB0:
+            // or b
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
             cyclesTaken = 4;
             break;
         case 0xB1:
@@ -645,10 +965,70 @@ int CPUZ80::executeOpcode() {
             or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 4;
             break;
+        case 0xB2:
+            // or d
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
         case 0xB3:
             // or e
             or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 4;
+            break;
+        case 0xB4:
+            // or h
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xB5:
+            // or l
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xB6:
+            // or (hl)
+            or8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
+            break;
+        case 0xB7:
+            // or a
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xB8:
+            // cp b
+            compare8Bit(gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xB9:
+            // cp c
+            compare8Bit(gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xBA:
+            // cp d
+            compare8Bit(gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xBB:
+            // cp e
+            compare8Bit(gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xBC:
+            // cp h
+            compare8Bit(gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 4;
+            break;
+        case 0xBD:
+            // cp l
+            compare8Bit(gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 4;
+            break;
+        case 0xBF:
+            // cp (hl)
+            compare8Bit(memory->read(gpRegisters[cpuReg::HL].whole));
+            cyclesTaken = 7;
             break;
         case 0xC1:
             //pop bc
@@ -783,11 +1163,10 @@ int CPUZ80::executeOpcode() {
             cyclesTaken = 7;
             break;
         default:
-            state = CPUState::Error;
-
-            std::cout << "Error: Unknown opcode: 0x" << std::hex << (int) opcode << "-  At PC: 0x"
+            std::stringstream ss;
+            ss << "Unimplemented opcode: 0x" << std::hex << (int) opcode << "-  At PC: 0x"
                       << (int) originalProgramCounterValue << std::endl;
-            break;
+            throw Z80Exception(ss.str());
     }
 
     if (executedInstructionName.empty()) {
@@ -849,13 +1228,9 @@ void CPUZ80::extendedOpcodes(unsigned char opcode) {
             otir();
             break;
         default:
-            state = CPUState::Error;
-
-#ifdef VERBOSE_MODE
-            std::cout << "Error: Unknown extended opcode: 0x" << std::hex << (int) opcode << std::endl;
-#endif
-
-            break;
+            std::stringstream ss;
+            ss << "Unimplemented extended opcode: 0x" << std::hex << (int) opcode;
+            throw Z80Exception(ss.str());
     }
 
     if (executedInstructionName.empty()) {
@@ -888,11 +1263,9 @@ void CPUZ80::iyOpcodes(unsigned char opcode) {
             cyclesTaken = 14;
             break;
         default:
-            state = CPUState::Error;
-
-#ifdef VERBOSE_MODE
-            std::cout << "Error: Unknown iy opcode: 0x" << std::hex << (int) opcode << std::endl;
-#endif
+            std::stringstream ss;
+            ss << "Unimplemented iy opcode: 0x" << std::hex << (int) opcode << std::endl;
+            throw Z80Exception(ss.str());
 
             break;
     }
@@ -1027,8 +1400,7 @@ bool CPUZ80::hasMetJumpCondition(JPCondition condition) {
         case JPCondition::M:
             return getFlag(CPUFlag::sign);
         default:
-            std::cout<<"Unhandled jump condition"<<std::endl;
-            throw std::exception(); // TODO build a custom exception class for storing and displaying error messages
+            throw Z80Exception("Unhandled jump condition");
     }
 }
 

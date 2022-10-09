@@ -36,14 +36,9 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value, bool modifyFlag
     setFlag(CPUFlag::overflow, iff1 || iff2);
 }
 
-/**
- * [cpuZ80::add ADD opcode handler]
- * @param dest  [Destination (Usually register A)]
- * @param value [Value to add with what is stored in dest]
- */
-void CPUZ80::add8Bit(unsigned char &dest, unsigned char value) {
+void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
     unsigned char originalValue = dest;
-    dest+=value;
+    dest = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::overflow, dest < originalValue);
     setFlag(CPUFlag::subtract, false);
@@ -51,10 +46,22 @@ void CPUZ80::add8Bit(unsigned char &dest, unsigned char value) {
     setFlag(CPUFlag::carry, !(originalValue & 0xFF));
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
 }
+/**
+ * [cpuZ80::add ADD opcode handler]
+ * @param dest  [Destination (Usually register A)]
+ * @param value [Value to add with what is stored in dest]
+ */
+void CPUZ80::add8Bit(unsigned char &dest, unsigned char value) {
+    addAdc8Bit(dest, value, false);
+}
 
-void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
+void CPUZ80::adc8Bit(unsigned char &dest, unsigned char value) {
+    addAdc8Bit(dest, value, true);
+}
+
+void CPUZ80::addAdc16Bit(unsigned short &dest, unsigned short value, bool withCarry) {
     unsigned short originalValue = dest;
-    unsigned long result = dest + value;
+    unsigned long result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));;
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::subtract, false);
     setFlag(CPUFlag::halfCarry, (result & 0x0FFF + (result & 0x0FFF)) > 0x0FFF);
@@ -64,20 +71,36 @@ void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
     setFlag(CPUFlag::overflow, dest < originalValue);
 }
 
-/**
- * [cpuZ80::sub sub opcode handler]
- * @param dest  [Destination (Usually register A)]
- * @param value [Value to subtract with what is stored in dest]
- */
-void CPUZ80::sub8Bit(unsigned char &dest, unsigned char value) {
+void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
+    addAdc16Bit(dest, value, false);
+}
+
+void CPUZ80::adc16Bit(unsigned short &dest, unsigned short value) {
+    addAdc16Bit(dest, value, true);
+}
+
+void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
     unsigned char originalValue = dest;
-    dest-=value;
+    dest = dest - (value - (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::overflow, dest > originalValue);
     setFlag(CPUFlag::subtract, true);
     setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
     setFlag(CPUFlag::carry, !(originalValue & 0xFF));
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+}
+
+/**
+ * [cpuZ80::sub sub opcode handler]
+ * @param dest  [Destination (Usually register A)]
+ * @param value [Value to subtract with what is stored in dest]
+ */
+void CPUZ80::sub8Bit(unsigned char &dest, unsigned char value) {
+    subSbc8Bit(dest, value, false);
+}
+
+void CPUZ80::sbc8Bit(unsigned char &dest, unsigned char value) {
+    subSbc8Bit(dest, value, true);
 }
 
 void CPUZ80::dec8Bit(unsigned char &dest) {

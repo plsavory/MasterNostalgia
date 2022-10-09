@@ -109,11 +109,23 @@ private:
 
     void ldReg16(unsigned short &dest, unsigned short value, bool modifyFlags);
 
+    void addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry);
+
     void add8Bit(unsigned char &dest, unsigned char value);
+
+    void adc8Bit(unsigned char &dest, unsigned char value);
+
+    void addAdc16Bit(unsigned short &dest, unsigned short value, bool withCarry);
 
     void add16Bit(unsigned short &dest, unsigned short value);
 
+    void adc16Bit(unsigned short &dest, unsigned short value);
+
+    void subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry);
+
     void sub8Bit(unsigned char &dest, unsigned char value);
+
+    void sbc8Bit(unsigned char &dest, unsigned char value);
 
     void sbc16Bit(unsigned short &dest, unsigned short value);
 

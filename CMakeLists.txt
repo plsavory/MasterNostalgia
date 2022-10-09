@@ -42,7 +42,8 @@ add_executable(${EXECUTABLE_NAME}
         src/Utils.cpp
         src/VDP.cpp
         src/Z80InstructionNames.cpp
-        src/include/Z80InstructionNames.h)
+        src/include/Z80InstructionNames.h
+        src/include/Exceptions.h)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

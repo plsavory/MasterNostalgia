@@ -19,6 +19,19 @@ void CPUZ80::ldReg8(unsigned char &dest, unsigned char value) {
     dest = value;
 }
 
+void CPUZ80::ldReg8(unsigned char &dest, unsigned char value, bool modifyFlags) {
+    ldReg8(dest, value);
+
+    if (!modifyFlags) {
+        return;
+    }
+
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::halfCarry, false);
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+}
+
 /**
  * [cpuZ80::ldReg16 Load 16-bit value into destination register]
  * @param dest  [Reference to destination location]
@@ -34,6 +47,10 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value, bool modifyFlag
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::subtract, false);
     setFlag(CPUFlag::overflow, iff1 || iff2);
+}
+
+void CPUZ80::ldReg16(unsigned short &dest, unsigned short value) {
+    ldReg16(dest, value, false);
 }
 
 void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
@@ -182,6 +199,16 @@ void CPUZ80::jrCondition(JPCondition condition, unsigned char offset) {
     cyclesTaken = 12;
 }
 
+void CPUZ80::retCondition(JPCondition condition) {
+    if (!hasMetJumpCondition(condition)) {
+        cyclesTaken = 5;
+        return;
+    }
+
+    cyclesTaken = 11;
+    programCounter = popStack16();
+}
+
 void CPUZ80::jr(unsigned char offset) {
     programCounter = originalProgramCounterValue + static_cast<signed char>(offset);
     cyclesTaken = 12;
@@ -239,37 +266,103 @@ void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
     setFlag(CPUFlag::overflow, false);
 }
 
-void CPUZ80::ldir() {
+void CPUZ80::ini(bool increment) {
     // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    memory->write(gpRegisters[cpuReg::DE].whole++, memory->read(gpRegisters[cpuReg::HL].whole++));
+    memory->write(gpRegisters[cpuReg::HL].whole, readIOPort(gpRegisters[cpuReg::BC].lo));
 
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, false);
-    setFlag(CPUFlag::halfCarry, false);
-
-    if ((--gpRegisters[cpuReg::BC].whole) != 0) {
-        programCounter -= 2;
-        cyclesTaken = 21;
-        return;
-    }
-
-    cyclesTaken = 16;
-}
-
-void CPUZ80::otir() {
-    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    writeIOPort(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole++));
+    gpRegisters[cpuReg::HL].whole += increment ? 1 : -1;
 
     setFlag(CPUFlag::subtract, true);
     setFlag(CPUFlag::zero, true);
 
-    if ((--gpRegisters[cpuReg::BC].lo) != 0) {
-        programCounter -= 2;
-        cyclesTaken = 21;
+    cyclesTaken = 16;
+    --gpRegisters[cpuReg::BC].hi;
+}
+
+void CPUZ80::inir(bool increment) {
+
+    ini(increment);
+
+    if (gpRegisters[cpuReg::BC].hi == 0) {
         return;
     }
 
+    programCounter -= 2;
+    cyclesTaken = 21;
+}
+
+void CPUZ80::cpi(bool increment) {
+    compare8Bit(memory->read(gpRegisters[cpuReg::HL].whole));
+    --gpRegisters[cpuReg::BC].whole;
     cyclesTaken = 16;
+
+    gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
+}
+
+void CPUZ80::cpir(bool increment) {
+    cpi(increment);
+
+    if (gpRegisters[cpuReg::BC].whole == 0) {
+        return;
+    }
+
+    if (getFlag(CPUFlag::zero)) {
+        return;
+    }
+
+    cyclesTaken = 21;
+    programCounter -= 2;
+}
+
+void CPUZ80::ldi(bool increment) {
+    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
+    memory->write(gpRegisters[cpuReg::DE].whole, memory->read(gpRegisters[cpuReg::HL].whole));
+
+    unsigned short incrementValue = increment ? 1 : -1;
+    gpRegisters[cpuReg::DE].whole += incrementValue;
+    gpRegisters[cpuReg::HL].whole += incrementValue;
+
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflow, false);
+    setFlag(CPUFlag::halfCarry, false);
+    --gpRegisters[cpuReg::BC].whole;
+    cyclesTaken = 16;
+}
+
+void CPUZ80::ldir(bool increment) {
+
+    ldi(increment);
+
+    if (gpRegisters[cpuReg::BC].whole == 0) {
+        return;
+    }
+
+    programCounter -= 2;
+    cyclesTaken = 21;
+}
+
+void CPUZ80::outi(bool increment) {
+    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
+    writeIOPort(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+
+    gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
+
+    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::zero, true);
+    --gpRegisters[cpuReg::BC].hi;
+    cyclesTaken = 16;
+}
+
+void CPUZ80::otir(bool increment) {
+
+    outi(increment);
+
+    if (gpRegisters[cpuReg::BC].hi == 0) {
+        return;
+    }
+
+    programCounter -= 2;
+    cyclesTaken = 21;
 }
 
 void CPUZ80::call(unsigned short location, bool conditionMet) {
@@ -285,6 +378,16 @@ void CPUZ80::call(unsigned short location, bool conditionMet) {
 
 void CPUZ80::call(unsigned short location) {
     call(location, true);
+}
+
+void CPUZ80::callCondition(JPCondition condition) {
+    call(build16BitNumber(), hasMetJumpCondition(condition));
+}
+
+void CPUZ80::rst(unsigned short location) {
+    pushStack(programCounter);
+    programCounter = location;
+    cyclesTaken = 11;
 }
 
 void CPUZ80::store(unsigned short location, unsigned char hi, unsigned char lo) {
@@ -308,42 +411,101 @@ void CPUZ80::dec16Bit(unsigned short &target) {
     // TODO handle any flag changes that are required, so far it seems like this instruction never does though.
 }
 
-void CPUZ80::shiftLeft(unsigned char &dest, bool copyPreviousCarryFlagValue) {
+unsigned char CPUZ80::shiftLeft(unsigned char dest, ShiftBitToCopy copyMode) {
     bool previousCarryFlagValue = getFlag(CPUFlag::carry);
     bool bit7 = Utils::testBit(7, dest);
 
     setFlag(CPUFlag::carry, bit7);
     dest <<= 1;
-    Utils::setBit(0, copyPreviousCarryFlagValue ? previousCarryFlagValue : bit7, dest);
+
+    bool copyBitValue = false;
+
+    switch (copyMode) {
+        case ShiftBitToCopy::copyPreviousValue:
+            copyBitValue = bit7;
+            break;
+        case ShiftBitToCopy::copyCarryFlag:
+            copyBitValue = previousCarryFlagValue;
+            break;
+        case ShiftBitToCopy::copyNothing:
+        case ShiftBitToCopy::copyZero:
+            break;
+        case ShiftBitToCopy::copyOne:
+            copyBitValue = true;
+            break;
+    }
+
+    if (copyMode != ShiftBitToCopy::copyNothing) {
+        Utils::setBit(0, copyBitValue, dest);
+    }
     setFlag(CPUFlag::subtract, false);
     setFlag(CPUFlag::halfCarry, false);
+    return dest;
 }
 
-void CPUZ80::rlc(unsigned char &dest) {
-    shiftLeft(dest, false);
+unsigned char CPUZ80::rlc(unsigned char dest) {
+    return shiftLeft(dest, ShiftBitToCopy::copyPreviousValue);
 }
 
-void CPUZ80::rl(unsigned char &dest) {
-    shiftLeft(dest, true);
+unsigned char CPUZ80::rl(unsigned char dest) {
+    return shiftLeft(dest, ShiftBitToCopy::copyCarryFlag);
 }
 
-void CPUZ80::shiftRight(unsigned char &dest, bool copyPreviousCarryFlagValue) {
+unsigned char CPUZ80::sla(unsigned char dest) {
+    return shiftLeft(dest, ShiftBitToCopy::copyZero);
+}
+
+unsigned char CPUZ80::sll(unsigned char dest) {
+    return shiftLeft(dest, ShiftBitToCopy::copyOne);
+}
+
+unsigned char CPUZ80::shiftRight(unsigned char dest, ShiftBitToCopy copyMode) {
     bool previousCarryFlagValue = getFlag(CPUFlag::carry);
     bool bit0 = Utils::testBit(0, dest);
 
     setFlag(CPUFlag::carry, bit0);
     dest >>= 1;
-    Utils::setBit(7, copyPreviousCarryFlagValue ? previousCarryFlagValue : bit0, dest);
+
+    bool copyBitValue = false;
+
+    switch (copyMode) {
+        case ShiftBitToCopy::copyPreviousValue:
+            copyBitValue = bit0;
+            break;
+        case ShiftBitToCopy::copyCarryFlag:
+            copyBitValue = previousCarryFlagValue;
+            break;
+        case ShiftBitToCopy::copyNothing:
+        case ShiftBitToCopy::copyZero:
+            break;
+        case ShiftBitToCopy::copyOne:
+            copyBitValue = true;
+            break;
+    }
+
+    if (copyMode != ShiftBitToCopy::copyNothing) {
+        Utils::setBit(7, copyBitValue, dest);
+    }
+
     setFlag(CPUFlag::subtract, false);
     setFlag(CPUFlag::halfCarry, false);
+    return dest;
 }
 
-void CPUZ80::rrc(unsigned char &dest) {
-    shiftRight(dest, true);
+unsigned char CPUZ80::rrc(unsigned char dest) {
+    return shiftRight(dest, ShiftBitToCopy::copyPreviousValue);
 }
 
-void CPUZ80::rr(unsigned char &dest) {
-    shiftRight(dest, false);
+unsigned char CPUZ80::rr(unsigned char dest) {
+    return shiftRight(dest, ShiftBitToCopy::copyCarryFlag);
+}
+
+unsigned char CPUZ80::sra(unsigned char dest) {
+    return shiftRight(dest, ShiftBitToCopy::copyNothing);
+}
+
+unsigned char CPUZ80::srl(unsigned char dest) {
+    return shiftRight(dest,  ShiftBitToCopy::copyZero);
 }
 
 void CPUZ80::exchange8Bit(unsigned char &register1, unsigned char &register2) {
@@ -388,4 +550,75 @@ void CPUZ80::cpl(unsigned char &dest) {
     dest = ~dest;
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::subtract, true);
+}
+
+void CPUZ80::exStack(unsigned short &dest) {
+    unsigned short originalRegisterValue = dest;
+    dest = popStack16();
+    pushStack(originalRegisterValue);
+    cyclesTaken = 19;
+}
+
+void CPUZ80::readPortToRegister(unsigned char &dest, unsigned char portAddress) {
+    dest = readIOPort(portAddress);
+    setFlag(CPUFlag::halfCarry, false);
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    cyclesTaken = 12;
+}
+
+void CPUZ80::retn() {
+    programCounter = popStack16();
+    iff1 = iff2;
+    cyclesTaken = 14;
+}
+
+void CPUZ80::reti() {
+    programCounter = popStack16();
+    // TODO send a signal to an I/O device when I have figured out where to send it to.
+    cyclesTaken = 14;
+}
+
+void CPUZ80::rrd(unsigned char &dest) {
+    // TODO test/debug this, there is a lot going on here
+    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].hi);
+    unsigned char previousRegisterLowerNibble = dest & 0x0F;
+    dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + (memoryCurrentValue & 0x0F);
+    memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)((previousRegisterLowerNibble << 4) + (memoryCurrentValue >> 4)));
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::halfCarry, false);
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    cyclesTaken = 18;
+}
+
+void CPUZ80::rld(unsigned char &dest) {
+    // TODO test/debug this, there is a lot going on here
+    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].hi);
+    unsigned char previousRegisterLowerNibble = dest & 0x0F;
+    dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + ((memoryCurrentValue & 0xF0) >> 4);
+    memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)(((memoryCurrentValue & 0x0F) << 4) + previousRegisterLowerNibble));
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::halfCarry, false);
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    cyclesTaken = 18;
+}
+
+void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
+    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::halfCarry, true);
+    setFlag(CPUFlag::zero, !Utils::testBit(bitNumber, value));
+}
+
+unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {
+    Utils::setBit(bitNumber, false, value);
+    return value;
+}
+
+unsigned char CPUZ80::set(unsigned char bitNumber, unsigned char value) {
+    Utils::setBit(bitNumber, true, value);
+    return value;
 }

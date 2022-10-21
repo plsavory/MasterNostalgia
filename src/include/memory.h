@@ -12,7 +12,11 @@ public:
 
     unsigned char read(unsigned short location);
 
+    unsigned short read16Bit(unsigned short location);
+
     void write(unsigned short location, unsigned char value);
+
+    void write(unsigned short location, unsigned short value);
 
 private:
     Cartridge *smsCartridge;

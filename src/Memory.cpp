@@ -78,6 +78,15 @@ unsigned char Memory::read(unsigned short location) {
     return ram[location];
 }
 
+unsigned short Memory::read16Bit(unsigned short location) {
+    return read(location) + (read(location+1) << 8);
+}
+
+void Memory::write(unsigned short location, unsigned short value) {
+    write(location, (unsigned char)(value & 0x00FF));
+    write(location+1, (unsigned char)(value >> 8));
+}
+
 /**
  * [write Writes to system memory]
  * @param location [Memory location to write to]

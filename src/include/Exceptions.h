@@ -90,7 +90,7 @@ private:
     }
 };
 
-class Z80Exception : GeneralException {
+class Z80Exception : public GeneralException {
 public:
     explicit Z80Exception(const std::string &message) : GeneralException(std::string("Z80 Exception"),
                                                                              message) {};

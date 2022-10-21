@@ -38,6 +38,14 @@ enum CPUFlag : unsigned char {
     sign = 7
 };
 
+enum ShiftBitToCopy {
+    copyCarryFlag,
+    copyPreviousValue,
+    copyZero,
+    copyNothing,
+    copyOne
+};
+
 // Force these variables to use the same memory space - a handy way of emulating the CPU registers.
 union CPURegister {
     unsigned short whole;
@@ -68,18 +76,31 @@ private:
     unsigned short stackPointer;
     CPURegister gpRegisters[10];
     CPUState state;
-    unsigned short registerI;
-    unsigned short RegisterR;
+    unsigned char registerI;
+    unsigned char registerR;
     std::string executedInstructionName = "";
+    std::string displayOpcodePrefix;
+    unsigned char displayOpcode;
 
     // Interrupt flip flops
     bool iff1;
     bool iff2;
     bool enableInterrupts;
+    bool bitUseMemory;
 
-    void extendedOpcodes(unsigned char opcode);
+    void extendedOpcodes();
 
-    void iyOpcodes(unsigned char opcode);
+    void bitOpcodes();
+
+    void ixOpcodes();
+
+    void ixBitOpcodes();
+
+    void iyOpcodes();
+
+    void iyBitOpcodes();
+
+    void indexBitOpcodes(const std::string& opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
 
     int executeOpcode();
 
@@ -92,11 +113,13 @@ private:
 
     unsigned char interruptMode; // TODO: Use http://z80.info/1653.htm as reference when implementing interrupts in future.
 
-    void logCPUState(unsigned char opcode, std::string prefix);
+    void logCPUState();
 
     void jpCondition(JPCondition condition);
 
     void jrCondition(JPCondition condition, unsigned char offset);
+
+    void retCondition(JPCondition condition);
 
     void jr(unsigned char offset);
 
@@ -107,7 +130,11 @@ private:
     // Instruction handler functions
     void ldReg8(unsigned char &dest, unsigned char value);
 
+    void ldReg8(unsigned char &dest, unsigned char value, bool modifyFlags);
+
     void ldReg16(unsigned short &dest, unsigned short value, bool modifyFlags);
+
+    void ldReg16(unsigned short &dest, unsigned short value);
 
     void addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry);
 
@@ -155,19 +182,35 @@ private:
 
     void call(unsigned short location, bool conditionMet);
 
+    void callCondition(JPCondition condition);
+
+    void rst(unsigned short location);
+
     void store(unsigned short location, unsigned char hi, unsigned char lo);
 
-    void shiftLeft(unsigned char &dest, bool copyPreviousCarryFlagValue);
+    unsigned char shiftLeft(unsigned char dest, ShiftBitToCopy copyMode);
 
-    void rlc(unsigned char &dest);
+    unsigned char rlc(unsigned char dest);
 
-    void rl(unsigned char &dest);
+    unsigned char rl(unsigned char dest);
 
-    void shiftRight(unsigned char &dest, bool copyPreviousCarryFlagValue);
+    unsigned char sla(unsigned char dest);
 
-    void rrc(unsigned char &dest);
+    unsigned char sll(unsigned char dest);
 
-    void rr(unsigned char &dest);
+    unsigned char shiftRight(unsigned char dest, ShiftBitToCopy copyMode);
+
+    unsigned char rrc(unsigned char dest);
+
+    unsigned char rr(unsigned char dest);
+
+    unsigned char sra(unsigned char dest);
+
+    unsigned char srl(unsigned char dest);
+
+    void rld(unsigned char &dest);
+
+    void rrd(unsigned char &dest);
 
     void cpl(unsigned char &dest);
 
@@ -198,9 +241,33 @@ private:
 
     bool hasMetJumpCondition(JPCondition condition);
 
-    void ldir();
+    void readPortToRegister(unsigned char &dest, unsigned char portAddress);
 
-    void otir();
+    void ini(bool increment);
+
+    void inir(bool increment);
+
+    void cpi(bool increment);
+
+    void cpir(bool increment);
+
+    void ldi(bool increment);
+
+    void ldir(bool increment);
+
+    void outi(bool increment);
+
+    void otir(bool increment);
+
+    void retn();
+
+    void reti();
+
+    void bit(unsigned char bitNumber, unsigned char value);
+
+    unsigned char res(unsigned char bitNumber, unsigned char value);
+
+    unsigned char set(unsigned char bitNumber, unsigned char value);
 
     // Stack
     void pushStack(unsigned char value);
@@ -210,6 +277,8 @@ private:
     unsigned char popStack();
 
     unsigned short popStack16();
+
+    void exStack(unsigned short &dest);
 
     // Misc
     std::string getInstructionName(unsigned short opcode, unsigned short extendedOpcode, unsigned short lastOpcode);

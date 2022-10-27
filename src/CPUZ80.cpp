@@ -1350,6 +1350,10 @@ signed char CPUZ80::signedNB() {
     return static_cast<signed char>(memory->read(programCounter++));
 }
 
+unsigned short CPUZ80::getIndexedOffsetAddress(unsigned short registerValue) {
+    return registerValue + signedNB();
+}
+
 /**
  * [CPUZ80::extendedOpcodes Handles extended opcodes]
  */
@@ -1643,37 +1647,847 @@ void CPUZ80::extendedOpcodes() {
 }
 
 void CPUZ80::ixOpcodes() {
+    indexOpcodes("DD", "IX", cpuReg::IX);
+}
+
+void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
+
+    // TODO add the rest of the undocumented opcodes, not all of them are done.
 
     unsigned char opcode = NB();
-    displayOpcodePrefix = "DD";
+    displayOpcodePrefix = opcodePrefix;
     displayOpcode = opcode;
+    unsigned short address = 0x0;
 
     switch (opcode) {
+        case 0x04:
+            // inc b
+            inc8Bit(gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x05:
+            // dec b
+            dec8Bit(gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x06:
+            // ld b, n
+            ldReg8(gpRegisters[cpuReg::BC].hi, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x09:
+            // add ix, bc
+            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[cpuReg::BC].whole);
+            cyclesTaken = 15;
+            break;
+        case 0x0C:
+            // inc c
+            inc8Bit(gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x0D:
+            // dec c
+            dec8Bit(gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x0E:
+            // ld c, n
+            ldReg8(gpRegisters[cpuReg::BC].lo, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x14:
+            // inc d
+            inc8Bit(gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x15:
+            // dec d
+            dec8Bit(gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x16:
+            // ld d, n
+            ldReg8(gpRegisters[cpuReg::DE].hi, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x19:
+            // add ix,de
+            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[cpuReg::DE].whole);
+            cyclesTaken = 15;
+            break;
+        case 0x1C:
+            // inc e
+            inc8Bit(gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x1D:
+            // dec e
+            dec8Bit(gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x1E:
+            // ld e, n
+            ldReg8(gpRegisters[cpuReg::DE].lo, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x21:
+            // ld ix, nn
+            ldReg16(gpRegisters[indexRegister].whole, build16BitNumber());
+            cyclesTaken = 14;
+            break;
+        case 0x22:
+            // ld (nn), ix
+            memory->write(build16BitNumber(), gpRegisters[indexRegister].whole);
+            cyclesTaken = 20;
+            break;
+        case 0x23:
+            // inc ix
+            inc16Bit(gpRegisters[indexRegister].whole);
+            cyclesTaken = 10;
+            break;
+        case 0x24:
+            // inc ixh
+            inc8Bit(gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x25:
+            // dec ixh
+            dec8Bit(gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x26:
+            // ld ixh, n
+            ldReg8(gpRegisters[interruptMode].hi, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x29:
+            // add ix, sp
+            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[indexRegister].whole);
+            cyclesTaken = 15;
+            break;
+        case 0x2A:
+            // ld ix, (nn)
+            ldReg16(gpRegisters[indexRegister].whole, memory->read(build16BitNumber()));
+            cyclesTaken = 20;
+            break;
+        case 0x2B:
+            // dec ix
+            dec16Bit(gpRegisters[indexRegister].whole);
+            cyclesTaken = 10;
+            break;
+        case 0x2C:
+            // inc ixl
+            inc8Bit(gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x2D:
+            // dec ixl
+            dec8Bit(gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x2E:
+            // ld ixl, n
+            ldReg8(gpRegisters[interruptMode].lo, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x34:
+            // inc (ix+d)
+            address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
+            memory->write(address, getInc8BitValue(memory->read(address)));
+            cyclesTaken = 23;
+            break;
+        case 0x35:
+            // dec (ix+d)
+            address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
+            memory->write(address, getDec8BitValue(memory->read(address)));
+            cyclesTaken = 23;
+            break;
+        case 0x36:
+            // ld (ix+d), n
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), NB());
+            cyclesTaken = 19;
+            break;
+        case 0x39:
+            // add ix, sp
+            add16Bit(gpRegisters[indexRegister].whole, stackPointer);
+            cyclesTaken = 15;
+            break;
+        case 0x3C:
+            // inc a
+            inc8Bit(gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x3D:
+            // dec a
+            dec8Bit(gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x3E:
+            // ld a, n
+            ldReg8(gpRegisters[cpuReg::AF].hi, NB());
+            cyclesTaken = 11;
+            break;
+        case 0x40:
+            // ld b, b
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x41:
+            // ld b, c
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x42:
+            // ld b, d
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x43:
+            // ld b, e
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x44:
+            // ld b, ixh
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x45:
+            // ld b, ixl
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x46:
+            // ld b, (ix+d)
+            ldReg8(gpRegisters[cpuReg::BC].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x47:
+            // ld b, a
+            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x48:
+            // ld c, b
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x49:
+            // ld c, c
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x4A:
+            // ld c, d
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x4B:
+            // ld c, e
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x4C:
+            // ld c, ixh
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x4D:
+            // ld c, ixl
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x4E:
+            // ld c, (ix+d)
+            ldReg8(gpRegisters[cpuReg::BC].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x4F:
+            // ld c, a
+            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x50:
+            // ld d, b
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x51:
+            // ld d, c
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x52:
+            // ld d, d
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x53:
+            // ld d, e
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x54:
+            // ld d, ixh
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x55:
+            // ld d, ixl
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x56:
+            // ld d, (ix+d)
+            ldReg8(gpRegisters[cpuReg::DE].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x57:
+            // ld d, a
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x58:
+            // ld e, b
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x59:
+            // ld e, c
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x5A:
+            // ld e, d
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x5B:
+            // ld e, e
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x5C:
+            // ld e, ixh
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x5D:
+            // ld e, ixl
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x5E:
+            // ld e, (ix+d)
+            ldReg8(gpRegisters[cpuReg::DE].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x5F:
+            // ld e, a
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x60:
+            // ld ixh, b
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x61:
+            // ld ixh, c
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x62:
+            // ld ixh, d
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x63:
+            // ld ixh, e
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x64:
+            // ld ixh, ixh
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x65:
+            // ld ixh, ixl
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x66:
+            // ld h, (ix+d)
+            ldReg8(gpRegisters[cpuReg::HL].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x67:
+            // ld ixh, a
+            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x68:
+            // ld ixl, b
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x69:
+            // ld ixl, c
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x6A:
+            // ld ixl, d
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x6B:
+            // ld ixl, e
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x6C:
+            // ld ixl, ixh
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x6D:
+            // ld ixl, ixl
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x6E:
+            // ld l, (ix+d)
+            ldReg8(gpRegisters[cpuReg::HL].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x6F:
+            // ld ixl, a
+            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x70:
+            // ld (ix+d), b
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 19;
+            break;
+        case 0x71:
+            // ld (ix+d), c
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 19;
+            break;
+        case 0x72:
+            // ld (ix+d), d
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 19;
+            break;
+        case 0x73:
+            // ld (ix+d), e
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 19;
+            break;
+        case 0x74:
+            // ld (ix+d), h
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].hi);
+            cyclesTaken = 19;
+            break;
+        case 0x75:
+            // ld (ix+d), l
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].lo);
+            cyclesTaken = 19;
+            break;
+        case 0x77:
+            // ld (ix+d), a
+            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 19;
+            break;
+        case 0x78:
+            // ld a, b
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x79:
+            // ld a, c
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x7A:
+            // ld a, d
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x7B:
+            // ld a, e
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x7C:
+            // ld a, ixh
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x7D:
+            // ld a, ixl
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x7E:
+            // ld a, (ix+d)
+            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x7F:
+            // ld a, a
+            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x80:
+            // add a, b
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x81:
+            // add a, c
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x82:
+            // add a, d
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x83:
+            // add a, e
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x84:
+            // add a, ixh
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x85:
+            // add a, ixl
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x86:
+            // add a, (ix+d)
+            add8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x87:
+            // add a, a
+            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x88:
+            // adc a, b
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x89:
+            // adc a, c
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x8A:
+            // adc a, d
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x8B:
+            // adc a, e
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x8C:
+            // adc a, ixh
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x8D:
+            // adc a, ixl
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x8E:
+            // adc a, (ix+d)
+            adc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x8F:
+            // adc a, a
+            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x90:
+            // sub a, b
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x91:
+            // sub a, c
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x92:
+            // sub a, d
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x93:
+            // sub a, e
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x94:
+            // sub a, ixh
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x95:
+            // sub a, ixl
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x96:
+            // sub a, (ix+d)
+            sub8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x97:
+            // sub a, a
+            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x98:
+            // sbc a, b
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x99:
+            // sbc a, c
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x9A:
+            // sbc a, d
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x9B:
+            // sbc a, e
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x9C:
+            // sbc a, ixh
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0x9D:
+            // sbc a, ixl
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0x9E:
+            // sbc a, (ix+d)
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0x9F:
+            // sbc a, a
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA0:
+            // and b
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA1:
+            // and c
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xA2:
+            // and d
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA3:
+            // and e
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xA4:
+            // and ixh
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA5:
+            // and ixl
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xA6:
+            // and a, (ix+d)
+            and8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0xA7:
+            // and a
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA8:
+            // xor b
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xA9:
+            // xor c
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xAA:
+            // xor d
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xAB:
+            // xor e
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xAC:
+            // xor ixh
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xAD:
+            // xor ixl
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xAE:
+            // xor a, (ix+d)
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0xAF:
+            // xor a
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB0:
+            // or b
+            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB1:
+            // or c
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xB2:
+            // or d
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB3:
+            // or e
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xB4:
+            // or ixh
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB5:
+            // or ixl
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xB6:
+            // or a, (ix+d)
+            or8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0xB7:
+            // or a
+            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB8:
+            // cp b
+            compare8Bit(gpRegisters[cpuReg::BC].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xB9:
+            // cp c
+            compare8Bit(gpRegisters[cpuReg::BC].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xBA:
+            // cp d
+            compare8Bit(gpRegisters[cpuReg::DE].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xBB:
+            // cp e
+            compare8Bit(gpRegisters[cpuReg::DE].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xBC:
+            // cp ixh
+            compare8Bit(gpRegisters[indexRegister].hi);
+            cyclesTaken = 8;
+            break;
+        case 0xBD:
+            // cp ixl
+            compare8Bit(gpRegisters[indexRegister].lo);
+            cyclesTaken = 8;
+            break;
+        case 0xBE:
+            // cp a, (ix+d)
+            compare8Bit(memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            cyclesTaken = 19;
+            break;
+        case 0xBF:
+            // cp a
+            compare8Bit(gpRegisters[cpuReg::AF].hi);
+            cyclesTaken = 8;
+            break;
         case 0xCB:
-            ixBitOpcodes();
+            opcodePrefix.append("CB");
+            indexBitOpcodes(opcodePrefix, indexPrefix, indexRegister);
             break;
         case 0xE1:
             // pop ix
-            ldReg16(gpRegisters[cpuReg::IX].whole, popStack16(), false);
+            ldReg16(gpRegisters[indexRegister].whole, popStack16(), false);
             cyclesTaken = 14;
             break;
         case 0xE3:
             // ex (sp), ix
-            popStackExchange(gpRegisters[cpuReg::IX].whole);
+            popStackExchange(gpRegisters[indexRegister].whole);
             cyclesTaken = 23;
             break;
         case 0xE5:
             // push ix
-            pushStack(gpRegisters[cpuReg::IX].whole);
+            pushStack(gpRegisters[indexRegister].whole);
             cyclesTaken = 15;
             break;
         case 0xE9:
             // jp (ix) - Notation seems to indicate that this is indirect, but docs says that it is
-            programCounter = gpRegisters[cpuReg::IX].whole;
+            programCounter = gpRegisters[indexRegister].whole;
             cyclesTaken = 8;
             break;
         case 0xF9:
-            ldReg16(stackPointer, gpRegisters[cpuReg::IX].whole);
+            ldReg16(stackPointer, gpRegisters[indexRegister].whole);
             cyclesTaken = 10;
             break;
         default:
@@ -1683,52 +2497,12 @@ void CPUZ80::ixOpcodes() {
     }
 
     if (executedInstructionName.empty()) {
-        executedInstructionName = getInstructionName(0xDD, opcode, 0x0);
+        executedInstructionName = getInstructionName(indexRegister == cpuReg::IX ? 0xDD : 0xFD, opcode, 0x0);
     }
-
 }
 
 void CPUZ80::iyOpcodes() {
-
-    unsigned char opcode = NB();
-    displayOpcodePrefix = "FD";
-    displayOpcode = opcode;
-
-    switch (opcode) {
-        case 0x66:
-            // ld h, (iy+d)
-            ldReg8(gpRegisters[cpuReg::HL].hi, memory->read(gpRegisters[cpuReg::IY].whole + signedNB()));
-            cyclesTaken = 19;
-            break;
-            break;
-        case 0x6E:
-            // ld l, (iy+d)
-            ldReg8(gpRegisters[cpuReg::HL].lo, memory->read(gpRegisters[cpuReg::IY].whole + signedNB()));
-            cyclesTaken = 19;
-            break;
-        case 0x7E:
-            // ld a, (iy+d)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::IY].whole + signedNB()));
-            cyclesTaken = 19;
-            break;
-        case 0xCB:
-            iyBitOpcodes();
-            break;
-        case 0xE1:
-            // pop iy
-            ldReg16(gpRegisters[cpuReg::IY].whole, popStack16(), false);
-            cyclesTaken = 14;
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented iy opcode: 0x" << std::hex << (int) opcode << std::endl;
-            throw Z80Exception(ss.str());
-    }
-
-    if (executedInstructionName.empty()) {
-        executedInstructionName = getInstructionName(0xFD, opcode, 0x0);
-    }
-
+    indexOpcodes("FD", "IY", cpuReg::IY);
 }
 
 /**
@@ -1816,7 +2590,7 @@ unsigned char CPUZ80::readIOPort(unsigned char address) {
     if (address <= 0x7F) {
         // TODO even address - return SN76489 PSG V counter
         // TODO odd address - return SN76489 PSG H counter
-        return 0x0;
+        return 0xB0;
     }
 
     if (address <= 0xBF) {
@@ -3176,17 +3950,9 @@ void CPUZ80::bitOpcodes() {
 
 }
 
-void CPUZ80::ixBitOpcodes() {
-    indexBitOpcodes("DDCB", "IX", cpuReg::IX);
-}
-
-void CPUZ80::iyBitOpcodes() {
-    indexBitOpcodes("FDCB", "IY", cpuReg::IY);
-}
-
 void CPUZ80::indexBitOpcodes(const std::string& opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
     // Opcode format is offset, opcode
-    unsigned short address = memory->read(gpRegisters[indexRegister].whole + NB());
+    unsigned short address = memory->read(gpRegisters[indexRegister].whole + signedNB());
     unsigned char opcode = NB();
     displayOpcodePrefix = opcodePrefix;
     displayOpcode = opcode;

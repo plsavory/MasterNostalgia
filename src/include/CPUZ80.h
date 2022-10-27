@@ -92,13 +92,11 @@ private:
 
     void bitOpcodes();
 
+    void indexOpcodes(std::string opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
+
     void ixOpcodes();
 
-    void ixBitOpcodes();
-
     void iyOpcodes();
-
-    void iyBitOpcodes();
 
     void indexBitOpcodes(const std::string& opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
 
@@ -279,6 +277,8 @@ private:
     unsigned short popStack16();
 
     void exStack(unsigned short &dest);
+
+    unsigned short getIndexedOffsetAddress(unsigned short registerValue);
 
     // Misc
     std::string getInstructionName(unsigned short opcode, unsigned short extendedOpcode, unsigned short lastOpcode);

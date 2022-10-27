@@ -46,7 +46,10 @@ add_executable(${EXECUTABLE_NAME}
         src/include/Exceptions.h
         src/include/Console.h
         src/include/Emulator.h
-        src/Emulator.cpp)
+        src/Emulator.cpp
+        src/include/Z80IO.h
+        src/include/MasterSystemZ80IO.h
+        src/MasterSystemZ80IO.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

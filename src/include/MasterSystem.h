@@ -10,6 +10,7 @@ Licensed under the GPLv3 license.
 #include "VDP.h"
 #include "PSG.h"
 #include "Console.h"
+#include "MasterSystemZ80IO.h"
 
 class MasterSystem : public Console {
 public:
@@ -29,6 +30,7 @@ private:
     Cartridge *smsCartridge;
     VDP *smsVdp;
     PSG *smsPSG;
+    MasterSystemZ80IO *z80Io;
     bool running;
 protected:
 

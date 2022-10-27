@@ -268,7 +268,7 @@ void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
 
 void CPUZ80::ini(bool increment) {
     // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    memory->write(gpRegisters[cpuReg::HL].whole, readIOPort(gpRegisters[cpuReg::BC].lo));
+    memory->write(gpRegisters[cpuReg::HL].whole, z80Io->read(gpRegisters[cpuReg::BC].lo));
 
     gpRegisters[cpuReg::HL].whole += increment ? 1 : -1;
 
@@ -343,7 +343,7 @@ void CPUZ80::ldir(bool increment) {
 
 void CPUZ80::outi(bool increment) {
     // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    writeIOPort(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+    z80Io->write(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
 
     gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
 
@@ -560,7 +560,7 @@ void CPUZ80::exStack(unsigned short &dest) {
 }
 
 void CPUZ80::readPortToRegister(unsigned char &dest, unsigned char portAddress) {
-    dest = readIOPort(portAddress);
+    dest = z80Io->read(portAddress);
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::subtract, false);
     setFlag(CPUFlag::overflow, dest % 2 == 0);

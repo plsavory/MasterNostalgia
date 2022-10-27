@@ -10,9 +10,10 @@ Licensed under the GPLv3 license.
 MasterSystem::MasterSystem() {
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
-    smsCPU = new CPUZ80(smsMemory);
     smsVdp = new VDP();
     smsPSG = new PSG();
+    z80Io = new MasterSystemZ80IO(smsVdp, smsPSG);
+    smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;
 }
 
@@ -22,6 +23,7 @@ MasterSystem::~MasterSystem() {
     delete(smsCPU);
     delete(smsVdp);
     delete(smsPSG);
+    delete(z80Io);
 }
 
 bool MasterSystem::init(std::string romFilename) {

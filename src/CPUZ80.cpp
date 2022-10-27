@@ -13,9 +13,10 @@ Licensed under the GPLv3 license.
 #include "Utils.h"
 #include "Exceptions.h"
 
-CPUZ80::CPUZ80(Memory *smsMemory) {
+CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
     // Store a pointer to the memory object
     memory = smsMemory;
+    this->z80Io = z80Io;
 
     cyclesTaken = 0;
 
@@ -1117,7 +1118,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xD3:
             // out (n) a
-            writeIOPort(NB(), gpRegisters[cpuReg::AF].hi);
+            z80Io->write(NB(), gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 11;
             break;
         case 0xD4:
@@ -1155,7 +1156,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xDB:
             // in a, (n)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readIOPort(NB()));
+            ldReg8(gpRegisters[cpuReg::AF].hi, z80Io->read(NB()));
             cyclesTaken = 11;
             break;
         case 0xDC:
@@ -1370,7 +1371,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x41:
             // out (c), b
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
             cyclesTaken = 12;
             break;
         case 0x42:
@@ -1407,7 +1408,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x49:
             // out (c), c
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x4A:
@@ -1435,7 +1436,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x51:
             // out (c), d
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
             cyclesTaken = 12;
             break;
         case 0x52:
@@ -1459,12 +1460,12 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x58:
             // in e, (c)
-            ldReg8(gpRegisters[cpuReg::DE].lo, readIOPort(gpRegisters[cpuReg::BC].lo));
+            ldReg8(gpRegisters[cpuReg::DE].lo, z80Io->read(gpRegisters[cpuReg::BC].lo));
             cyclesTaken = 12;
             break;
         case 0x59:
             // out (c), e
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 12;
             break;
         case 0x5A:
@@ -1487,12 +1488,12 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x60:
             // in h, (c)
-            ldReg8(gpRegisters[cpuReg::HL].hi, readIOPort(gpRegisters[cpuReg::BC].lo));
+            ldReg8(gpRegisters[cpuReg::HL].hi, z80Io->read(gpRegisters[cpuReg::BC].lo));
             cyclesTaken = 12;
             break;
         case 0x61:
             // out (c), h
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
             cyclesTaken = 12;
             break;
         case 0x62:
@@ -1511,12 +1512,12 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x68:
             // in l, (c)
-            ldReg8(gpRegisters[cpuReg::HL].lo, readIOPort(gpRegisters[cpuReg::BC].lo));
+            ldReg8(gpRegisters[cpuReg::HL].lo, z80Io->read(gpRegisters[cpuReg::BC].lo));
             cyclesTaken = 12;
             break;
         case 0x69:
             // out (c), l
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
             cyclesTaken = 12;
             break;
         case 0x6A:
@@ -1535,12 +1536,12 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x70:
             // in (c)
-            readIOPort(gpRegisters[cpuReg::BC].lo);
+            z80Io->read(gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x71:
             // out (c), 0
-            writeIOPort(gpRegisters[cpuReg::BC].lo, 0);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, 0);
             cyclesTaken = 12;
             break;
         case 0x72:
@@ -1555,12 +1556,12 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x78:
             // in a, (c)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readIOPort(gpRegisters[cpuReg::BC].lo));
+            ldReg8(gpRegisters[cpuReg::AF].hi, z80Io->read(gpRegisters[cpuReg::BC].lo));
             cyclesTaken = 12;
             break;
         case 0x79:
             // out (c), a
-            writeIOPort(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
+            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 12;
             break;
         case 0x7A:
@@ -2549,60 +2550,6 @@ unsigned char CPUZ80::getIndirectValue() {
  */
 unsigned char CPUZ80::getIndirectValue(unsigned short address) {
     return memory->read(address);
-}
-
-void CPUZ80::writeIOPort(unsigned char address, unsigned char value) {
-
-    // TODO handle the Game Gear I/O port map if I ever add support for it
-
-    if (address <= 0x3F) {
-        // TODO even address - write to memory control register
-        // TODO odd address - write to I/O control register
-        return;
-    }
-
-    if (address <= 0x7F) {
-        // TODO - write to SN76489 PSG
-        return;
-    }
-
-    if (address <= 0xBF) {
-        // TODO even address - write to VDP data port
-        // TODO odd address - write to VDP control port
-        return;
-    }
-
-    // TODO even address - return I/O port A/B register
-    // TODO odd address - return I/O port B/misc register
-
-}
-
-unsigned char CPUZ80::readIOPort(unsigned char address) {
-
-    // TODO handle the Game Gear I/O port map if I ever add support for it
-
-    if (address <= 0x3F) {
-        // Return the last byte of the instruction which read the port
-        // TODO or 0xFF if emulating Master System 2
-        return address;
-    }
-
-    if (address <= 0x7F) {
-        // TODO even address - return SN76489 PSG V counter
-        // TODO odd address - return SN76489 PSG H counter
-        return 0xB0;
-    }
-
-    if (address <= 0xBF) {
-        // TODO even address - return VDP data port contents
-        // TODO odd address - return VDP status flags
-        return 0x0;
-    }
-
-    // TODO even address - return I/O port A/B register
-    // TODO odd address - return I/O port B/misc register
-    return 0x0;
-
 }
 
 /**

@@ -4,6 +4,9 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#ifndef SMS_PSG_H
+#define SMS_PSG_H
+
 class PSG {
 public:
     PSG();
@@ -14,3 +17,5 @@ public:
 
 private:
 };
+
+#endif

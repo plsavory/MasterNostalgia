@@ -4,6 +4,9 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#ifndef SMS_VDP_H
+#define SMS_VDP_H
+
 class VDP {
 public:
     VDP();
@@ -12,3 +15,4 @@ public:
 
     void execute(float cycles);
 };
+#endif

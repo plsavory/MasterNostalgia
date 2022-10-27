@@ -4,6 +4,8 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#include "Z80IO.h"
+
 enum CPUState {
     Halt, Running, Error, Step
 };
@@ -58,7 +60,7 @@ union CPURegister {
 
 class CPUZ80 {
 public:
-    CPUZ80(Memory *smsMemory);
+    CPUZ80(Memory *smsMemory, Z80IO *z80Io);
 
     ~CPUZ80();
 
@@ -81,6 +83,8 @@ private:
     std::string executedInstructionName = "";
     std::string displayOpcodePrefix;
     unsigned char displayOpcode;
+
+    Z80IO *z80Io;
 
     // Interrupt flip flops
     bool iff1;
@@ -231,11 +235,6 @@ private:
     unsigned char getIndirectValue();
 
     unsigned char getIndirectValue(unsigned short address);
-
-    // IO
-    void writeIOPort(unsigned char address, unsigned char value);
-
-    unsigned char readIOPort(unsigned char address);
 
     bool hasMetJumpCondition(JPCondition condition);
 

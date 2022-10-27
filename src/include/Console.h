@@ -14,7 +14,7 @@ public:
         unsigned int currentClicks = 0;
 
         while (currentClicks < machineClicksPerFrame) {
-            currentClicks = tick();
+            currentClicks += tick();
         }
     };
 

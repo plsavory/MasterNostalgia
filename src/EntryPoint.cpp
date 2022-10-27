@@ -6,7 +6,7 @@ Licensed under the GPLv3 license.
 
 #include <iostream>
 #include "Utils.h"
-#include "MasterSystem.h"
+#include "Emulator.h"
 #include "Exceptions.h"
 
 int main(int argc, char *argv[]) {
@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 
     // Start the Emulator
     try {
-        MasterSystem *emulator = new MasterSystem();
+        Emulator *emulator = new Emulator();
 
         std::string romFile;
 
@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
             romFile = argv[1];
         }
 
-        emulator->start(romFile);
+        emulator->init(romFile);
+        emulator->run(); // Main loop
     } catch (GeneralException &e) {
         std::cout<<e.what()<<std::endl;
     } catch (std::exception &e) {

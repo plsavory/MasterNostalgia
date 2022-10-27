@@ -9,20 +9,19 @@ Licensed under the GPLv3 license.
 #include "CPUZ80.h"
 #include "VDP.h"
 #include "PSG.h"
+#include "Console.h"
 
-class MasterSystem {
+class MasterSystem : public Console {
 public:
     MasterSystem();
 
     ~MasterSystem();
 
-    bool start(std::string romFilename);
+    bool init(std::string romFilename) final;
 
-    void tick();
+    unsigned int tick();
 
-    void run();
-
-    bool isRunning();
+    bool isRunning() final;
 
 private:
     CPUZ80 *smsCPU;
@@ -31,4 +30,7 @@ private:
     VDP *smsVdp;
     PSG *smsPSG;
     bool running;
+protected:
+
+    double getMachineClicksPerFrame() final;
 };

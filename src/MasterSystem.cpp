@@ -17,10 +17,14 @@ MasterSystem::MasterSystem() {
 }
 
 MasterSystem::~MasterSystem() {
-
+    delete(smsCartridge);
+    delete(smsMemory);
+    delete(smsCPU);
+    delete(smsVdp);
+    delete(smsPSG);
 }
 
-bool MasterSystem::start(std::string romFilename) {
+bool MasterSystem::init(std::string romFilename) {
 
     running = true;
     // Load a ROM into memory
@@ -30,17 +34,14 @@ bool MasterSystem::start(std::string romFilename) {
         return false;
     }
 
-    // Enter the main loop
-    run();
-
     return true;
 }
 
-void MasterSystem::tick() {
+unsigned int MasterSystem::tick() {
 
     int z80ClockCycles = smsCPU->execute();
 
-    int machineClicks = z80ClockCycles * 3;
+    unsigned int machineClicks = z80ClockCycles * 3;
 
     float vdpCycles = machineClicks / 2;
 
@@ -50,19 +51,13 @@ void MasterSystem::tick() {
 
     smsPSG->execute(soundCycles);
 
-}
-
-void MasterSystem::run() {
-
-#ifdef VERBOSE_MODE
-    std::cout<<std::endl<<"--- Starting code execution ---"<<std::endl;
-#endif
-
-    while (isRunning()) {
-        tick();
-    }
+    return machineClicks;
 }
 
 bool MasterSystem::isRunning() {
     return running && smsCPU->getState() != CPUState::Error && smsCPU->getState() != CPUState::Halt;
+}
+
+double MasterSystem::getMachineClicksPerFrame() {
+    return (float)10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
 }

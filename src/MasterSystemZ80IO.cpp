@@ -20,8 +20,15 @@ void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
     }
 
     if (address <= 0xBF) {
-        // TODO even address - write to VDP data port
-        // TODO odd address - write to VDP control port
+
+        if (address % 2) {
+            // Write to VDP control port
+            vdp->writeControlPort(value);
+            return;
+        }
+
+        // Write to VDP data port
+        vdp->writeDataPort(value);
         return;
     }
 
@@ -37,15 +44,18 @@ unsigned char MasterSystemZ80IO::read(unsigned char address) {
     }
 
     if (address <= 0x7F) {
-        // TODO even address - return SN76489 PSG V counter
-        // TODO odd address - return SN76489 PSG H counter
-        return 0xB0;
+        if (address % 2) {
+            return vdp->readHCounter();
+        }
+        return vdp->readVCounter();
     }
 
     if (address <= 0xBF) {
-        // TODO even address - return VDP data port contents
-        // TODO odd address - return VDP status flags
-        return 0x0;
+        if (address % 2) {
+            return vdp->readStatus();
+        }
+
+        return vdp->readDataPort();
     }
 
     // TODO even address - return I/O port A/B register

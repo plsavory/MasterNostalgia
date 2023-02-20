@@ -50,6 +50,10 @@ public:
 
     static std::string padString(const std::string &string, int length);
 
+    static std::string formatHexNumber(unsigned short value);
+
+    static std::string formatHexNumber(unsigned char value);
+
 private:
 };
 

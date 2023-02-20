@@ -96,6 +96,12 @@ public:
                                                                              message) {};
 };
 
+class VDPException : public GeneralException {
+public:
+    explicit VDPException(const std::string &message) : GeneralException(std::string("Z80 Exception"),
+                                                                         message) {};
+};
+
 #endif
 
 #endif //MASTALGIA_EXCEPTIONS_H

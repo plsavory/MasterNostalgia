@@ -5,6 +5,10 @@ Licensed under the GPLv3 license.
  */
 
 #include "Z80IO.h"
+#include "Z80InterruptBus.h"
+#include "Utils.h"
+
+#define DEBUG_VALUES
 
 enum CPUState {
     Halt, Running, Error, Step
@@ -33,9 +37,9 @@ enum CPUFlag : unsigned char {
     carry = 0,
     subtract = 1,
     overflow = 2,
-    unused2 = 3,
+    xf = 3,
     halfCarry = 4,
-    unused = 5,
+    yf = 5,
     zero = 6,
     sign = 7
 };
@@ -60,7 +64,7 @@ union CPURegister {
 
 class CPUZ80 {
 public:
-    CPUZ80(Memory *smsMemory, Z80IO *z80Io);
+    CPUZ80(Memory *smsMemory, Z80IO *z80Io, Z80InterruptBus *interruptBus);
 
     ~CPUZ80();
 
@@ -77,12 +81,20 @@ private:
     unsigned short originalProgramCounterValue;
     unsigned short stackPointer;
     CPURegister gpRegisters[10];
+    CPURegister originalRegisterValues[10];
     CPUState state;
+    Z80InterruptBus *interruptBus;
     unsigned char registerI;
     unsigned char registerR;
     std::string executedInstructionName = "";
-    std::string displayOpcodePrefix;
+    unsigned short displayOpcodePrefix;
     unsigned char displayOpcode;
+
+    unsigned short readValue;
+
+    unsigned char ioPortAddress;
+
+    unsigned short memoryAddress;
 
     Z80IO *z80Io;
 
@@ -96,13 +108,13 @@ private:
 
     void bitOpcodes();
 
-    void indexOpcodes(std::string opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
+    void indexOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
 
     void ixOpcodes();
 
     void iyOpcodes();
 
-    void indexBitOpcodes(const std::string& opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
+    void indexBitOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister);
 
     int executeOpcode();
 
@@ -110,6 +122,8 @@ private:
     int cyclesTaken;
 
     unsigned char NB();
+
+    unsigned char NBHideFromTrace();
 
     signed char signedNB();
 
@@ -279,6 +293,16 @@ private:
 
     unsigned short getIndexedOffsetAddress(unsigned short registerValue);
 
+    inline void handleUndocumentedFlags(unsigned char result) {
+        setFlag(CPUFlag::yf, Utils::testBit(5, result));
+        setFlag(CPUFlag::xf, Utils::testBit(3, result));
+    }
+
+    inline void handleUndocumentedFlags(unsigned short result) {
+        setFlag(CPUFlag::yf, Utils::testBit(5, result));
+        setFlag(CPUFlag::xf, Utils::testBit(3, result));
+    }
+
     // Misc
     std::string getInstructionName(unsigned short opcode, unsigned short extendedOpcode, unsigned short lastOpcode);
 
@@ -296,4 +320,21 @@ private:
 
     std::vector<std::string> getIYBitInstructionNames();
 
+    std::string getInstructionNameWithOperands(std::string instructionString);
+
+    void storeDebugOperand(unsigned char value);
+
+    void storeDebugOperand(unsigned short value);
+
+    void portOut(unsigned char port, unsigned char value);
+
+    unsigned char portIn(unsigned char port);
+
+    void writeMemory(unsigned short location, unsigned char value);
+
+    void writeMemory(unsigned short location, unsigned short value);
+
+    unsigned char readMemory(unsigned short location);
+
+    unsigned short readMemory16Bit(unsigned short location);
 };

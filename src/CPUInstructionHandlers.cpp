@@ -17,6 +17,7 @@ Licensed under the GPLv3 license.
  */
 void CPUZ80::ldReg8(unsigned char &dest, unsigned char value) {
     dest = value;
+    readValue = value;
 }
 
 void CPUZ80::ldReg8(unsigned char &dest, unsigned char value, bool modifyFlags) {
@@ -39,6 +40,10 @@ void CPUZ80::ldReg8(unsigned char &dest, unsigned char value, bool modifyFlags) 
  */
 void CPUZ80::ldReg16(unsigned short &dest, unsigned short value, bool modifyFlags) {
     dest = value;
+
+    #ifdef DEBUG_VALUES
+    readValue = value;
+    #endif
 
     if (!modifyFlags) {
         return;
@@ -195,8 +200,12 @@ void CPUZ80::jrCondition(JPCondition condition, unsigned char offset) {
         return;
     }
 
-    programCounter = originalProgramCounterValue + static_cast<signed char>(offset);
+    programCounter += static_cast<signed char>(offset);
     cyclesTaken = 12;
+
+    #ifdef DEBUG_VALUES
+    readValue = offset;
+    #endif
 }
 
 void CPUZ80::retCondition(JPCondition condition) {
@@ -212,6 +221,10 @@ void CPUZ80::retCondition(JPCondition condition) {
 void CPUZ80::jr(unsigned char offset) {
     programCounter = originalProgramCounterValue + static_cast<signed char>(offset);
     cyclesTaken = 12;
+
+    #ifdef DEBUG_VALUES
+    readValue = offset;
+    #endif
 }
 
 /**
@@ -219,6 +232,10 @@ void CPUZ80::jr(unsigned char offset) {
  */
 void CPUZ80::jpImm() {
     programCounter = build16BitNumber();
+
+    #ifdef DEBUG_VALUES
+    readValue = programCounter;
+    #endif
 }
 
 /**
@@ -247,8 +264,8 @@ void CPUZ80::inc8Bit(unsigned char &target) {
 unsigned char CPUZ80::getInc8BitValue(unsigned char initialValue) {
     unsigned char newValue = initialValue+1;
     setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, newValue < initialValue);
-    setFlag(CPUFlag::halfCarry, !(initialValue & 0x0F));
+    setFlag(CPUFlag::overflow, initialValue & 0x80);
+    setFlag(CPUFlag::halfCarry, ((initialValue & 0xF)) + 1 & 0x10);
     setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
     setFlag(CPUFlag::zero, newValue == 0);
     return newValue;
@@ -264,6 +281,11 @@ void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
     setFlag(CPUFlag::carry, originalValue < valueToSubtract);
     setFlag(CPUFlag::sign, Utils::testBit(7, comparisonResult));
     setFlag(CPUFlag::overflow, false);
+    handleUndocumentedFlags(comparisonResult);
+
+    #ifdef DEBUG_VALUES
+    readValue = valueToSubtract;
+    #endif
 }
 
 void CPUZ80::ini(bool increment) {
@@ -366,6 +388,11 @@ void CPUZ80::otir(bool increment) {
 }
 
 void CPUZ80::call(unsigned short location, bool conditionMet) {
+
+    #ifdef DEBUG_VALUES
+    readValue = location;
+    #endif
+
     if (!conditionMet) {
         cyclesTaken = 10;
         return;
@@ -388,6 +415,10 @@ void CPUZ80::rst(unsigned short location) {
     pushStack(programCounter);
     programCounter = location;
     cyclesTaken = 11;
+
+    #ifdef DEBUG_VALUES
+    readValue = programCounter;
+    #endif
 }
 
 void CPUZ80::store(unsigned short location, unsigned char hi, unsigned char lo) {
@@ -620,5 +651,59 @@ unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {
 
 unsigned char CPUZ80::set(unsigned char bitNumber, unsigned char value) {
     Utils::setBit(bitNumber, true, value);
+    return value;
+}
+
+unsigned char CPUZ80::portIn(unsigned char port) {
+    #ifdef DEBUG_VALUES
+    ioPortAddress = port;
+    #endif
+    return z80Io->read(port);
+}
+
+void CPUZ80::portOut(unsigned char port, unsigned char value) {
+    z80Io->write(port, value);
+
+    #ifdef DEBUG_VALUES
+    ioPortAddress = port;
+    readValue = value;
+    #endif
+}
+
+void CPUZ80::writeMemory(unsigned short location, unsigned char value) {
+    memory->write(location, value);
+
+    #ifdef DEBUG_VALUES
+    readValue = value;
+    memoryAddress = location;
+    #endif
+}
+
+void CPUZ80::writeMemory(unsigned short location, unsigned short value) {
+    memory->write(location, value);
+
+    #ifdef DEBUG_VALUES
+    readValue = value;
+    memoryAddress = location;
+    #endif
+}
+
+unsigned char CPUZ80::readMemory(unsigned short location) {
+    // TODO this wrapper function has been created for debugging purposes to get console output - refactor later.
+    unsigned char value = memory->read(location);
+    #ifdef DEBUG_VALUES
+    readValue = value;
+    memoryAddress = location;
+    #endif
+    return value;
+}
+
+unsigned short CPUZ80::readMemory16Bit(unsigned short location) {
+    // TODO this wrapper function has been created for debugging purposes to get console output - refactor later.
+    unsigned short value = memory->read16Bit(location);
+    #ifdef DEBUG_VALUES
+        readValue = value;
+        memoryAddress = location;
+    #endif
     return value;
 }

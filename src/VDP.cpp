@@ -6,7 +6,7 @@ Licensed under the GPLv3 license.
 #include "VDP.h"
 #include "Utils.h"
 
-VDP::VDP() {
+VDP::VDP(Z80InterruptBus *interruptBus) {
     for (auto &vRAMByte : vRAM) {
         vRAMByte = 0x0;
     }
@@ -19,6 +19,7 @@ VDP::VDP() {
         controlRegister = 0x0;
     }
 
+    this->interruptBus = interruptBus;
     statusRegister = 0x0;
     controlWord = 0x0;
     isSecondControlWrite = false;
@@ -26,18 +27,113 @@ VDP::VDP() {
     requestInterrupt = false;
     hCounter = 0x0;
     vCounter = 0x0;
+    vRefresh = false;
+    isVBlanking = false;
+    vCounterJumpCount = 0;
+    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall); // TODO should this be the default? just using it for now.
+    pixels = new sf::Uint8[256 * 224 * 4];
+
+    for (int i = 0; i <= ((256 * 224) * 4); i += 4) {
+        pixels[i] = 128; // R
+        pixels[i + 1] = 128; // G
+        pixels[i + 2] = 128; // B
+        pixels[i + 3] = 255; // A
+    }
 }
 
 VDP::~VDP() {
 
 }
 
-/**
- * [vdp::execute Update the graphics chip]
- * @param cycles [description]
- */
+
 void VDP::execute(float cycles) {
-    // TODO: Implement this
+    unsigned short currentHCount = hCounter;
+    int vdpCycles = (int)cycles * 2;
+    hCounter = (int)(hCounter + cycles) % 685;
+
+    if (currentHCount + vdpCycles <= 684) {
+        return;
+    }
+
+    handleScanlineChange();
+
+    if (Utils::testBit(7, statusRegister) && Utils::testBit(5, registers[0x1])) {
+        requestInterrupt = true;
+    }
+
+    if (requestInterrupt) {
+        requestInterrupt = false;
+        interruptBus->raiseInterrupt(InterruptType::INT);
+    }
+}
+
+void VDP::handleScanlineChange() {
+
+    // End of the current scanline
+    hCounter = 0;
+    unsigned char currentVCounter = vCounter;
+    ++vCounter;
+
+    // Handle VCounter timing/increment events
+    if (currentVCounter == 255) {
+        // End of vertical refresh - start rendering the next frame
+        vCounter = 0;
+        vCounterJumpCount = 0; // Ensure that we don't end up moving the VCounter back every time, should be done once per frame
+        vRefresh = true;
+        // TODO draw this scanline to the screen
+    } else {
+        handleVCounterJump(currentVCounter);
+    }
+
+    if (vCounterJumpCount == 0 && vCounter == displayMode.getActiveDisplayEnd()) {
+        // Entering vertical refresh on the next scanline if we've reached the end of the active display and the vcounter has not jumped
+        isVBlanking = true;
+        Utils::setBit(7, true, statusRegister);
+    }
+
+    if (vCounter <= displayMode.getActiveDisplayEnd()) {
+
+        if (vCounter != displayMode.getActiveDisplayEnd()) {
+            // Active display - render this scanline
+            renderScanline();
+        }
+
+        // TODO handle line interrupt timing
+
+        // Determine whether the line interrupt counter is going to underflow and decrement it
+        if ((lineInterruptCounter--) == 0) {
+            lineInterruptCounter = registers[0xA]; // Reload the counter - as the program may later check for another scanline on this frame
+
+            if (Utils::testBit(4, registers[0x0])) {
+                requestInterrupt = true;
+            }
+        }
+    }
+
+    if (vCounter >= displayMode.getActiveDisplayEnd()) {
+        // Inactive display area
+        if (vCounter != displayMode.getActiveDisplayEnd()) {
+            // Line interrupt counter should be loaded on the first scanline after the active display period
+            lineInterruptCounter = registers[0xA];
+        }
+
+        vScroll = registers[0x9];
+
+        // Allow the screen resolution to change
+        // TODO handle PAL modes
+        switch (getMode()) {
+            case 11:
+                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCMedium);
+                break;
+            case 14:
+                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCLarge);
+                break;
+            default:
+                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall);
+                break;
+        }
+    }
+
 }
 
 unsigned short VDP::getNameTableBaseAddress() {
@@ -48,6 +144,7 @@ void VDP::writeControlPort(unsigned char value) {
 
     if (isSecondControlWrite) {
         controlWord = (controlWord & 0x00FF) + (((unsigned short)value) << 8);
+
         isSecondControlWrite = false;
 
         switch (getCodeRegister()) {
@@ -149,10 +246,39 @@ unsigned char VDP::readDataPort() {
 
 unsigned char VDP::readHCounter() {
     isSecondControlWrite = false;
-    return hCounter;
+    return (hCounter >> 1) & 0xFF;
 }
 
 unsigned char VDP::readVCounter() {
     isSecondControlWrite = false;
     return vCounter;
+}
+
+bool VDP::handleVCounterJump(unsigned char currentVCounter) {
+
+    std::vector<VDPDisplayModeVCounterJump> vCounterJumps = displayMode.getVCounterJumps();
+
+    if (vCounterJumpCount >= vCounterJumps.size()) {
+        // We've already jumped enough times - do nothing
+        return false;
+    }
+
+    VDPDisplayModeVCounterJump jump = vCounterJumps[vCounterJumpCount];
+
+    if (currentVCounter != jump.getFrom()) {
+        return false; // Not the correct scanline - don't change vcounter
+    }
+
+    vCounter = jump.getTo();
+    ++vCounterJumpCount;
+
+    return true;
+}
+
+void VDP::renderScanline() {
+
+}
+
+sf::Uint8* VDP::getVideoOutput() {
+    return pixels;
 }

@@ -7,6 +7,11 @@ Licensed under the GPLv3 license.
 #ifndef SMS_VDP_H
 #define SMS_VDP_H
 
+#include "VDPDisplayMode.h"
+#include "Z80InterruptBus.h"
+#include <SFML/System.hpp>
+#include <SFML/Graphics.hpp>
+
 // Flag register enums, some won't be needed but will leave them here for reference
 enum class StatusFlag : unsigned char {
     spriteCollision = 5,
@@ -53,11 +58,11 @@ enum class VDPControlRegister2 : unsigned char { // TODO probably won't need thi
     nameTableBaseAddressBit13 = 3
 };
 
-// VDP Control Registers 3 and 4 are unused.
+// VDP Control Registers 3 and 4 are yf.
 
 class VDP {
 public:
-    VDP();
+    VDP(Z80InterruptBus *interruptBus);
 
     ~VDP();
 
@@ -82,6 +87,8 @@ public:
     unsigned char readHCounter();
 
     unsigned char readVCounter();
+
+    sf::Uint8* getVideoOutput();
 
 private:
 
@@ -110,7 +117,7 @@ private:
 
     bool isSecondControlWrite;
 
-    unsigned char hCounter;
+    unsigned short hCounter;
 
     unsigned char vCounter;
 
@@ -122,6 +129,37 @@ private:
 
     void writeRegister();
 
+    void renderScanline();
+
     unsigned char getMode();
+
+    /**
+     * Jumps the VCounter to another location if required
+     * @return true if counter has jumped, otherwise false
+     */
+    bool handleVCounterJump(unsigned char currentVCounter);
+
+    void setHCounter(unsigned short value);
+
+    bool vRefresh;
+
+    bool isVBlanking;
+
+    unsigned char vScroll;
+
+    VDPDisplayMode displayMode;
+
+    void handleScanlineChange();
+
+    unsigned char lineInterruptCounter;
+
+    unsigned char vCounterJumpCount;
+
+    Z80InterruptBus *interruptBus;
+
+    sf::Uint8 *pixels;
+
 };
 #endif
+
+// 30th November = leaving date

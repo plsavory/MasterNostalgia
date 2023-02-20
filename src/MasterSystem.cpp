@@ -8,12 +8,15 @@ Licensed under the GPLv3 license.
 #include "MasterSystem.h"
 
 MasterSystem::MasterSystem() {
+
+    Z80InterruptBus *interruptBus = new Z80InterruptBus();
+
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
-    smsVdp = new VDP();
+    smsVdp = new VDP(interruptBus);
     smsPSG = new PSG();
     z80Io = new MasterSystemZ80IO(smsVdp, smsPSG);
-    smsCPU = new CPUZ80(smsMemory, z80Io);
+    smsCPU = new CPUZ80(smsMemory, z80Io, interruptBus);
     running = false;
 }
 
@@ -62,4 +65,8 @@ bool MasterSystem::isRunning() {
 
 double MasterSystem::getMachineClicksPerFrame() {
     return (float)10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
+}
+
+sf::Uint8* MasterSystem::getVideoOutput() {
+    return smsVdp->getVideoOutput();
 }

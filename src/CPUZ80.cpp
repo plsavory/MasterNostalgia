@@ -13,10 +13,11 @@ Licensed under the GPLv3 license.
 #include "Utils.h"
 #include "Exceptions.h"
 
-CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
+CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io, Z80InterruptBus *interruptBus) {
     // Store a pointer to the memory object
     memory = smsMemory;
     this->z80Io = z80Io;
+    this->interruptBus = interruptBus;
 
     cyclesTaken = 0;
 
@@ -47,7 +48,7 @@ void CPUZ80::reset() {
 
 int CPUZ80::execute() {
     // This function may be redundant - TODO: Call executeOpcode directly from MasterSystem class if this turns out to be the case in the future.
-    if (state == CPUState::Running) {
+    if (state == CPUState::Running || state == CPUState::Halt) {
         return executeOpcode();
     }
 
@@ -59,6 +60,14 @@ int CPUZ80::executeOpcode() {
     cyclesTaken = 0;
     originalProgramCounterValue = programCounter;
     executedInstructionName = "";
+    ioPortAddress = 0x0;
+    readValue = 0x0;
+    memoryAddress = 0x0;
+
+    // Store the original register values that we are going to output to the console for debugging
+    for (int i = 0; i < 10; i++) {
+        originalRegisterValues[i] = gpRegisters[i];
+    }
 
     // TODO handle interrupts - if the CPU is halted, make it active again when an interrupt occurs
     if (enableInterrupts) {
@@ -66,14 +75,38 @@ int CPUZ80::executeOpcode() {
         enableInterrupts = false;
     }
 
+    InterruptType currentInterrupt;
+
+    // TODO have I misunderstood how this works? I have built the interrupt bus like a list in case multiple get raised between CPU instructions
+    while ((currentInterrupt = interruptBus->getPendingInterrupt()) != InterruptType::None) {
+
+        if (currentInterrupt == InterruptType::NMI) {
+            iff2 = iff1;
+            iff1 = false; // Prevent maskable interrupts from being services as this one takes priority
+            pushStack(programCounter);
+            programCounter = 0x66;
+            continue;
+        }
+
+        if (!iff1) {
+            // Don't service maskable interrupts unless iff1 is turned on
+            continue;
+        }
+
+        if (currentInterrupt == InterruptType::INT) {
+            pushStack(programCounter);
+            programCounter = 0x38;
+        }
+    }
+
     if (state == CPUState::Halt) {
         return 4; // TODO not sure what to return here in terms of cycles taken, look into it - assume 4 for now
     }
 
-    unsigned char opcode = NB();
+    unsigned char opcode = NBHideFromTrace();
     unsigned char upperOpcode; // Use for 2-byte instructions
 
-    displayOpcodePrefix = "";
+    displayOpcodePrefix = 0x0;
     displayOpcode = opcode;
 
     switch (opcode) {
@@ -88,7 +121,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x02:
             // ld (bc), a
-            memory->write(gpRegisters[cpuReg::BC].whole, gpRegisters[cpuReg::AF].hi);
+            writeMemory(gpRegisters[cpuReg::BC].whole, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 7;
             break;
         case 0x03:
@@ -128,7 +161,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x0A:
             // ld a, (bc)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::BC].whole));
+            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::BC].whole));
             cyclesTaken = 7;
             break;
         case 0x0B:
@@ -167,7 +200,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x12:
             // ld (de), a
-            memory->write(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::AF].hi);
+            writeMemory(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 7;
             break;
         case 0x13:
@@ -206,7 +239,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0X1A:
             // ld a, (de)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::DE].whole));
+            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::DE].whole));
             cyclesTaken = 7;
             break;
         case 0x1B:
@@ -284,7 +317,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x2A:
             // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, memory->read(build16BitNumber()), false);
+            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory(build16BitNumber()), false);
             cyclesTaken = 16;
             break;
         case 0x2B:
@@ -323,7 +356,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x32:
             // ld (nn), a
-            memory->write(build16BitNumber(), gpRegisters[cpuReg::AF].hi);
+            writeMemory(build16BitNumber(), gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 13;
             break;
         case 0x33:
@@ -333,17 +366,17 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x34:
             // inc (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, getInc8BitValue(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, getInc8BitValue(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 11;
             break;
         case 0x35:
             // dec (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, getDec8BitValue(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, getDec8BitValue(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 11;
             break;
         case 0x36:
             // ld (hl), n
-            memory->write(gpRegisters[cpuReg::HL].whole, NB());
+            writeMemory(gpRegisters[cpuReg::HL].whole, NB());
             cyclesTaken = 10;
             break;
         case 0x37:
@@ -364,7 +397,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x3A:
             // ld a, (nn)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(build16BitNumber()));
+            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(build16BitNumber()));
             cyclesTaken = 13;
             break;
         case 0x3B:
@@ -426,7 +459,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x46:
             // ld b, (hl)
-            ldReg8(gpRegisters[cpuReg::BC].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x47:
@@ -466,7 +499,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x4E:
             // ld c, (hl)
-            ldReg8(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::BC].lo, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x4F:
@@ -506,7 +539,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x56:
             // ld d, (hl)
-            ldReg8(gpRegisters[cpuReg::DE].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x57:
@@ -546,7 +579,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x5E:
             // ld e, (hl)
-            ldReg8(gpRegisters[cpuReg::DE].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x5F:
@@ -586,7 +619,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x66:
             // ld h, (hl)
-            ldReg8(gpRegisters[cpuReg::HL].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x67:
@@ -626,7 +659,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x6E:
             // ld l, (hl)
-            ldReg8(gpRegisters[cpuReg::HL].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x6F:
@@ -636,32 +669,32 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x70:
             // ld (hl), b
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].hi);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].hi);
             cyclesTaken = 7;
             break;
         case 0x71:
             // ld (hl), c
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].lo);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 7;
             break;
         case 0x72:
             // ld (hl), d
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].hi);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].hi);
             cyclesTaken = 7;
             break;
         case 0x73:
             // ld (hl), e
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 7;
             break;
         case 0x74:
             // ld (hl), h
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].hi);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].hi);
             cyclesTaken = 7;
             break;
         case 0x75:
             // ld (hl), l
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].lo);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].lo);
             cyclesTaken = 7;
             break;
         case 0x76:
@@ -671,7 +704,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x77:
             // ld (hl), a
-            memory->write(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::AF].hi);
+            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 7;
             break;
         case 0x78:
@@ -706,7 +739,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x7E:
             // ld a (hl)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x7F:
@@ -746,7 +779,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x86:
             // add a, (hl)
-            add8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x87:
@@ -786,7 +819,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x8E:
             // adc a, (hl)
-            adc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            adc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x8F:
@@ -826,7 +859,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x96:
             // sub (hl)
-            sub8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x97:
@@ -866,7 +899,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x9E:
             // sbc a, (hl)
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0x9F:
@@ -906,7 +939,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xA6:
             // and (hl)
-            and8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 4;
             break;
         case 0xA7:
@@ -946,7 +979,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xAE:
             // xor (hl)
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0xAF:
@@ -986,7 +1019,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xB6:
             // or (hl)
-            or8Bit(gpRegisters[cpuReg::AF].hi, memory->read(gpRegisters[cpuReg::HL].whole));
+            or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0xB7:
@@ -1026,7 +1059,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xBE:
             // cp (hl)
-            compare8Bit(memory->read(gpRegisters[cpuReg::HL].whole));
+            compare8Bit(readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 7;
             break;
         case 0xBF:
@@ -1118,7 +1151,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xD3:
             // out (n) a
-            z80Io->write(NB(), gpRegisters[cpuReg::AF].hi);
+            portOut(NB(), gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 11;
             break;
         case 0xD4:
@@ -1340,6 +1373,11 @@ int CPUZ80::executeOpcode() {
  * @return [description]
  */
 unsigned char CPUZ80::NB() {
+    return readMemory(programCounter++);
+}
+
+unsigned char CPUZ80::NBHideFromTrace() {
+    // Fetch the next byte without updating the trace variables that I use for debugging
     return memory->read(programCounter++);
 }
 
@@ -1348,7 +1386,7 @@ unsigned char CPUZ80::NB() {
  * @return
  */
 signed char CPUZ80::signedNB() {
-    return static_cast<signed char>(memory->read(programCounter++));
+    return static_cast<signed char>(readMemory(programCounter++));
 }
 
 unsigned short CPUZ80::getIndexedOffsetAddress(unsigned short registerValue) {
@@ -1360,9 +1398,9 @@ unsigned short CPUZ80::getIndexedOffsetAddress(unsigned short registerValue) {
  */
 void CPUZ80::extendedOpcodes() {
 
-    unsigned char opcode = NB();
+    unsigned char opcode = NBHideFromTrace();
     displayOpcode = opcode;
-    displayOpcodePrefix = "ED";
+    displayOpcodePrefix = 0xED;
 
     switch (opcode) {
         case 0x40:
@@ -1371,7 +1409,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x41:
             // out (c), b
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
             cyclesTaken = 12;
             break;
         case 0x42:
@@ -1381,7 +1419,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x43:
             // ld (nn), bc
-            memory->write(build16BitNumber(), gpRegisters[cpuReg::BC].whole);
+            writeMemory(build16BitNumber(), gpRegisters[cpuReg::BC].whole);
             cyclesTaken = 20;
             break;
         case 0x44:
@@ -1408,7 +1446,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x49:
             // out (c), c
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x4A:
@@ -1418,7 +1456,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x4B:
             // ld bc, (nn)
-            ldReg16(gpRegisters[cpuReg::BC].whole, memory->read16Bit(build16BitNumber()), false);
+            ldReg16(gpRegisters[cpuReg::BC].whole, readMemory16Bit(build16BitNumber()), false);
             cyclesTaken = 20;
             break;
         case 0x4D:
@@ -1436,7 +1474,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x51:
             // out (c), d
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
             cyclesTaken = 12;
             break;
         case 0x52:
@@ -1446,7 +1484,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x53:
             // ld (nn), de
-            memory->write(build16BitNumber(), gpRegisters[cpuReg::DE].whole);
+            writeMemory(build16BitNumber(), gpRegisters[cpuReg::DE].whole);
             cyclesTaken = 20;
             break;
         case 0x56:
@@ -1465,7 +1503,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x59:
             // out (c), e
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 12;
             break;
         case 0x5A:
@@ -1475,7 +1513,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x5B:
             // ld de, (nn)
-            ldReg16(gpRegisters[cpuReg::DE].whole, memory->read16Bit(build16BitNumber()));
+            ldReg16(gpRegisters[cpuReg::DE].whole, readMemory16Bit(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0x5E:
@@ -1493,7 +1531,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x61:
             // out (c), h
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
             cyclesTaken = 12;
             break;
         case 0x62:
@@ -1503,7 +1541,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x63:
             // ld (nn), hl
-            memory->write(build16BitNumber(), gpRegisters[cpuReg::HL].whole);
+            writeMemory(build16BitNumber(), gpRegisters[cpuReg::HL].whole);
             cyclesTaken = 20;
             break;
         case 0x67:
@@ -1517,7 +1555,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x69:
             // out (c), l
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
             cyclesTaken = 12;
             break;
         case 0x6A:
@@ -1527,7 +1565,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x6B:
             // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, memory->read(build16BitNumber()));
+            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0x6F:
@@ -1541,7 +1579,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x71:
             // out (c), 0
-            z80Io->write(gpRegisters[cpuReg::BC].lo, 0);
+            portOut(gpRegisters[cpuReg::BC].lo, 0);
             cyclesTaken = 12;
             break;
         case 0x72:
@@ -1551,7 +1589,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x73:
             // ld (nn), sp
-            memory->write(build16BitNumber(), stackPointer);
+            writeMemory(build16BitNumber(), stackPointer);
             cyclesTaken = 20;
             break;
         case 0x78:
@@ -1561,7 +1599,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x79:
             // out (c), a
-            z80Io->write(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
+            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 12;
             break;
         case 0x7A:
@@ -1571,7 +1609,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x7B:
             // ld sp, (nn)
-            ldReg16(stackPointer, memory->read(build16BitNumber()));
+            ldReg16(stackPointer, readMemory(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0xA0:
@@ -1648,14 +1686,14 @@ void CPUZ80::extendedOpcodes() {
 }
 
 void CPUZ80::ixOpcodes() {
-    indexOpcodes("DD", "IX", cpuReg::IX);
+    indexOpcodes(0xDD, "IX", cpuReg::IX);
 }
 
-void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
+void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
 
     // TODO add the rest of the undocumented opcodes, not all of them are done.
 
-    unsigned char opcode = NB();
+    unsigned char opcode = NBHideFromTrace();
     displayOpcodePrefix = opcodePrefix;
     displayOpcode = opcode;
     unsigned short address = 0x0;
@@ -1738,7 +1776,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x22:
             // ld (nn), ix
-            memory->write(build16BitNumber(), gpRegisters[indexRegister].whole);
+            writeMemory(build16BitNumber(), gpRegisters[indexRegister].whole);
             cyclesTaken = 20;
             break;
         case 0x23:
@@ -1768,7 +1806,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x2A:
             // ld ix, (nn)
-            ldReg16(gpRegisters[indexRegister].whole, memory->read(build16BitNumber()));
+            ldReg16(gpRegisters[indexRegister].whole, readMemory(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0x2B:
@@ -1794,18 +1832,18 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
         case 0x34:
             // inc (ix+d)
             address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
-            memory->write(address, getInc8BitValue(memory->read(address)));
+            writeMemory(address, getInc8BitValue(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x35:
             // dec (ix+d)
             address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
-            memory->write(address, getDec8BitValue(memory->read(address)));
+            writeMemory(address, getDec8BitValue(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x36:
             // ld (ix+d), n
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), NB());
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), NB());
             cyclesTaken = 19;
             break;
         case 0x39:
@@ -1860,7 +1898,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x46:
             // ld b, (ix+d)
-            ldReg8(gpRegisters[cpuReg::BC].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x47:
@@ -1900,7 +1938,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x4E:
             // ld c, (ix+d)
-            ldReg8(gpRegisters[cpuReg::BC].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x4F:
@@ -1940,7 +1978,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x56:
             // ld d, (ix+d)
-            ldReg8(gpRegisters[cpuReg::DE].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x57:
@@ -1980,7 +2018,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x5E:
             // ld e, (ix+d)
-            ldReg8(gpRegisters[cpuReg::DE].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x5F:
@@ -2020,7 +2058,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x66:
             // ld h, (ix+d)
-            ldReg8(gpRegisters[cpuReg::HL].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x67:
@@ -2060,7 +2098,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x6E:
             // ld l, (ix+d)
-            ldReg8(gpRegisters[cpuReg::HL].lo, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x6F:
@@ -2070,37 +2108,37 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x70:
             // ld (ix+d), b
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].hi);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].hi);
             cyclesTaken = 19;
             break;
         case 0x71:
             // ld (ix+d), c
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].lo);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 19;
             break;
         case 0x72:
             // ld (ix+d), d
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].hi);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].hi);
             cyclesTaken = 19;
             break;
         case 0x73:
             // ld (ix+d), e
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].lo);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].lo);
             cyclesTaken = 19;
             break;
         case 0x74:
             // ld (ix+d), h
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].hi);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].hi);
             cyclesTaken = 19;
             break;
         case 0x75:
             // ld (ix+d), l
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].lo);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].lo);
             cyclesTaken = 19;
             break;
         case 0x77:
             // ld (ix+d), a
-            memory->write(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::AF].hi);
+            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 19;
             break;
         case 0x78:
@@ -2135,7 +2173,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x7E:
             // ld a, (ix+d)
-            ldReg8(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x7F:
@@ -2175,7 +2213,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x86:
             // add a, (ix+d)
-            add8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x87:
@@ -2215,7 +2253,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x8E:
             // adc a, (ix+d)
-            adc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            adc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x8F:
@@ -2255,7 +2293,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x96:
             // sub a, (ix+d)
-            sub8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x97:
@@ -2295,7 +2333,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0x9E:
             // sbc a, (ix+d)
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0x9F:
@@ -2335,7 +2373,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0xA6:
             // and a, (ix+d)
-            and8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0xA7:
@@ -2375,7 +2413,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0xAE:
             // xor a, (ix+d)
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0xAF:
@@ -2415,7 +2453,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0xB6:
             // or a, (ix+d)
-            or8Bit(gpRegisters[cpuReg::AF].hi, memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0xB7:
@@ -2455,7 +2493,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             break;
         case 0xBE:
             // cp a, (ix+d)
-            compare8Bit(memory->read(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
+            compare8Bit(readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
             cyclesTaken = 19;
             break;
         case 0xBF:
@@ -2464,7 +2502,7 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
             cyclesTaken = 8;
             break;
         case 0xCB:
-            opcodePrefix.append("CB");
+            displayOpcodePrefix = 0xCB;
             indexBitOpcodes(opcodePrefix, indexPrefix, indexRegister);
             break;
         case 0xE1:
@@ -2503,18 +2541,21 @@ void CPUZ80::indexOpcodes(std::string opcodePrefix, const std::string& indexPref
 }
 
 void CPUZ80::iyOpcodes() {
-    indexOpcodes("FD", "IY", cpuReg::IY);
+    indexOpcodes(0xFD, "IY", cpuReg::IY);
 }
 
 /**
  * [logCPUState Log the CPU's current state to the console]
  */
 void CPUZ80::logCPUState() {
-    std::cout << std::uppercase << "PC: 0x" << std::hex << (int) originalProgramCounterValue << " Opcode: 0x" << displayOpcodePrefix
-              << (int) displayOpcode << " - " << Utils::padString(executedInstructionName, 10) << " - Registers: AF=0x" << (int) gpRegisters[cpuReg::AF].whole << " BC=0x"
-              << (int) gpRegisters[cpuReg::BC].whole << " DE=0x" << (int) gpRegisters[cpuReg::DE].whole << " HL=0x"
-              << (int) gpRegisters[cpuReg::HL].whole << " IX=0x" << (int) gpRegisters[cpuReg::IX].whole << " IY=0x"
-              << (int) gpRegisters[cpuReg::IY].whole << " SP=0x" << (int) stackPointer << std::endl;
+    std::cout << std::uppercase << std::hex << Utils::formatHexNumber(displayOpcodePrefix) << Utils::formatHexNumber(displayOpcode) << ": "
+              << Utils::padString(executedInstructionName, 10) << " BC:"
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL:"
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX:"
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP:"
+              << Utils::formatHexNumber(stackPointer) << " PC:" << Utils::formatHexNumber(originalProgramCounterValue) << " VAL:"
+              << Utils::formatHexNumber(readValue) << " PADDR:" << Utils::formatHexNumber(ioPortAddress)
+              << " MADDR:" << Utils::formatHexNumber(memoryAddress) << std::endl;
 }
 
 void CPUZ80::setFlag(CPUFlag flag, bool value) {
@@ -2530,8 +2571,8 @@ bool CPUZ80::getFlag(CPUFlag flag) {
  * @return [The memory address]
  */
 unsigned short CPUZ80::build16BitNumber() {
-    unsigned char addrLo = NB();
-    unsigned char addrHi = NB();
+    unsigned char addrLo = NBHideFromTrace();
+    unsigned char addrHi = NBHideFromTrace();
 
     return (addrLo + (addrHi << 8));
 }
@@ -2541,7 +2582,7 @@ unsigned short CPUZ80::build16BitNumber() {
  * @return [description]
  */
 unsigned char CPUZ80::getIndirectValue() {
-    return memory->read(build16BitNumber());
+    return readMemory(build16BitNumber());
 }
 
 /**
@@ -2549,7 +2590,7 @@ unsigned char CPUZ80::getIndirectValue() {
  * @return [description]
  */
 unsigned char CPUZ80::getIndirectValue(unsigned short address) {
-    return memory->read(address);
+    return readMemory(address);
 }
 
 /**
@@ -2581,7 +2622,7 @@ bool CPUZ80::hasMetJumpCondition(JPCondition condition) {
 }
 
 void CPUZ80::pushStack(unsigned char value) {
-    memory->write(stackPointer--, value);
+    writeMemory(stackPointer--, value);
 }
 
 void CPUZ80::pushStack(unsigned short value) {
@@ -2592,7 +2633,7 @@ void CPUZ80::pushStack(unsigned short value) {
 }
 
 unsigned char CPUZ80::popStack() {
-    return memory->read(++stackPointer);
+    return readMemory(++stackPointer);
 }
 
 unsigned short CPUZ80::popStack16() {
@@ -2604,8 +2645,8 @@ unsigned short CPUZ80::popStack16() {
 
 void CPUZ80::bitOpcodes() {
 
-    unsigned char opcode = NB();
-    displayOpcodePrefix = "CB";
+    unsigned char opcode = NBHideFromTrace();
+    displayOpcodePrefix = 0xCB;
     displayOpcode = opcode;
 
     switch (opcode) {
@@ -2641,7 +2682,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x06:
             // rlc (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, rlc(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, rlc(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x07:
@@ -2681,7 +2722,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x0E:
             // rrc (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, rrc(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, rrc(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x0F:
@@ -2721,7 +2762,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x16:
             // rl (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, rl(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, rl(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x17:
@@ -2761,7 +2802,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x1E:
             // rr (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, rr(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, rr(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x1F:
@@ -2801,7 +2842,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x26:
             // sla (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, sla(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, sla(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x27:
@@ -2841,7 +2882,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x2E:
             // sra (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, sra(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, sra(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x2F:
@@ -2881,7 +2922,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x36:
             // sll (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, sll(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, sll(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x37:
@@ -2921,7 +2962,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x3E:
             // srl (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, srl(memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, srl(readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x3F:
@@ -2961,7 +3002,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x46:
             // bit 0, (hl);
-            bit(0, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(0, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x47:
@@ -3001,7 +3042,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x4E:
             // bit 1, (hl);
-            bit(1, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(1, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x4F:
@@ -3041,7 +3082,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x56:
             // bit 2, (hl);
-            bit(2, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(2, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x57:
@@ -3081,7 +3122,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x5E:
             // bit 3, (hl);
-            bit(3, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(3, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x5F:
@@ -3121,7 +3162,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x66:
             // bit 4, (hl);
-            bit(4, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(4, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x67:
@@ -3161,7 +3202,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x6E:
             // bit 5, (hl);
-            bit(5, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(5, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x6F:
@@ -3201,7 +3242,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x76:
             // bit 6, (hl);
-            bit(6, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(6, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x77:
@@ -3241,7 +3282,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x7E:
             // bit 7, (hl);
-            bit(7, memory->read(gpRegisters[cpuReg::HL].whole));
+            bit(7, readMemory(gpRegisters[cpuReg::HL].whole));
             cyclesTaken = 12;
             break;
         case 0x7F:
@@ -3281,7 +3322,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x86:
             // res 0, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(0, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(0, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x87:
@@ -3321,7 +3362,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x8E:
             // res 1, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(1, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(1, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x8F:
@@ -3361,7 +3402,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x96:
             // res 2, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(2, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(2, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x97:
@@ -3401,7 +3442,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0x9E:
             // res 3, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(3, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(3, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0x9F:
@@ -3441,7 +3482,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xA6:
             // res 4, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(4, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(4, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xA7:
@@ -3481,7 +3522,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xAE:
             // res 5, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(5, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(5, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xAF:
@@ -3521,7 +3562,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xB6:
             // res 6, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(6, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(6, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xB7:
@@ -3561,7 +3602,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xBE:
             // res 7, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, res(7, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, res(7, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xBF:
@@ -3601,7 +3642,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xC6:
             // set 0, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(0, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(0, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xC7:
@@ -3641,7 +3682,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xCE:
             // set 1, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(1, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(1, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xCF:
@@ -3681,7 +3722,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xD6:
             // set 2, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(2, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(2, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xD7:
@@ -3721,7 +3762,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xDE:
             // set 3, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(3, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(3, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xDF:
@@ -3761,7 +3802,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xE6:
             // set 4, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(4, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(4, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xE7:
@@ -3801,7 +3842,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xEE:
             // set 5, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(5, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(5, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xEF:
@@ -3841,7 +3882,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xF6:
             // set 6, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(6, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(6, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xF7:
@@ -3881,7 +3922,7 @@ void CPUZ80::bitOpcodes() {
             break;
         case 0xFE:
             // set 7, (hl)
-            memory->write(gpRegisters[cpuReg::HL].whole, set(7, memory->read(gpRegisters[cpuReg::HL].whole)));
+            writeMemory(gpRegisters[cpuReg::HL].whole, set(7, readMemory(gpRegisters[cpuReg::HL].whole)));
             cyclesTaken = 15;
             break;
         case 0xFF:
@@ -3897,1292 +3938,1292 @@ void CPUZ80::bitOpcodes() {
 
 }
 
-void CPUZ80::indexBitOpcodes(const std::string& opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
+void CPUZ80::indexBitOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
     // Opcode format is offset, opcode
-    unsigned short address = memory->read(gpRegisters[indexRegister].whole + signedNB());
-    unsigned char opcode = NB();
-    displayOpcodePrefix = opcodePrefix;
+    unsigned short address = readMemory(gpRegisters[indexRegister].whole + signedNB());
+    unsigned char opcode = NBHideFromTrace();
+    displayOpcodePrefix = (displayOpcodePrefix << 8) + opcodePrefix;
     displayOpcode = opcode;
 
     switch (opcode) {
         case 0x00:
             // rlc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x01:
             // rlc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x02:
             // rlc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x03:
             // rlc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x04:
             // rlc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x05:
             // rlc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x06:
             // rlc (hl)
-            memory->write(address, rlc(memory->read(address)));
+            writeMemory(address, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x07:
             // rlc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rlc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, rlc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x08:
             // rrc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x09:
             // rrc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0A:
             // rrc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0B:
             // rrc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0C:
             // rrc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0D:
             // rrc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0E:
             // rrc (hl)
-            memory->write(address, rrc(memory->read(address)));
+            writeMemory(address, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x0F:
             // rrc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rrc(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, rrc(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x10:
             // rl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x11:
             // rl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x12:
             // rl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x13:
             // rl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x14:
             // rl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x15:
             // rl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x16:
             // rl (hl)
-            memory->write(address, rl(memory->read(address)));
+            writeMemory(address, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x17:
             // rl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, rl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x18:
             // rr b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x19:
             // rr c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1A:
             // rr d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1B:
             // rr e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1C:
             // rr h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1D:
             // rr l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1E:
             // rr (hl)
-            memory->write(address, rr(memory->read(address)));
+            writeMemory(address, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x1F:
             // rr a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rr(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, rr(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x20:
             // sla b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x21:
             // sla c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x22:
             // sla d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x23:
             // sla e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x24:
             // sla h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x25:
             // sla l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x26:
             // sla (hl)
-            memory->write(address, sla(memory->read(address)));
+            writeMemory(address, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x27:
             // sla a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sla(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, sla(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x28:
             // sra b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x29:
             // sra c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2A:
             // sra d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2B:
             // sra e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2C:
             // sra h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2D:
             // sra l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2E:
             // sra (hl)
-            memory->write(address, sra(memory->read(address)));
+            writeMemory(address, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x2F:
             // sra a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sra(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, sra(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x30:
             // sll b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x31:
             // sll c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x32:
             // sll d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x33:
             // sll e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x34:
             // sll h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x35:
             // sll l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x36:
             // sll (hl)
-            memory->write(address, sll(memory->read(address)));
+            writeMemory(address, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x37:
             // sll a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sll(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, sll(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x38:
             // srl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x39:
             // srl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3A:
             // srl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3B:
             // srl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3C:
             // srl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3D:
             // srl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3E:
             // srl (hl)
-            memory->write(address, srl(memory->read(address)));
+            writeMemory(address, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x3F:
             // srl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, srl(memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, srl(readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x40:
             // bit 0, b
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x41:
             // bit 0, c
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x42:
             // bit 0, d
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x43:
             // bit 0, e
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x44:
             // bit 0, h
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x45:
             // bit 0, l
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x46:
             // bit 0, (hl);
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x47:
             // bit 0, a
-            bit(0, memory->read(address));
+            bit(0, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x48:
             // bit 1, b
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x49:
             // bit 1, c
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4A:
             // bit 1, d
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4B:
             // bit 1, e
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4C:
             // bit 1, h
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4D:
             // bit 1, l
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4E:
             // bit 1, (hl);
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x4F:
             // bit 1, a
-            bit(1, memory->read(address));
+            bit(1, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x50:
             // bit 2, b
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x51:
             // bit 2, c
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x52:
             // bit 2, d
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x53:
             // bit 2, e
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x54:
             // bit 2, h
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x55:
             // bit 2, l
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x56:
             // bit 2, (hl);
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x57:
             // bit 2, a
-            bit(2, memory->read(address));
+            bit(2, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x58:
             // bit 3, b
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x59:
             // bit 3, c
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5A:
             // bit 3, d
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5B:
             // bit 3, e
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5C:
             // bit 3, h
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5D:
             // bit 3, l
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5E:
             // bit 3, (hl);
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x5F:
             // bit 3, a
-            bit(3, memory->read(address));
+            bit(3, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x60:
             // bit 4, b
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x61:
             // bit 4, c
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x62:
             // bit 4, d
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x63:
             // bit 4, e
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x64:
             // bit 4, h
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x65:
             // bit 4, l
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x66:
             // bit 4, (hl);
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x67:
             // bit 4, a
-            bit(4, memory->read(address));
+            bit(4, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x68:
             // bit 5, b
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x69:
             // bit 5, c
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6A:
             // bit 5, d
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6B:
             // bit 5, e
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6C:
             // bit 5, h
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6D:
             // bit 5, l
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6E:
             // bit 5, (hl);
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x6F:
             // bit 5, a
-            bit(5, memory->read(address));
+            bit(5, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x70:
             // bit 6, b
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x71:
             // bit 6, c
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x72:
             // bit 6, d
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x73:
             // bit 6, e
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x74:
             // bit 6, h
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x75:
             // bit 6, l
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x76:
             // bit 6, (hl);
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x77:
             // bit 6, a
-            bit(6, memory->read(address));
+            bit(6, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x78:
             // bit 7, b
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x79:
             // bit 7, c
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7A:
             // bit 7, d
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7B:
             // bit 7, e
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7C:
             // bit 7, h
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7D:
             // bit 7, l
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7E:
             // bit 7, (hl);
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x7F:
             // bit 7, a
-            bit(7, memory->read(address));
+            bit(7, readMemory(address));
             cyclesTaken = 20;
             break;
         case 0x80:
             // res 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x81:
             // res 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x82:
             // res 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x83:
             // res 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x84:
             // res 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x85:
             // res 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x86:
             // res 0, (hl)
-            memory->write(address, res(0, memory->read(address)));
+            writeMemory(address, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x87:
             // res 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x88:
             // res 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x89:
             // res 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8A:
             // res 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8B:
             // res 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8C:
             // res 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8D:
             // res 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8E:
             // res 1, (hl)
-            memory->write(address, res(1, memory->read(address)));
+            writeMemory(address, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x8F:
             // res 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x90:
             // res 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x91:
             // res 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x92:
             // res 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x93:
             // res 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x94:
             // res 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x95:
             // res 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x96:
             // res 2, (hl)
-            memory->write(address, res(2, memory->read(address)));
+            writeMemory(address, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x97:
             // res 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x98:
             // res 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x99:
             // res 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9A:
             // res 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9B:
             // res 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9C:
             // res 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9D:
             // res 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9E:
             // res 3, (hl)
-            memory->write(address, res(3, memory->read(address)));
+            writeMemory(address, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0x9F:
             // res 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA0:
             // res 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA1:
             // res 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA2:
             // res 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA3:
             // res 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA4:
             // res 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA5:
             // res 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA6:
             // res 4, (hl)
-            memory->write(address, res(4, memory->read(address)));
+            writeMemory(address, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA7:
             // res 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA8:
             // res 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xA9:
             // res 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAA:
             // res 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAB:
             // res 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAC:
             // res 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAD:
             // res 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAE:
             // res 5, (hl)
-            memory->write(address, res(5, memory->read(address)));
+            writeMemory(address, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xAF:
             // res 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB0:
             // res 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB1:
             // res 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB2:
             // res 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB3:
             // res 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB4:
             // res 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB5:
             // res 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB6:
             // res 6, (hl)
-            memory->write(address, res(6, memory->read(address)));
+            writeMemory(address, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB7:
             // res 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB8:
             // res 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xB9:
             // res 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBA:
             // res 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBB:
             // res 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBC:
             // res 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBD:
             // res 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBE:
             // res 7, (hl)
-            memory->write(address, res(7, memory->read(address)));
+            writeMemory(address, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xBF:
             // res 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, res(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC0:
             // set 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC1:
             // set 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC2:
             // set 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC3:
             // set 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC4:
             // set 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC5:
             // set 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC6:
             // set 0, (hl)
-            memory->write(address, set(0, memory->read(address)));
+            writeMemory(address, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC7:
             // set 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(0, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(0, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC8:
             // set 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xC9:
             // set 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCA:
             // set 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCB:
             // set 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCC:
             // set 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCD:
             // set 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCE:
             // set 1, (hl)
-            memory->write(address, set(1, memory->read(address)));
+            writeMemory(address, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xCF:
             // set 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(1, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(1, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD0:
             // set 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD1:
             // set 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD2:
             // set 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD3:
             // set 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD4:
             // set 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD5:
             // set 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD6:
             // set 2, (hl)
-            memory->write(address, set(2, memory->read(address)));
+            writeMemory(address, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD7:
             // set 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(2, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(2, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD8:
             // set 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xD9:
             // set 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDA:
             // set 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDB:
             // set 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDC:
             // set 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDD:
             // set 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDE:
             // set 3, (hl)
-            memory->write(address, set(3, memory->read(address)));
+            writeMemory(address, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xDF:
             // set 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(3, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(3, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE0:
             // set 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE1:
             // set 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE2:
             // set 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE3:
             // set 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE4:
             // set 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE5:
             // set 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE6:
             // set 4, (hl)
-            memory->write(address, set(4, memory->read(address)));
+            writeMemory(address, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE7:
             // set 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(4, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(4, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE8:
             // set 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xE9:
             // set 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xEA:
             // set 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xEB:
             // set 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xEC:
             // set 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xED:
             // set 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xEE:
             // set 5, (hl)
-            memory->write(address, set(5, memory->read(address)));
+            writeMemory(address, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xEF:
             // set 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(5, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(5, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF0:
             // set 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF1:
             // set 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF2:
             // set 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF3:
             // set 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF4:
             // set 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF5:
             // set 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF6:
             // set 6, (hl)
-            memory->write(address, set(6, memory->read(address)));
+            writeMemory(address, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF7:
             // set 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(6, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(6, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF8:
             // set 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].hi, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xF9:
             // set 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::BC].lo, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFA:
             // set 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].hi, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFB:
             // set 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::DE].lo, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFC:
             // set 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].hi, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFD:
             // set 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::HL].lo, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFE:
             // set 7, (hl)
-            memory->write(address, set(7, memory->read(address)));
+            writeMemory(address, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         case 0xFF:
             // set 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(7, memory->read(address)));
+            ldReg8(gpRegisters[cpuReg::AF].hi, set(7, readMemory(address)));
             cyclesTaken = 23;
             break;
         default:

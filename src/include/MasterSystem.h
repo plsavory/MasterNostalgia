@@ -6,6 +6,7 @@ Licensed under the GPLv3 license.
 
 #include "Cartridge.h"
 #include "Memory.h"
+#include "Z80InterruptBus.h"
 #include "CPUZ80.h"
 #include "VDP.h"
 #include "PSG.h"
@@ -23,6 +24,8 @@ public:
     unsigned int tick();
 
     bool isRunning() final;
+
+    sf::Uint8* getVideoOutput() final;
 
 private:
     CPUZ80 *smsCPU;

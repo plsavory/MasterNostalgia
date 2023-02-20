@@ -333,3 +333,17 @@ std::string Utils::strToLower(std::string subject) {
 std::string Utils::padString(const std::string &string, int length) {
     return string.length() >= length ? string : string + std::string(length - string.size(), ' ');
 }
+
+std::string Utils::formatHexNumber(unsigned short value) {
+    std::stringstream ss;
+    ss << std::hex << std::uppercase << (int)value;
+    std::string valueAsString = ss.str();
+    return valueAsString.length() >= 4 ? valueAsString : std::string(4 - valueAsString.size(), '0') + valueAsString;
+}
+
+std::string Utils::formatHexNumber(unsigned char value) {
+    std::stringstream ss;
+    ss << std::hex << std::uppercase << (int)value;
+    std::string valueAsString = ss.str();
+    return valueAsString.length() >= 2 ? valueAsString : std::string(2 - valueAsString.size(), '0') + valueAsString;
+}

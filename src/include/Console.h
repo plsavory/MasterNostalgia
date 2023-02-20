@@ -5,6 +5,9 @@
 #ifndef MASTALGIA_CONSOLE_H
 #define MASTALGIA_CONSOLE_H
 
+#include <SFML/System.hpp>
+#include <SFML/Graphics.hpp>
+
 class Console {
 public:
     virtual bool init(std::string romFilename) = 0;
@@ -21,6 +24,8 @@ public:
     virtual bool isRunning() = 0;
 
     virtual unsigned int tick() = 0;
+
+    virtual sf::Uint8* getVideoOutput() = 0;
 
 protected:
 

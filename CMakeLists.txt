@@ -31,6 +31,8 @@ add_executable(${EXECUTABLE_NAME}
         src/include/ProjectInfo.h
         src/include/PSG.h
         src/include/Utils.h
+        src/include/VDPDisplayMode.h
+        src/VDPDisplayMode.cpp
         src/include/VDP.h
         src/Cartridge.cpp
         src/CPUInstructionHandlers.cpp
@@ -49,7 +51,9 @@ add_executable(${EXECUTABLE_NAME}
         src/Emulator.cpp
         src/include/Z80IO.h
         src/include/MasterSystemZ80IO.h
-        src/MasterSystemZ80IO.cpp)
+        src/MasterSystemZ80IO.cpp
+        src/include/Z80InterruptBus.h
+        src/Z80InterruptBus.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
         std::string romFile;
 
         if (argc == 1) {
-            romFile = "roms/test.sms";
+            romFile = "roms/zexdoc.sms";
         } else {
             romFile = argv[1];
         }

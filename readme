@@ -1,0 +1,22 @@
+This project is being developed as an educational exercise to learn how to emulate the Sega Master System and how the internals
+of the console work.
+
+The emulator is not yet capable of running games as the emulator is still incomplete and needs work, but some ROMs do
+display an image on screen. I am currently using the following program to test and debug the emulator:
+
+https://github.com/maxim-zhao/zexall-sms
+
+Throughout this project I am using the following sources throughout development:
+
+- Z80 Instruction Set
+https://clrhome.org/table/
+http://z80-heaven.wikidot.com/instructions-set
+
+- Emulator development information and code examples (Parts of the project, mostly memory/mapping code and the current
+VDP implementation are heavily influenced by this):
+http://www.codeslinger.co.uk/pages/projects/mastersystem/hardware.html (and other pages in the Master System section on here)
+
+- General Master System hardware information:
+https://www.smspower.org/Development/Index
+https://segaretro.org/Sega_Master_System_Technical_Documentation_(1998-06-10)
+https://github.com/franckverrot/EmulationResources/blob/master/consoles/sms-gg/Sega%20Master%20System%20VDP%20documentation.txt

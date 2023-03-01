@@ -8,15 +8,12 @@ Licensed under the GPLv3 license.
 #include "MasterSystem.h"
 
 MasterSystem::MasterSystem() {
-
-    Z80InterruptBus *interruptBus = new Z80InterruptBus();
-
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
-    smsVdp = new VDP(interruptBus);
+    smsVdp = new VDP();
     smsPSG = new PSG();
     z80Io = new MasterSystemZ80IO(smsVdp, smsPSG);
-    smsCPU = new CPUZ80(smsMemory, z80Io, interruptBus);
+    smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;
 }
 

@@ -5,8 +5,10 @@ Licensed under the GPLv3 license.
  */
 #include "VDP.h"
 #include "Utils.h"
+#include "Exceptions.h"
+#include "iostream"
 
-VDP::VDP(Z80InterruptBus *interruptBus) {
+VDP::VDP() {
     for (auto &vRAMByte : vRAM) {
         vRAMByte = 0x0;
     }
@@ -15,11 +17,19 @@ VDP::VDP(Z80InterruptBus *interruptBus) {
         cRamByte = 0x0;
     }
 
+    // Set registers to initial values so that we can run without a BIOS. Source: https://github.com/maxim-zhao/smsbioses/blob/master/1.0/Bios10.asm
     for (auto &controlRegister: registers) {
         controlRegister = 0x0;
     }
 
-    this->interruptBus = interruptBus;
+    registers[0x0] = 0x36;
+    registers[0x1] = 0x80;
+    registers[0x2] = 0xFF;
+    registers[0x3] = 0xFF;
+    registers[0x4] = 0xFF;
+    registers[0x5] = 0xFF;
+    registers[0x6] = 0xFB;
+
     statusRegister = 0x0;
     controlWord = 0x0;
     isSecondControlWrite = false;
@@ -31,14 +41,11 @@ VDP::VDP(Z80InterruptBus *interruptBus) {
     isVBlanking = false;
     vCounterJumpCount = 0;
     displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall); // TODO should this be the default? just using it for now.
-    pixels = new sf::Uint8[256 * 224 * 4];
-
-    for (int i = 0; i <= ((256 * 224) * 4); i += 4) {
-        pixels[i] = 128; // R
-        pixels[i + 1] = 128; // G
-        pixels[i + 2] = 128; // B
-        pixels[i + 3] = 255; // A
-    }
+    workingBuffer = new sf::Uint8[256 * 224 * 4];
+    outputBuffer = new sf::Uint8[256 * 224 * 4];
+    vScroll = 0;
+    clearScreen();
+    fillVideoOutput();
 }
 
 VDP::~VDP() {
@@ -60,11 +67,6 @@ void VDP::execute(float cycles) {
     if (Utils::testBit(7, statusRegister) && Utils::testBit(5, registers[0x1])) {
         requestInterrupt = true;
     }
-
-    if (requestInterrupt) {
-        requestInterrupt = false;
-        interruptBus->raiseInterrupt(InterruptType::INT);
-    }
 }
 
 void VDP::handleScanlineChange() {
@@ -79,8 +81,9 @@ void VDP::handleScanlineChange() {
         // End of vertical refresh - start rendering the next frame
         vCounter = 0;
         vCounterJumpCount = 0; // Ensure that we don't end up moving the VCounter back every time, should be done once per frame
-        vRefresh = true;
-        // TODO draw this scanline to the screen
+        renderScanline();
+        fillVideoOutput(); // Fill the video output workingBuffer with the current full frame
+        clearScreen();
     } else {
         handleVCounterJump(currentVCounter);
     }
@@ -97,8 +100,6 @@ void VDP::handleScanlineChange() {
             // Active display - render this scanline
             renderScanline();
         }
-
-        // TODO handle line interrupt timing
 
         // Determine whether the line interrupt counter is going to underflow and decrement it
         if ((lineInterruptCounter--) == 0) {
@@ -137,7 +138,12 @@ void VDP::handleScanlineChange() {
 }
 
 unsigned short VDP::getNameTableBaseAddress() {
-    return (registers[VDPControlRegisters::baseNameTableAddress] & 0x0E) << 10;
+    if (displayMode.getActiveDisplayEnd() == 192) {
+        // Ignore bit 0 and the top nibble
+        return ((unsigned short)(registers[0x2] & 0xE)) << 10;
+    }
+
+    return (((unsigned short)(registers[0x2] * 0x0C)) << 10) | 0x700;
 }
 
 void VDP::writeControlPort(unsigned char value) {
@@ -147,7 +153,9 @@ void VDP::writeControlPort(unsigned char value) {
 
         isSecondControlWrite = false;
 
-        switch (getCodeRegister()) {
+        unsigned char controlRegister = getCodeRegister();
+
+        switch (controlRegister) {
             case 0:
                 // Update the read buffer and increment the current memory address register
                 readBuffer = vRAM[getAddressRegister()];
@@ -190,7 +198,7 @@ void VDP::writeRegister() {
 }
 
 unsigned char VDP::getCodeRegister() const {
-    return ((unsigned char)controlWord >> 14);
+    return (unsigned char)(controlWord >> 14);
 }
 
 unsigned short VDP::getAddressRegister() const {
@@ -275,10 +283,319 @@ bool VDP::handleVCounterJump(unsigned char currentVCounter) {
     return true;
 }
 
-void VDP::renderScanline() {
+bool VDP::isRequestingInterrupt() {
+    return requestInterrupt;
+}
 
+void VDP::renderScanline() {
+    if (getMode() == 2) {
+        renderSpritesMode2();
+        renderBackgroundMode2();
+    } else {
+        renderSpritesMode4();
+        renderBackgroundMode4();
+    }
 }
 
 sf::Uint8* VDP::getVideoOutput() {
-    return pixels;
+    return outputBuffer;
 }
+
+unsigned short VDP::getSpriteAllocationTableBaseAddress() {
+    return (registers[0x5] & 0x7E) << 7;
+}
+
+void VDP::renderSpritesMode2() {
+
+}
+
+void VDP::renderBackgroundMode2() {
+
+}
+
+void VDP::renderSpritesMode4() {
+
+    bool zoomSprites = Utils::testBit(0, registers[0x1]);
+    bool spriteSize8x16 = Utils::testBit(1, registers[0x1]);
+    bool shiftLeft = Utils::testBit(3, registers[0x0]);
+
+    unsigned char width = 8;
+    unsigned char height = spriteSize8x16 ? 16 : 8;
+
+    if (zoomSprites) {
+        height *= 2;
+    }
+
+    unsigned short baseAddress = getSpriteAllocationTableBaseAddress();
+
+    int spriteCount = 0;
+
+    for (int i = 0; i < 64; i++) {
+
+        // Sprite format: byte0 = y, byte1 = x, byte2 = unused, byte3 = pattern id
+        unsigned char y = vRAM[baseAddress + i];
+
+        if (y == 0xD0 && (displayMode.getActiveDisplayEnd() == 192)) {
+            break;
+        }
+
+        if (y > 0xD0) {
+            y -= 0x100;
+        }
+
+        if (vCounter < y) {
+            continue;
+        }
+
+        if (vCounter > y + height) {
+            continue;
+        }
+
+        // Sprite falls within this scanline
+        if (spriteCount == 8) {
+            // Set sprite overflow flag
+            Utils::setBit(6, true, statusRegister);
+            break;
+        }
+
+        spriteCount += 1;
+
+        unsigned char x = vRAM[baseAddress + 128 + (i*2)];
+
+        if (shiftLeft) {
+            x -= 8;
+        }
+
+        // Fetch and draw the bitmap data for this sprite
+        unsigned short patternId = vRAM[baseAddress + 128 + (i*2) + 1];
+
+        if (Utils::testBit(2, registers[0x6])) {
+            // Using second pattern table
+            patternId += 256;
+
+            if (spriteSize8x16) {
+                Utils::setBit(0, false, patternId);
+            }
+        }
+
+        unsigned short patternAddress = (patternId * 32) + (4 * vCounter - y);
+
+        unsigned char pattern1 = vRAM[patternAddress];
+        unsigned char pattern2 = vRAM[patternAddress+1];
+        unsigned char pattern3 = vRAM[patternAddress+2];
+        unsigned char pattern4 = vRAM[patternAddress+3];
+
+        for (unsigned char xPixel = 0; xPixel < 8; xPixel++) {
+
+            if (!doesPixelMatch(x + xPixel, vCounter, 0, 0, 1)) {
+                // Flag a sprite collision
+                Utils::setBit(5, true, statusRegister);
+                continue;
+            }
+
+            if (x + xPixel > 255) {
+                // Don't try to draw off screen
+                break;
+            }
+
+            unsigned char pixelDataIndex = 7 - xPixel;
+
+            unsigned char paletteId = (Utils::testBit(pixelDataIndex, pattern4) << 3) |
+                                      (Utils::testBit(pixelDataIndex, pattern3) << 2) |
+                                      (Utils::testBit(pixelDataIndex, pattern2) << 1) |
+                                      (Utils::testBit(pixelDataIndex, pattern1));
+
+            if (paletteId == 0) {
+                continue;
+            }
+
+            unsigned char rgb = cRAM[paletteId + 16];
+            unsigned char r = getColourValue(rgb & 0x3);
+            unsigned char g = getColourValue((rgb >> 2) & 0x3);
+            unsigned char b = getColourValue((rgb >> 4) * 0x3);
+
+            putPixel(x + xPixel, vCounter, r, g, b);
+        }
+    }
+}
+
+void VDP::renderBackgroundMode4() {
+
+    unsigned short nameTableBaseAddress = getNameTableBaseAddress();
+
+    unsigned char vScrollTileOffset = vScroll >> 3;
+    unsigned char hScrollTileOffset = registers[0x8] >> 3;
+    unsigned char vScrollPixelOffset = vScroll & 0x7;
+    unsigned char hScrollPixelOffset = registers[0x8] & 0x7;
+
+    unsigned char row = vCounter / 8;
+
+    bool limitVScroll = Utils::testBit(7, registers[0]);
+    bool limitHScroll = Utils::testBit(6, registers[0]);
+
+    // If this is set, the first column needs to be drawn as the background colour
+    bool maskFirstColumn = Utils::testBit(5, registers[0]);
+
+    for (int column = 0; column < 32; column++) {
+        // Draw each tile to the screen
+        for (int pixelCounter = 0; pixelCounter < 8; pixelCounter++) {
+            int currentPixel = pixelCounter; // We will need to modify this if we are scrolling
+
+            // We should not allow horizontal scrolling here if we are on the first row and the appropriate flag is not set
+            bool allowHScroll = (row > 1 || !limitHScroll);
+
+            int onScreenPixelX = column * 8 + pixelCounter; // Where we will draw the actual pixel on screen
+
+            // When scrolling horizontally, this can differ from the actual pixel screen location, as we need the workingBuffer to be offset from their position
+            int xPixelDataOffset = onScreenPixelX;
+
+            if (allowHScroll) {
+                // Should be the first pixel of the starting column * tile width + the current screen pixel + the fine scroll offset
+                onScreenPixelX = ((hScrollTileOffset * 8) + pixelCounter + hScrollPixelOffset) % 255;
+            }
+
+            bool allowVScroll = !(limitVScroll && (xPixelDataOffset/8) > 23);
+
+            int currentVRow = row;
+
+            if (allowVScroll) {
+                currentVRow += vScrollTileOffset;
+
+                // We might overshoot the end of this tile by adding fine scroll, so check for that
+                if (((vCounter % 8) + vScrollPixelOffset) > 7) {
+                    ++currentVRow;
+                }
+
+                // Wrap the pixel data if we have exceeded the maximum number of rows
+                currentVRow = currentVRow % (displayMode.getActiveDisplayEnd() == 192 ? 28 : 32);
+            }
+
+            unsigned short nameTableOffsetAddress = nameTableBaseAddress + (currentVRow * 64) + (column * 2);
+
+            unsigned short tileData = vRAM[nameTableOffsetAddress] + (vRAM[nameTableOffsetAddress+1] << 8);
+
+            bool isHighPriority = Utils::testBit(12, tileData);
+            bool useSpritePalette = Utils::testBit(11, tileData);
+            bool verticalFlip = Utils::testBit(10, tileData);
+            bool horizontalFlip = Utils::testBit(9, tileData);
+            unsigned short tileId = tileData & 0x1FF;
+
+            unsigned char pixelRowOffset = vCounter;
+
+            if (allowVScroll) {
+                pixelRowOffset += vScrollPixelOffset;
+            }
+
+            pixelRowOffset = pixelRowOffset % 8;
+
+            if (verticalFlip) {
+                pixelRowOffset = 7 - pixelRowOffset;
+            }
+
+            // Each pattern is 32 bytes in size, and each line is 4 bytes. Same as sprites.
+            unsigned short patternMemoryAddress = (tileId * 32) + (pixelRowOffset * 4);
+
+            unsigned char pattern1 = vRAM[patternMemoryAddress];
+            unsigned char pattern2 = vRAM[patternMemoryAddress+1];
+            unsigned char pattern3 = vRAM[patternMemoryAddress+2];
+            unsigned char pattern4 = vRAM[patternMemoryAddress+3];
+
+            // Get the colour to draw for this pixel
+            int colourIndex = horizontalFlip ? pixelCounter : (7 - pixelCounter);
+
+            unsigned char paletteId = (Utils::testBit(colourIndex, pattern4) << 3) |
+                                      (Utils::testBit(colourIndex, pattern3) << 2) |
+                                      (Utils::testBit(colourIndex, pattern2) << 1) |
+                                      (Utils::testBit(colourIndex, pattern1));
+
+            bool isMasking = false;
+
+            if (onScreenPixelX < 8 && maskFirstColumn) {
+                // Draw the background colour instead of the colour of the tile
+                isMasking = true;
+                paletteId = registers[0x7] & 15;
+                useSpritePalette = true;
+            }
+
+            if (paletteId == 0) {
+                // Can't be high priority if this pixel is transparent
+                isHighPriority = false;
+            }
+
+            if (useSpritePalette) {
+                paletteId+=16;
+            }
+
+            unsigned char rgb = cRAM[paletteId];
+            unsigned char r = getColourValue(rgb & 0x3);
+            unsigned char g = getColourValue((rgb >> 2) & 0x3);
+            unsigned char b = getColourValue((rgb >> 4) & 0x3);
+
+            if (xPixelDataOffset > 255) {
+                break;
+            }
+
+            if (!isMasking && !isHighPriority && !doesPixelMatch(onScreenPixelX, vCounter, 0, 0, 1)) {
+                // This isn't a high priority pixel and there is nothing here, so don't draw it.
+                continue;
+            }
+
+            putPixel(onScreenPixelX, vCounter, r, g, b);
+        }
+
+        hScrollTileOffset = (hScrollTileOffset + 1) % 0x32;
+    }
+}
+
+unsigned char VDP::getColourValue(unsigned char rgb) {
+    // Convert the Master System's colour values into something that we can draw to the screen
+    switch (rgb) {
+        case 0:
+            return 0;
+        case 1:
+            return 85;
+        case 2:
+            return 170;
+        case 3:
+            return 255;
+        default:
+            return 0;
+    }
+}
+
+//region Display output
+void VDP::clearScreen() {
+    for (int i = 0; i <= ((256 * 224) * 4); i += 4) {
+        workingBuffer[i] = 0; // R
+        workingBuffer[i + 1] = 0; // G
+        workingBuffer[i + 2] = 1; // B
+        workingBuffer[i + 3] = 255; // A
+    }
+}
+
+void VDP::fillVideoOutput() {
+    for (int i = 0; i <= ((256 * 224) * 4); i += 4) {
+        outputBuffer[i] = workingBuffer[i]; // R
+        outputBuffer[i + 1] = workingBuffer[i + 1]; // G
+        outputBuffer[i + 2] = workingBuffer[i + 2]; // B
+        outputBuffer[i + 3] = workingBuffer[i + 3]; // A
+    }
+}
+
+void VDP::putPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b) {
+    unsigned int index = getPixelBitmapIndex(x, y);
+    workingBuffer[index] = r;
+    workingBuffer[index + 1] = g;
+    workingBuffer[index + 2] = b;
+    workingBuffer[index + 3] = 255;
+}
+
+bool VDP::doesPixelMatch(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b) {
+    unsigned int index = getPixelBitmapIndex(x, y);
+    return workingBuffer[index] == r && workingBuffer[index + 1] == g && workingBuffer[index + 2] == b;
+}
+
+inline unsigned int VDP::getPixelBitmapIndex(unsigned char x, unsigned char y) {
+    return ((y * 256) + x) * 4;
+}
+//endregion

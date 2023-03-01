@@ -5,7 +5,6 @@ Licensed under the GPLv3 license.
  */
 
 #include "Z80IO.h"
-#include "Z80InterruptBus.h"
 #include "Utils.h"
 
 #define DEBUG_VALUES
@@ -52,6 +51,12 @@ enum ShiftBitToCopy {
     copyOne
 };
 
+enum class ResetRequest : unsigned char {
+    none = 0,
+    pending = 1,
+    processing = 2
+};
+
 // Force these variables to use the same memory space - a handy way of emulating the CPU registers.
 union CPURegister {
     unsigned short whole;
@@ -64,7 +69,7 @@ union CPURegister {
 
 class CPUZ80 {
 public:
-    CPUZ80(Memory *smsMemory, Z80IO *z80Io, Z80InterruptBus *interruptBus);
+    CPUZ80(Memory *smsMemory, Z80IO *z80Io);
 
     ~CPUZ80();
 
@@ -82,8 +87,8 @@ private:
     unsigned short stackPointer;
     CPURegister gpRegisters[10];
     CPURegister originalRegisterValues[10];
+    unsigned short originalStackPointerValue;
     CPUState state;
-    Z80InterruptBus *interruptBus;
     unsigned char registerI;
     unsigned char registerR;
     std::string executedInstructionName = "";
@@ -95,6 +100,8 @@ private:
     unsigned char ioPortAddress;
 
     unsigned short memoryAddress;
+
+    ResetRequest resetRequest;
 
     Z80IO *z80Io;
 
@@ -141,7 +148,7 @@ private:
 
     void jpImm();
 
-    void djnz(unsigned short from, unsigned char offset);
+    void djnz();
 
     // Instruction handler functions
     void ldReg8(unsigned char &dest, unsigned char value);
@@ -319,12 +326,6 @@ private:
     std::vector<std::string> getIYInstructionNames();
 
     std::vector<std::string> getIYBitInstructionNames();
-
-    std::string getInstructionNameWithOperands(std::string instructionString);
-
-    void storeDebugOperand(unsigned char value);
-
-    void storeDebugOperand(unsigned short value);
 
     void portOut(unsigned char port, unsigned char value);
 

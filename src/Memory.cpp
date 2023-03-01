@@ -35,9 +35,11 @@ Memory::Memory(Cartridge *cart) {
     for (unsigned short &memoryPage: memoryPages) {
         memoryPage = 0x0;
     }
+    memoryPages[1] = 1;
+    memoryPages[2] = 2;
 
     ramBanked = false;
-    currentRamBank = 0;
+    currentPage3RamBank = 0;
 }
 
 Memory::~Memory() = default;
@@ -51,7 +53,13 @@ unsigned char Memory::read(unsigned short location) {
     // Handle mirroring
     if (location >= 0xFFFC) {
         location -= 0x2000;
-    } else if (location < 0x4000) {
+    }
+
+    if (!smsCartridge->isCodemasters() && location < 0x400) {
+        return smsCartridge->read(location);
+    }
+
+    if (location < 0x4000) {
         // Page 1
         unsigned short address = location + (0x4000 * memoryPages[0]);
         return smsCartridge->read(address);
@@ -66,8 +74,8 @@ unsigned char Memory::read(unsigned short location) {
 
     if (location < 0xC000) {
         // Page 3 (or extra RAM)
-        if (ramBanked) {
-            return ramBank[currentRamBank][location - 0x8000];
+        if (currentPage3RamBank >= 0) {
+            return ramBank[currentPage3RamBank][location - 0x8000];
         }
 
         unsigned short address = location + (0x4000 * memoryPages[2]);
@@ -104,11 +112,12 @@ void Memory::write(unsigned short location, unsigned char value) {
 
     if (location < 0xC000) {
         // Allow a write if RAM is banked into this address range
-        if (!ramBanked) {
+        if (currentPage3RamBank < 0) {
             return;
         }
 
-        ramBank[currentRamBank][location - 0x8000] = value;
+        ramBank[currentPage3RamBank][location - 0x8000] = value;
+        return;
     }
 
     // If we've reached this point, it's all good to write to RAM
@@ -144,12 +153,12 @@ void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char
             case 0xFFFC:
                 if (Utils::testBit(3, value)) {
                     if (Utils::testBit(2, value)) {
-                        currentRamBank = 1;
+                        currentPage3RamBank = 1;
                     } else {
-                        currentRamBank = 0;
+                        currentPage3RamBank = 0;
                     }
                 } else {
-                    ramBanked = false;
+                    currentPage3RamBank = -1;
                 }
                 break;
             case 0xFFFD:

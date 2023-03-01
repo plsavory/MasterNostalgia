@@ -8,61 +8,14 @@ Licensed under the GPLv3 license.
 #define SMS_VDP_H
 
 #include "VDPDisplayMode.h"
-#include "Z80InterruptBus.h"
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
-
-// Flag register enums, some won't be needed but will leave them here for reference
-enum class StatusFlag : unsigned char {
-    spriteCollision = 5,
-    spriteOverflow = 6,
-    vSyncInterruptPending = 7
-};
-
-enum VDPControlRegisters {
-    misc1 = 0,
-    misc2 = 1,
-    baseNameTableAddress = 2,
-    spriteAttributeTableBase = 5,
-    spriteTileDataLocation = 6,
-    overScanColour = 7,
-    backgroundXScrollPosition = 8,
-    backgroundYScrollPosition = 9,
-    lineCounter = 10
-};
-
-enum class VDPControlRegister0 : unsigned char {
-    useMode2 = 1,
-    useMode4 = 2,
-    offsetSpritesMinus8Pixels = 3,
-    lineInterruptEnabled = 4,
-    column0UsesOverScanColour = 5,
-    column01DisableVerticalScrolling = 6,
-    column24to31DisableVerticalScrolling = 7
-};
-
-enum class VDPControlRegister1 : unsigned char {
-    zoomSprites = 0, // Render sprites at 2x their original size
-    use16x16Sprites = 1, // 8x8 if this is not set
-    unused2 = 2,
-    use240ScanLines = 3, // TODO enforce that VDP mode 2 is set when used
-    use224ScanLines = 4, // TODO enforce that VDP mode 2 is set when used
-    vSyncInterruptsEnabled = 5,
-    enableRendering = 6
-};
-
-enum class VDPControlRegister2 : unsigned char { // TODO probably won't need this - just write a function to build the base name table address
-    unused = 0,
-    nameTableBaseAddressBit11 = 1,
-    nameTableBaseAddressBit12 = 2,
-    nameTableBaseAddressBit13 = 3
-};
 
 // VDP Control Registers 3 and 4 are yf.
 
 class VDP {
 public:
-    VDP(Z80InterruptBus *interruptBus);
+    VDP();
 
     ~VDP();
 
@@ -89,6 +42,8 @@ public:
     unsigned char readVCounter();
 
     sf::Uint8* getVideoOutput();
+
+    bool isRequestingInterrupt();
 
 private:
 
@@ -155,9 +110,34 @@ private:
 
     unsigned char vCounterJumpCount;
 
-    Z80InterruptBus *interruptBus;
+    unsigned short getSpriteAllocationTableBaseAddress();
 
-    sf::Uint8 *pixels;
+    void renderSpritesMode2();
+
+    void renderSpritesMode4();
+
+    void renderBackgroundMode2();
+
+    void renderBackgroundMode4();
+
+    static unsigned char getColourValue(unsigned char rgb);
+
+    //region Display output
+    // TODO these could probably do with refactoring once multiple systems are supported. Might be useful to have a separate "display" class.
+    sf::Uint8 *workingBuffer;
+
+    sf::Uint8 *outputBuffer;
+
+    void clearScreen();
+
+    void fillVideoOutput();
+
+    void putPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b);
+
+    bool doesPixelMatch(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b);
+
+    static unsigned int getPixelBitmapIndex(unsigned char x, unsigned char y);
+    //endregion
 
 };
 #endif

@@ -1,5 +1,5 @@
 /*
-Mastalgia - a (soon to be) Sega Master System emulator.
+Mastalgia - Sega Master System emulator.
 Licensed under the GPLv3 license.
 @author: Peter Savory
  */
@@ -13,13 +13,14 @@ Licensed under the GPLv3 license.
 #include "Utils.h"
 #include "Exceptions.h"
 
-CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io, Z80InterruptBus *interruptBus) {
+CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
     // Store a pointer to the memory object
     memory = smsMemory;
     this->z80Io = z80Io;
-    this->interruptBus = interruptBus;
 
     cyclesTaken = 0;
+
+    resetRequest = ResetRequest::none;
 
     // Reset the CPU to its initial state
     reset();
@@ -34,6 +35,7 @@ void CPUZ80::reset() {
     std::cout << "Resetting CPU..." << std::endl;
 #endif
 
+    resetRequest = ResetRequest::none;
     originalProgramCounterValue = programCounter = 0x0;
     stackPointer = 0xDFF0;
     iff1 = iff2 = true;
@@ -59,6 +61,7 @@ int CPUZ80::executeOpcode() {
 
     cyclesTaken = 0;
     originalProgramCounterValue = programCounter;
+    originalStackPointerValue = stackPointer;
     executedInstructionName = "";
     ioPortAddress = 0x0;
     readValue = 0x0;
@@ -69,34 +72,24 @@ int CPUZ80::executeOpcode() {
         originalRegisterValues[i] = gpRegisters[i];
     }
 
-    // TODO handle interrupts - if the CPU is halted, make it active again when an interrupt occurs
+    if (resetRequest == ResetRequest::pending) {
+        resetRequest = ResetRequest::processing;
+        pushStack(programCounter);
+        iff1 = false;
+        state = CPUState::Running;
+        programCounter = 0x66;
+    }
+
+    if (z80Io->isVDPRequestingInterrupt() && iff1 && interruptMode == 1) {
+        state = CPUState::Running;
+        pushStack(programCounter);
+        programCounter = 0x38;
+        iff1 = iff2 = false;
+    }
+
     if (enableInterrupts) {
         iff1 = iff2 = true;
         enableInterrupts = false;
-    }
-
-    InterruptType currentInterrupt;
-
-    // TODO have I misunderstood how this works? I have built the interrupt bus like a list in case multiple get raised between CPU instructions
-    while ((currentInterrupt = interruptBus->getPendingInterrupt()) != InterruptType::None) {
-
-        if (currentInterrupt == InterruptType::NMI) {
-            iff2 = iff1;
-            iff1 = false; // Prevent maskable interrupts from being services as this one takes priority
-            pushStack(programCounter);
-            programCounter = 0x66;
-            continue;
-        }
-
-        if (!iff1) {
-            // Don't service maskable interrupts unless iff1 is turned on
-            continue;
-        }
-
-        if (currentInterrupt == InterruptType::INT) {
-            pushStack(programCounter);
-            programCounter = 0x38;
-        }
     }
 
     if (state == CPUState::Halt) {
@@ -191,7 +184,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x10:
             // djnz, d
-            djnz(programCounter, NB());
+            djnz();
             break;
         case 0x11:
             // ld de, nn
@@ -317,7 +310,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x2A:
             // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory(build16BitNumber()), false);
+            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(build16BitNumber()), false);
             cyclesTaken = 16;
             break;
         case 0x2B:
@@ -1189,7 +1182,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xDB:
             // in a, (n)
-            ldReg8(gpRegisters[cpuReg::AF].hi, z80Io->read(NB()));
+            readPortToRegister(gpRegisters[cpuReg::AF].hi, NB());
             cyclesTaken = 11;
             break;
         case 0xDC:
@@ -1498,7 +1491,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x58:
             // in e, (c)
-            ldReg8(gpRegisters[cpuReg::DE].lo, z80Io->read(gpRegisters[cpuReg::BC].lo));
+            readPortToRegister(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x59:
@@ -1526,7 +1519,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x60:
             // in h, (c)
-            ldReg8(gpRegisters[cpuReg::HL].hi, z80Io->read(gpRegisters[cpuReg::BC].lo));
+            readPortToRegister(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x61:
@@ -1550,7 +1543,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x68:
             // in l, (c)
-            ldReg8(gpRegisters[cpuReg::HL].lo, z80Io->read(gpRegisters[cpuReg::BC].lo));
+            readPortToRegister(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x69:
@@ -1565,7 +1558,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x6B:
             // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory(build16BitNumber()));
+            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0x6F:
@@ -1594,7 +1587,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x78:
             // in a, (c)
-            ldReg8(gpRegisters[cpuReg::AF].hi, z80Io->read(gpRegisters[cpuReg::BC].lo));
+            readPortToRegister(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
             cyclesTaken = 12;
             break;
         case 0x79:
@@ -1609,7 +1602,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x7B:
             // ld sp, (nn)
-            ldReg16(stackPointer, readMemory(build16BitNumber()));
+            ldReg16(stackPointer, readMemory16Bit(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0xA0:
@@ -1644,7 +1637,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0xB0:
             // ldir
-            ldir(false);
+            ldir(true);
             break;
         case 0xB1:
             // cpir
@@ -1806,7 +1799,7 @@ void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPr
             break;
         case 0x2A:
             // ld ix, (nn)
-            ldReg16(gpRegisters[indexRegister].whole, readMemory(build16BitNumber()));
+            ldReg16(gpRegisters[indexRegister].whole, readMemory16Bit(build16BitNumber()));
             cyclesTaken = 20;
             break;
         case 0x2B:
@@ -2553,9 +2546,9 @@ void CPUZ80::logCPUState() {
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL:"
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX:"
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP:"
-              << Utils::formatHexNumber(stackPointer) << " PC:" << Utils::formatHexNumber(originalProgramCounterValue) << " VAL:"
+              << Utils::formatHexNumber(originalStackPointerValue) << " PC:" << Utils::formatHexNumber(originalProgramCounterValue) << " VAL:"
               << Utils::formatHexNumber(readValue) << " PADDR:" << Utils::formatHexNumber(ioPortAddress)
-              << " MADDR:" << Utils::formatHexNumber(memoryAddress) << std::endl;
+              << " MADDR:" << Utils::formatHexNumber(memoryAddress) << " " <<"NPC: " << programCounter << " " << std::endl;
 }
 
 void CPUZ80::setFlag(CPUFlag flag, bool value) {
@@ -3934,6 +3927,10 @@ void CPUZ80::bitOpcodes() {
             std::stringstream ss;
             ss << "Unimplemented bit opcode: 0x" << std::hex << (int) opcode << std::endl;
             throw Z80Exception(ss.str());
+    }
+
+    if (executedInstructionName.empty()) {
+        executedInstructionName = getInstructionName(0xCB, opcode, 0x0);
     }
 
 }

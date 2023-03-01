@@ -149,6 +149,7 @@ void CPUZ80::sbc16Bit(unsigned short &dest, unsigned short value) {
     setFlag(CPUFlag::carry, result & 0x10000);
     setFlag(CPUFlag::sign, Utils::testBit(15, dest));
     setFlag(CPUFlag::overflow, (value ^ originalValue) & (originalValue ^ result) & 0x8000);
+    setFlag(CPUFlag::subtract, true);
 }
 
 void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
@@ -202,7 +203,6 @@ void CPUZ80::jrCondition(JPCondition condition, unsigned char offset) {
 
     programCounter += static_cast<signed char>(offset);
     cyclesTaken = 12;
-
     #ifdef DEBUG_VALUES
     readValue = offset;
     #endif
@@ -219,9 +219,8 @@ void CPUZ80::retCondition(JPCondition condition) {
 }
 
 void CPUZ80::jr(unsigned char offset) {
-    programCounter = originalProgramCounterValue + static_cast<signed char>(offset);
+    programCounter += static_cast<signed char>(offset);
     cyclesTaken = 12;
-
     #ifdef DEBUG_VALUES
     readValue = offset;
     #endif
@@ -232,7 +231,6 @@ void CPUZ80::jr(unsigned char offset) {
  */
 void CPUZ80::jpImm() {
     programCounter = build16BitNumber();
-
     #ifdef DEBUG_VALUES
     readValue = programCounter;
     #endif
@@ -365,7 +363,7 @@ void CPUZ80::ldir(bool increment) {
 
 void CPUZ80::outi(bool increment) {
     // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    z80Io->write(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+    portOut(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
 
     gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
 
@@ -426,7 +424,9 @@ void CPUZ80::store(unsigned short location, unsigned char hi, unsigned char lo) 
     memory->write(location+1, hi);
 }
 
-void CPUZ80::djnz(unsigned short from, unsigned char offset) {
+void CPUZ80::djnz() {
+
+    char offset  = static_cast<signed char>(NB());
 
     if (--gpRegisters[cpuReg::BC].hi == 0) {
         cyclesTaken = 7;
@@ -434,7 +434,7 @@ void CPUZ80::djnz(unsigned short from, unsigned char offset) {
     }
 
     cyclesTaken = 13;
-    programCounter = from + static_cast<signed char>(offset);
+    programCounter += offset;
 }
 
 void CPUZ80::dec16Bit(unsigned short &target) {
@@ -591,10 +591,17 @@ void CPUZ80::exStack(unsigned short &dest) {
 }
 
 void CPUZ80::readPortToRegister(unsigned char &dest, unsigned char portAddress) {
+
     dest = z80Io->read(portAddress);
+
+    #ifdef DEBUG_VALUES
+        ioPortAddress = portAddress;
+        readValue = dest;
+    #endif
+
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::overflow, std::bitset<8>(dest).count() % 2 == 0);
     cyclesTaken = 12;
 }
 
@@ -639,9 +646,15 @@ void CPUZ80::rld(unsigned char &dest) {
 }
 
 void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
-    setFlag(CPUFlag::subtract, false);
+    bool bitIsSet = Utils::testBit(bitNumber, value);
+    // TODO flag behaviour can change with index register based BIT instructions to account for this
+    setFlag(CPUFlag::sign, bitNumber == 7 && bitIsSet);
+    setFlag(CPUFlag::zero, !bitIsSet);
+    setFlag(CPUFlag::yf, Utils::testBit(5, value));
     setFlag(CPUFlag::halfCarry, true);
-    setFlag(CPUFlag::zero, !Utils::testBit(bitNumber, value));
+    setFlag(CPUFlag::xf, Utils::testBit(3, value));
+    setFlag(CPUFlag::overflow, !bitIsSet);
+    setFlag(CPUFlag::subtract, false);
 }
 
 unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {

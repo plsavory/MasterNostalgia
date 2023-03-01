@@ -25,6 +25,6 @@ private:
     void memoryPage(bool Codemasters, unsigned short location, unsigned char value);
 
     unsigned char ramBank[2][0x4000]{};
-    int currentRamBank;
+    int currentPage3RamBank;
     unsigned short memoryPages[3]{};
 };

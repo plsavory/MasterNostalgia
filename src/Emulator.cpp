@@ -27,22 +27,27 @@ void Emulator::init(const std::string &fileName) {
 
 void Emulator::run() {
     // Create SFML window for video output
-    setVideoMode(256, 224);
+    float width = 256;
+    float height = 224;
+    float displayScale = 2;
 
-    videoOutputTexture.create(256, 224);
+    int windowWidth = (int)(width * displayScale);
+    int windowHeight = (int)(height * displayScale);
+
+    setVideoMode(windowWidth, windowHeight);
+
+    videoOutputTexture.create((int)width, (int)height);
     videoOutputSprite.setTexture(videoOutputTexture);
     videoOutputSprite.setPosition(0.f, 0.f);
+    videoOutputSprite.setScale(displayScale, displayScale);
 
     while (window->isOpen()) {
 
         sf::Event event;
         while (window->pollEvent(event)) {
-            switch (event.type) {
-                case sf::Event::Closed:
-                    window->close();
-                    break;
-                default:
-                    break;
+            if (event.type == sf::Event::Closed) {
+                window->close();
+                return;
             }
         }
         system->emulateFrame();
@@ -51,6 +56,8 @@ void Emulator::run() {
         window->draw(videoOutputSprite);
         window->display();
     }
+    delete(window);
+    window = nullptr;
 }
 
 void Emulator::setVideoMode(unsigned int width, unsigned int height) {
@@ -59,6 +66,6 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
         delete(window);
     }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Master System Emulator", sf::Style::Close);
+    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Mastalgia", sf::Style::Close);
 }
 

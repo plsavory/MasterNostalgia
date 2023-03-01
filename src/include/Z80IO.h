@@ -11,6 +11,8 @@ public:
     virtual void write(unsigned char address, unsigned char value) = 0;
 
     virtual unsigned char read(unsigned char address) = 0;
+
+    virtual bool isVDPRequestingInterrupt() = 0;
 };
 
 #endif //MASTALGIA_Z80IO_H

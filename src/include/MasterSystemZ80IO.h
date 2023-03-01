@@ -19,6 +19,8 @@ public:
 
     unsigned char read(unsigned char address) final;
 
+    bool isVDPRequestingInterrupt() final;
+
 private:
 
     VDP *vdp;

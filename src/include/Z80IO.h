@@ -13,6 +13,8 @@ public:
     virtual unsigned char read(unsigned char address) = 0;
 
     virtual bool isVDPRequestingInterrupt() = 0;
+
+    virtual void printVDPDebugInfo() = 0;
 };
 
 #endif //MASTALGIA_Z80IO_H

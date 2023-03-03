@@ -22,13 +22,13 @@ VDP::VDP() {
         controlRegister = 0x0;
     }
 
-    registers[0x0] = 0x36;
-    registers[0x1] = 0x80;
-    registers[0x2] = 0xFF;
-    registers[0x3] = 0xFF;
-    registers[0x4] = 0xFF;
-    registers[0x5] = 0xFF;
-    registers[0x6] = 0xFB;
+//    registers[0x0] = 0x36;
+//    registers[0x1] = 0x80;
+//    registers[0x2] = 0xFF;
+//    registers[0x3] = 0xFF;
+//    registers[0x4] = 0xFF;
+//    registers[0x5] = 0xFF;
+//    registers[0x6] = 0xFB;
 
     statusRegister = 0x0;
     controlWord = 0x0;
@@ -44,6 +44,7 @@ VDP::VDP() {
     workingBuffer = new sf::Uint8[256 * 224 * 4];
     outputBuffer = new sf::Uint8[256 * 224 * 4];
     vScroll = 0;
+    lineInterruptCounter = 0;
     clearScreen();
     fillVideoOutput();
 }
@@ -143,7 +144,7 @@ unsigned short VDP::getNameTableBaseAddress() {
         return ((unsigned short)(registers[0x2] & 0xE)) << 10;
     }
 
-    return (((unsigned short)(registers[0x2] * 0x0C)) << 10) | 0x700;
+    return (((unsigned short)(registers[0x2] & 0x0C)) << 10) | 0x700;
 }
 
 void VDP::writeControlPort(unsigned char value) {
@@ -599,3 +600,52 @@ inline unsigned int VDP::getPixelBitmapIndex(unsigned char x, unsigned char y) {
     return ((y * 256) + x) * 4;
 }
 //endregion
+
+void VDP::printDebugInfo() {
+    // Video Mode
+    std::cout << "Video Mode: " << Utils::formatHexNumber(displayMode.getActiveDisplayEnd()) << std::endl << std::endl;
+
+    // Registers
+    std::cout << "Registers: " << std::endl << std::endl;
+
+    for (unsigned char i = 0; i < 11; i++) {
+        std::cout << "Register " << Utils::formatHexNumber(i) << ": " << Utils::formatHexNumber(registers[i]) << std::endl;
+    }
+
+    std::cout << "Register Status: " << Utils::formatHexNumber(statusRegister) << std::endl;
+    std::cout << "Register HCounter: " << Utils::formatHexNumber(hCounter) << std::endl;
+    std::cout << "Register VCounter: " << Utils::formatHexNumber(vCounter) << std::endl;
+
+    std::cout << std::endl << std::endl;
+
+    // VRAM
+    std::cout<<"VRAM: " << std::endl << std::endl;
+
+    for (unsigned short i = 0x0; i < 0x4000; i += 0x10) {
+        std::cout<<Utils::formatHexNumber(i) << "  ";
+        for (unsigned char j = 0; j <= 0xF; j++) {
+            std::cout<<Utils::formatHexNumber(vRAM[i + j]);
+
+            if (j < 0xF) {
+                std::cout<<" ";
+            }
+        }
+        std::cout<<std::endl;
+    }
+
+    std::cout << std::endl << std::endl;
+
+    // CRAM
+    std::cout<<"CRAM: " << std::endl << std::endl;
+    for (unsigned short i = 0x0; i < 0x20; i += 0x10) {
+        std::cout<<Utils::formatHexNumber(i) << "  ";
+        for (unsigned char j = 0; j <= 0xF; j++) {
+            std::cout<<Utils::formatHexNumber(cRAM[i + j]);
+
+            if (j < 0xF) {
+                std::cout<<" ";
+            }
+        }
+        std::cout<<std::endl;
+    }
+}

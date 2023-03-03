@@ -31,21 +31,27 @@ CPUZ80::~CPUZ80() {
 }
 
 void CPUZ80::reset() {
-#ifdef VERBOSE_MODE
-    std::cout << "Resetting CPU..." << std::endl;
-#endif
 
     resetRequest = ResetRequest::none;
     originalProgramCounterValue = programCounter = 0x0;
     stackPointer = 0xDFF0;
     iff1 = iff2 = true;
     enableInterrupts = false;
+    interruptMode = 0;
 
     for (auto & gpRegister : gpRegisters) {
         gpRegister.whole = 0x0;
     }
 
+    registerI = 0x0;
+    registerR = 0x0;
+
     state = CPUState::Running;
+
+//    gpRegisters[cpuReg::BC].whole = 0x0;
+//    gpRegisters[cpuReg::DE].whole = 0xC714;
+//    gpRegisters[cpuReg::HL].whole = 0x0293;
+//    gpRegisters[cpuReg::AF].whole = 0xAB40;
 }
 
 int CPUZ80::execute() {
@@ -375,7 +381,7 @@ int CPUZ80::executeOpcode() {
         case 0x37:
             // scf
             setFlag(CPUFlag::carry, true);
-            setFlag(CPUFlag::subtract, false);
+            setFlag(CPUFlag::subtractNegative, false);
             setFlag(CPUFlag::halfCarry, false);
             cyclesTaken = 4;
             break;
@@ -417,7 +423,7 @@ int CPUZ80::executeOpcode() {
             // ccf
             setFlag(CPUFlag::carry, !getFlag(CPUFlag::carry));
             setFlag(CPUFlag::halfCarry, !getFlag(CPUFlag::halfCarry));
-            setFlag(CPUFlag::subtract, false);
+            setFlag(CPUFlag::subtractNegative, false);
             cyclesTaken = 4;
             break;
         case 0x40:
@@ -1221,7 +1227,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0xE4:
             // call po, nn
-            call(build16BitNumber(), !getFlag(CPUFlag::overflow));
+            call(build16BitNumber(), !getFlag(CPUFlag::overflowParity));
             break;
         case 0xE5:
             // push hl
@@ -2542,13 +2548,11 @@ void CPUZ80::iyOpcodes() {
  */
 void CPUZ80::logCPUState() {
     std::cout << std::uppercase << std::hex << Utils::formatHexNumber(displayOpcodePrefix) << Utils::formatHexNumber(displayOpcode) << ": "
-              << Utils::padString(executedInstructionName, 10) << " BC:"
-              << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL:"
-              << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX:"
-              << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY:" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP:"
-              << Utils::formatHexNumber(originalStackPointerValue) << " PC:" << Utils::formatHexNumber(originalProgramCounterValue) << " VAL:"
-              << Utils::formatHexNumber(readValue) << " PADDR:" << Utils::formatHexNumber(ioPortAddress)
-              << " MADDR:" << Utils::formatHexNumber(memoryAddress) << " " <<"NPC: " << programCounter << " " << std::endl;
+              << Utils::padString(executedInstructionName, 10) << " BC="
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL="
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX="
+              << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP="
+              << Utils::formatHexNumber(originalStackPointerValue) << " PC=" << Utils::formatHexNumber(originalProgramCounterValue) << std::endl;
 }
 
 void CPUZ80::setFlag(CPUFlag flag, bool value) {
@@ -2602,9 +2606,9 @@ bool CPUZ80::hasMetJumpCondition(JPCondition condition) {
         case JPCondition::C:
             return getFlag(CPUFlag::carry);
         case JPCondition::PO:
-            return !getFlag(CPUFlag::overflow);
+            return !getFlag(CPUFlag::overflowParity);
         case JPCondition::PE:
-            return getFlag(CPUFlag::overflow);
+            return getFlag(CPUFlag::overflowParity);
         case JPCondition::P:
             return !getFlag(CPUFlag::sign);
         case JPCondition::M:

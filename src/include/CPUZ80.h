@@ -34,8 +34,8 @@ enum JPCondition {
 // TODO: Ensure that the bits are actually in the correct orientation with testing
 enum CPUFlag : unsigned char {
     carry = 0,
-    subtract = 1,
-    overflow = 2,
+    subtractNegative = 1,
+    overflowParity = 2,
     xf = 3,
     halfCarry = 4,
     yf = 5,
@@ -338,4 +338,12 @@ private:
     unsigned char readMemory(unsigned short location);
 
     unsigned short readMemory16Bit(unsigned short location);
+
+    inline bool getHalfCarry(unsigned char originalValue, unsigned char newValue) {
+        return (originalValue ^ newValue ^ 1) & 0x10;
+    }
+
+    inline bool getParity(unsigned char value) {
+        return std::bitset<8>(value).count() % 2 == 0;
+    }
 };

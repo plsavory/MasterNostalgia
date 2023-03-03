@@ -21,7 +21,7 @@ Memory::Memory(Cartridge *cart) {
     smsCartridge = cart;
 
     // Clear memory
-    for (int i = 0; i < 0x4000; i++) {
+    for (int i = 0; i < 0x10000; i++) {
         ram[i] = 0x0;
     }
 

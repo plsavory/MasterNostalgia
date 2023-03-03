@@ -10,8 +10,10 @@ Licensed under the GPLv3 license.
 #include "Exceptions.h"
 
 int main(int argc, char *argv[]) {
-    // Todo: Hide the long build string on master builds when the emulator is actually functional.
-    std::cout << Utils::getVersionString(true) << " starting..." << std::endl;
+    if (argc > 1 && std::string(argv[1]) == "-v") {
+        std::cout << Utils::getVersionString(true) << std::endl;
+        return 0;
+    }
 
     // Start the Emulator
     try {

@@ -27,7 +27,7 @@ void CPUZ80::ldReg8(unsigned char &dest, unsigned char value, bool modifyFlags) 
         return;
     }
 
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
@@ -50,8 +50,8 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value, bool modifyFlag
     }
 
     setFlag(CPUFlag::halfCarry, false);
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, iff1 || iff2);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, iff1 || iff2);
 }
 
 void CPUZ80::ldReg16(unsigned short &dest, unsigned short value) {
@@ -62,8 +62,8 @@ void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry
     unsigned char originalValue = dest;
     dest = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflow, dest < originalValue);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflowParity, dest < originalValue);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
     setFlag(CPUFlag::carry, !(originalValue & 0xFF));
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
@@ -85,12 +85,12 @@ void CPUZ80::addAdc16Bit(unsigned short &dest, unsigned short value, bool withCa
     unsigned short originalValue = dest;
     unsigned long result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));;
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, (result & 0x0FFF + (result & 0x0FFF)) > 0x0FFF);
     setFlag(CPUFlag::carry, result & 0xFFFF0000);
     setFlag(CPUFlag::sign, Utils::testBit(15, dest));
     dest = result & 0xFFFF;
-    setFlag(CPUFlag::overflow, dest < originalValue);
+    setFlag(CPUFlag::overflowParity, dest < originalValue);
 }
 
 void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
@@ -105,11 +105,12 @@ void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry
     unsigned char originalValue = dest;
     dest = dest - (value - (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflow, dest > originalValue);
-    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::subtractNegative, true);
+    setFlag(CPUFlag::carry, originalValue < value);
     setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
-    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    setFlag(CPUFlag::overflowParity, ((originalValue & 0x80) != (value & 0x80)) && ((dest & 0x80) == (value & 0x80)));
+    handleUndocumentedFlags(dest);
 }
 
 /**
@@ -131,10 +132,12 @@ void CPUZ80::dec8Bit(unsigned char &dest) {
 
 unsigned char CPUZ80::getDec8BitValue(unsigned char initialValue) {
     unsigned char newValue = initialValue - 1;
+    setFlag(CPUFlag::yf, Utils::testBit(5, newValue));
+    setFlag(CPUFlag::xf, Utils::testBit(3, newValue));
     setFlag(CPUFlag::zero, newValue == 0);
-    setFlag(CPUFlag::overflow, newValue > initialValue);
-    setFlag(CPUFlag::subtract, true);
-    setFlag(CPUFlag::halfCarry, (initialValue ^ newValue ^ 1) & 0x10);
+    setFlag(CPUFlag::overflowParity, newValue == 0x7F);
+    setFlag(CPUFlag::subtractNegative, true);
+    setFlag(CPUFlag::halfCarry, getHalfCarry(initialValue, newValue));
     setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
     return newValue;
 }
@@ -148,28 +151,28 @@ void CPUZ80::sbc16Bit(unsigned short &dest, unsigned short value) {
     setFlag(CPUFlag::halfCarry, ((originalValue ^ result ^ value) >> 8) & 0x10);
     setFlag(CPUFlag::carry, result & 0x10000);
     setFlag(CPUFlag::sign, Utils::testBit(15, dest));
-    setFlag(CPUFlag::overflow, (value ^ originalValue) & (originalValue ^ result) & 0x8000);
-    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::overflowParity, (value ^ originalValue) & (originalValue ^ result) & 0x8000);
+    setFlag(CPUFlag::subtractNegative, true);
 }
 
 void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
     dest = dest & value;
     setFlag(CPUFlag::carry, false);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflow, (dest % 2) == 0);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
 }
 
 void CPUZ80::or8Bit(unsigned char &dest, unsigned char value) {
     dest = dest | value;
     setFlag(CPUFlag::carry, false);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflow, (dest % 2) == 0);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
 }
 
 void CPUZ80::setInterruptMode(unsigned char mode) {
@@ -244,11 +247,11 @@ void CPUZ80::exclusiveOr(unsigned char &dest, unsigned char value) {
     unsigned char result = gpRegisters[cpuReg::AF].hi ^ value;
     dest = result;
     setFlag(CPUFlag::carry, false);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, result == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
-    setFlag(CPUFlag::overflow, result % 2 == 0);
+    setFlag(CPUFlag::overflowParity, getParity(result));
 }
 
 void CPUZ80::inc16Bit(unsigned short &target) {
@@ -261,8 +264,8 @@ void CPUZ80::inc8Bit(unsigned char &target) {
 
 unsigned char CPUZ80::getInc8BitValue(unsigned char initialValue) {
     unsigned char newValue = initialValue+1;
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, initialValue & 0x80);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, newValue == 0x80);
     setFlag(CPUFlag::halfCarry, ((initialValue & 0xF)) + 1 & 0x10);
     setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
     setFlag(CPUFlag::zero, newValue == 0);
@@ -273,13 +276,13 @@ void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
     unsigned char originalValue = gpRegisters[cpuReg::AF].hi;
     unsigned char comparisonResult = gpRegisters[cpuReg::AF].hi - valueToSubtract;
     setFlag(CPUFlag::zero, comparisonResult == 0);
-    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::subtractNegative, true);
     setFlag(CPUFlag::carry, originalValue < valueToSubtract);
     setFlag(CPUFlag::halfCarry, (originalValue ^ comparisonResult ^ valueToSubtract) & 0x10);
     setFlag(CPUFlag::carry, originalValue < valueToSubtract);
     setFlag(CPUFlag::sign, Utils::testBit(7, comparisonResult));
-    setFlag(CPUFlag::overflow, false);
-    handleUndocumentedFlags(comparisonResult);
+    setFlag(CPUFlag::overflowParity, ((originalValue & 0x80) != (valueToSubtract & 0x80)) && ((comparisonResult & 0x80) == (valueToSubtract & 0x80)));
+    handleUndocumentedFlags(valueToSubtract);
 
     #ifdef DEBUG_VALUES
     readValue = valueToSubtract;
@@ -292,7 +295,7 @@ void CPUZ80::ini(bool increment) {
 
     gpRegisters[cpuReg::HL].whole += increment ? 1 : -1;
 
-    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::subtractNegative, true);
     setFlag(CPUFlag::zero, true);
 
     cyclesTaken = 16;
@@ -335,15 +338,14 @@ void CPUZ80::cpir(bool increment) {
 }
 
 void CPUZ80::ldi(bool increment) {
-    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
     memory->write(gpRegisters[cpuReg::DE].whole, memory->read(gpRegisters[cpuReg::HL].whole));
 
     unsigned short incrementValue = increment ? 1 : -1;
     gpRegisters[cpuReg::DE].whole += incrementValue;
     gpRegisters[cpuReg::HL].whole += incrementValue;
 
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, false);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, false);
     setFlag(CPUFlag::halfCarry, false);
     --gpRegisters[cpuReg::BC].whole;
     cyclesTaken = 16;
@@ -362,14 +364,24 @@ void CPUZ80::ldir(bool increment) {
 }
 
 void CPUZ80::outi(bool increment) {
-    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
-    portOut(gpRegisters[cpuReg::BC].lo, memory->read(gpRegisters[cpuReg::HL].whole));
+    unsigned char valueToWrite = memory->read(gpRegisters[cpuReg::HL].whole);
+    portOut(gpRegisters[cpuReg::BC].lo,valueToWrite);
 
     gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
 
-    setFlag(CPUFlag::subtract, true);
-    setFlag(CPUFlag::zero, true);
+    // TODO should the DEC function do the exact same behaviour as below with the flags? if so just move this logic in there and call that.
     --gpRegisters[cpuReg::BC].hi;
+    setFlag(CPUFlag::sign, Utils::testBit(7, gpRegisters[cpuReg::BC].hi));
+//    setFlag(CPUFlag::yf, Utils::testBit(5, gpRegisters[cpuReg::BC].hi));
+//    setFlag(CPUFlag::xf, Utils::testBit(3, gpRegisters[cpuReg::BC].hi));
+    setFlag(CPUFlag::zero, gpRegisters[cpuReg::BC].hi == 0);
+
+    unsigned short k = valueToWrite + gpRegisters[cpuReg::HL].lo;
+    setFlag(CPUFlag::subtractNegative, Utils::testBit(7, valueToWrite));
+    setFlag(CPUFlag::halfCarry, k > 0xFF);
+    setFlag(CPUFlag::carry, k > 0xFF);
+    setFlag(CPUFlag::overflowParity, std::bitset<8>((k & 0x7) ^ gpRegisters[cpuReg::BC].hi).count() % 2 == 0);
+
     cyclesTaken = 16;
 }
 
@@ -469,7 +481,7 @@ unsigned char CPUZ80::shiftLeft(unsigned char dest, ShiftBitToCopy copyMode) {
     if (copyMode != ShiftBitToCopy::copyNothing) {
         Utils::setBit(0, copyBitValue, dest);
     }
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
     return dest;
 }
@@ -518,7 +530,7 @@ unsigned char CPUZ80::shiftRight(unsigned char dest, ShiftBitToCopy copyMode) {
         Utils::setBit(7, copyBitValue, dest);
     }
 
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
     return dest;
 }
@@ -571,7 +583,7 @@ void CPUZ80::da(unsigned char &dest) {
     }
 
     setFlag(CPUFlag::carry, requiresSecondAddition);
-    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::halfCarry, false);
@@ -580,7 +592,7 @@ void CPUZ80::da(unsigned char &dest) {
 void CPUZ80::cpl(unsigned char &dest) {
     dest = ~dest;
     setFlag(CPUFlag::halfCarry, true);
-    setFlag(CPUFlag::subtract, true);
+    setFlag(CPUFlag::subtractNegative, true);
 }
 
 void CPUZ80::exStack(unsigned short &dest) {
@@ -600,8 +612,8 @@ void CPUZ80::readPortToRegister(unsigned char &dest, unsigned char portAddress) 
     #endif
 
     setFlag(CPUFlag::halfCarry, false);
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, std::bitset<8>(dest).count() % 2 == 0);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
     cyclesTaken = 12;
 }
 
@@ -623,8 +635,8 @@ void CPUZ80::rrd(unsigned char &dest) {
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + (memoryCurrentValue & 0x0F);
     memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)((previousRegisterLowerNibble << 4) + (memoryCurrentValue >> 4)));
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
@@ -637,8 +649,8 @@ void CPUZ80::rld(unsigned char &dest) {
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + ((memoryCurrentValue & 0xF0) >> 4);
     memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)(((memoryCurrentValue & 0x0F) << 4) + previousRegisterLowerNibble));
-    setFlag(CPUFlag::subtract, false);
-    setFlag(CPUFlag::overflow, dest % 2 == 0);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::overflowParity, getParity(dest));
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
@@ -653,8 +665,8 @@ void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
     setFlag(CPUFlag::yf, Utils::testBit(5, value));
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::xf, Utils::testBit(3, value));
-    setFlag(CPUFlag::overflow, !bitIsSet);
-    setFlag(CPUFlag::subtract, false);
+    setFlag(CPUFlag::overflowParity, !bitIsSet);
+    setFlag(CPUFlag::subtractNegative, false);
 }
 
 unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {

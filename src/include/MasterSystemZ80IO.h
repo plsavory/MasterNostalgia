@@ -21,6 +21,8 @@ public:
 
     bool isVDPRequestingInterrupt() final;
 
+    void printVDPDebugInfo() final;
+
 private:
 
     VDP *vdp;

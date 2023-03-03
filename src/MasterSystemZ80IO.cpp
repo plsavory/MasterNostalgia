@@ -105,3 +105,7 @@ unsigned char MasterSystemZ80IO::read(unsigned char address) {
 bool MasterSystemZ80IO::isVDPRequestingInterrupt() {
     return vdp->isRequestingInterrupt();
 }
+
+void MasterSystemZ80IO::printVDPDebugInfo() {
+    vdp->printDebugInfo();
+}

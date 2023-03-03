@@ -45,6 +45,8 @@ public:
 
     bool isRequestingInterrupt();
 
+    void printDebugInfo();
+
 private:
 
     /**

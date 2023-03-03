@@ -8,9 +8,10 @@ https://github.com/maxim-zhao/zexall-sms
 
 Throughout this project I am using the following sources throughout development:
 
-- Z80 Instruction Set
+- Z80 Instruction Set & flag behaviour
 https://clrhome.org/table/
 http://z80-heaven.wikidot.com/instructions-set
+http://www.z80.info/zip/z80-documented.pdf
 
 - Emulator development information and code examples (Parts of the project, mostly memory/mapping code and the current
 VDP implementation are heavily influenced by this):

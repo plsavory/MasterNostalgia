@@ -54,7 +54,7 @@ bool Cartridge::load(std::string fileName) {
         return false;
     }
 
-    std::cout << ROMSize << " byte ROM found..." << std::endl;
+//    std::cout << ROMSize << " byte ROM found..." << std::endl;
 
     // Fill temp storage with data from ROM file
     typedef std::istream_iterator<unsigned char> istream_iterator;

@@ -60,13 +60,15 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value) {
 
 void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
     unsigned char originalValue = dest;
-    dest = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+    unsigned short result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+    dest = (unsigned char)result;
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflowParity, dest < originalValue);
+    setFlag(CPUFlag::overflowParity, (originalValue & 0x80) == (value & 0x80) && (originalValue & 0x80) != (result & 0x80));
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
-    setFlag(CPUFlag::carry, !(originalValue & 0xFF));
+    setFlag(CPUFlag::carry, result > 0xFF);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    handleUndocumentedFlags(dest);
 }
 /**
  * [cpuZ80::add ADD opcode handler]
@@ -83,14 +85,19 @@ void CPUZ80::adc8Bit(unsigned char &dest, unsigned char value) {
 
 void CPUZ80::addAdc16Bit(unsigned short &dest, unsigned short value, bool withCarry) {
     unsigned short originalValue = dest;
-    unsigned long result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));;
-    setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::subtractNegative, false);
-    setFlag(CPUFlag::halfCarry, (result & 0x0FFF + (result & 0x0FFF)) > 0x0FFF);
-    setFlag(CPUFlag::carry, result & 0xFFFF0000);
-    setFlag(CPUFlag::sign, Utils::testBit(15, dest));
+    unsigned long result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     dest = result & 0xFFFF;
-    setFlag(CPUFlag::overflowParity, dest < originalValue);
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x1000);
+    setFlag(CPUFlag::carry, result > 0xFFFF);
+
+    if (withCarry) {
+        setFlag(CPUFlag::sign, Utils::testBit(15, dest));
+        setFlag(CPUFlag::zero, dest == 0);
+        setFlag(CPUFlag::overflowParity, (originalValue & 0x8000) == (value & 0x8000) && (value & 0x8000) != (dest & 0x8000));
+    }
+
+    handleUndocumentedFlags((unsigned char)(dest >> 8));
 }
 
 void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
@@ -103,7 +110,7 @@ void CPUZ80::adc16Bit(unsigned short &dest, unsigned short value) {
 
 void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
     unsigned char originalValue = dest;
-    dest = dest - (value - (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+    dest = dest - (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::subtractNegative, true);
     setFlag(CPUFlag::carry, originalValue < value);
@@ -111,6 +118,19 @@ void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::overflowParity, ((originalValue & 0x80) != (value & 0x80)) && ((dest & 0x80) == (value & 0x80)));
     handleUndocumentedFlags(dest);
+}
+
+void CPUZ80::subSbc16Bit(unsigned short &dest, unsigned short value, bool withCarry) {
+    unsigned short originalValue = dest;
+    dest = dest - (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+    unsigned char highResult = dest >> 8;
+    setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::subtractNegative, true);
+    setFlag(CPUFlag::carry, originalValue < value);
+    setFlag(CPUFlag::halfCarry, ((originalValue ^ dest ^ value) >> 8) & 0x10);
+    setFlag(CPUFlag::sign, Utils::testBit(15, dest));
+    setFlag(CPUFlag::overflowParity, ((originalValue & 0x8000) != (value & 0x8000)) && ((dest & 0x8000) == (value & 0x8000)));
+    handleUndocumentedFlags(highResult);
 }
 
 /**
@@ -143,16 +163,7 @@ unsigned char CPUZ80::getDec8BitValue(unsigned char initialValue) {
 }
 
 void CPUZ80::sbc16Bit(unsigned short &dest, unsigned short value) {
-    int result = dest - value - getFlag(CPUFlag::carry);
-    unsigned short originalValue = dest;
-    dest = result & 0xFFFF;
-
-    setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::halfCarry, ((originalValue ^ result ^ value) >> 8) & 0x10);
-    setFlag(CPUFlag::carry, result & 0x10000);
-    setFlag(CPUFlag::sign, Utils::testBit(15, dest));
-    setFlag(CPUFlag::overflowParity, (value ^ originalValue) & (originalValue ^ result) & 0x8000);
-    setFlag(CPUFlag::subtractNegative, true);
+    subSbc16Bit(dest, value, true);
 }
 
 void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
@@ -160,12 +171,14 @@ void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
     setFlag(CPUFlag::carry, false);
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, true);
-    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::zero, dest == 0);
+    setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::overflowParity, getParity(dest));
+    handleUndocumentedFlags(dest);
 }
 
 void CPUZ80::or8Bit(unsigned char &dest, unsigned char value) {
+    unsigned char originalValue = dest;
     dest = dest | value;
     setFlag(CPUFlag::carry, false);
     setFlag(CPUFlag::subtractNegative, false);
@@ -173,6 +186,7 @@ void CPUZ80::or8Bit(unsigned char &dest, unsigned char value) {
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::overflowParity, getParity(dest));
+    handleUndocumentedFlags(dest);
 }
 
 void CPUZ80::setInterruptMode(unsigned char mode) {
@@ -252,6 +266,7 @@ void CPUZ80::exclusiveOr(unsigned char &dest, unsigned char value) {
     setFlag(CPUFlag::zero, result == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::overflowParity, getParity(result));
+    handleUndocumentedFlags(result);
 }
 
 void CPUZ80::inc16Bit(unsigned short &target) {
@@ -266,9 +281,10 @@ unsigned char CPUZ80::getInc8BitValue(unsigned char initialValue) {
     unsigned char newValue = initialValue+1;
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::overflowParity, newValue == 0x80);
-    setFlag(CPUFlag::halfCarry, ((initialValue & 0xF)) + 1 & 0x10);
+    setFlag(CPUFlag::halfCarry, (initialValue & 0xF) == 0xF);
     setFlag(CPUFlag::sign, Utils::testBit(7, newValue));
     setFlag(CPUFlag::zero, newValue == 0);
+    handleUndocumentedFlags(newValue);
     return newValue;
 }
 
@@ -338,16 +354,21 @@ void CPUZ80::cpir(bool increment) {
 }
 
 void CPUZ80::ldi(bool increment) {
-    memory->write(gpRegisters[cpuReg::DE].whole, memory->read(gpRegisters[cpuReg::HL].whole));
+    unsigned char valueToWrite = memory->read(gpRegisters[cpuReg::HL].whole);
+    memory->write(gpRegisters[cpuReg::DE].whole, valueToWrite);
 
     unsigned short incrementValue = increment ? 1 : -1;
     gpRegisters[cpuReg::DE].whole += incrementValue;
     gpRegisters[cpuReg::HL].whole += incrementValue;
 
-    setFlag(CPUFlag::subtractNegative, false);
-    setFlag(CPUFlag::overflowParity, false);
-    setFlag(CPUFlag::halfCarry, false);
     --gpRegisters[cpuReg::BC].whole;
+
+    unsigned char n = valueToWrite + gpRegisters[cpuReg::AF].hi;
+    setFlag(CPUFlag::subtractNegative, false);
+    setFlag(CPUFlag::halfCarry, false);
+    setFlag(CPUFlag::yf, Utils::testBit(1, n));
+    setFlag(CPUFlag::xf, Utils::testBit(3, n));
+    setFlag(CPUFlag::overflowParity, gpRegisters[cpuReg::BC].whole != 0);
     cyclesTaken = 16;
 }
 
@@ -371,9 +392,11 @@ void CPUZ80::outi(bool increment) {
 
     // TODO should the DEC function do the exact same behaviour as below with the flags? if so just move this logic in there and call that.
     --gpRegisters[cpuReg::BC].hi;
+
+    // TODO set the undocumented flags appropriately, sources say they should be set to bit 5 and 3 of B but the emulator I am comparing against doesn't do that so disable for now to make comparisons easier.
+    setFlag(CPUFlag::yf, false);
+    setFlag(CPUFlag::xf, false);
     setFlag(CPUFlag::sign, Utils::testBit(7, gpRegisters[cpuReg::BC].hi));
-//    setFlag(CPUFlag::yf, Utils::testBit(5, gpRegisters[cpuReg::BC].hi));
-//    setFlag(CPUFlag::xf, Utils::testBit(3, gpRegisters[cpuReg::BC].hi));
     setFlag(CPUFlag::zero, gpRegisters[cpuReg::BC].hi == 0);
 
     unsigned short k = valueToWrite + gpRegisters[cpuReg::HL].lo;
@@ -454,23 +477,23 @@ void CPUZ80::dec16Bit(unsigned short &target) {
     // TODO handle any flag changes that are required, so far it seems like this instruction never does though.
 }
 
-unsigned char CPUZ80::shiftLeft(unsigned char dest, ShiftBitToCopy copyMode) {
+unsigned char CPUZ80::shiftLeft(unsigned char dest, ShiftBitToCopy lowBitCopyMode, bool updateAllFlags) {
     bool previousCarryFlagValue = getFlag(CPUFlag::carry);
     bool bit7 = Utils::testBit(7, dest);
 
     setFlag(CPUFlag::carry, bit7);
-    dest <<= 1;
 
     bool copyBitValue = false;
 
-    switch (copyMode) {
-        case ShiftBitToCopy::copyPreviousValue:
+    switch (lowBitCopyMode) {
+        case ShiftBitToCopy::copyOutgoingValue:
             copyBitValue = bit7;
             break;
         case ShiftBitToCopy::copyCarryFlag:
             copyBitValue = previousCarryFlagValue;
             break;
-        case ShiftBitToCopy::copyNothing:
+        case ShiftBitToCopy::preserve:
+            copyBitValue = Utils::testBit(0, dest);
         case ShiftBitToCopy::copyZero:
             break;
         case ShiftBitToCopy::copyOne:
@@ -478,47 +501,70 @@ unsigned char CPUZ80::shiftLeft(unsigned char dest, ShiftBitToCopy copyMode) {
             break;
     }
 
-    if (copyMode != ShiftBitToCopy::copyNothing) {
-        Utils::setBit(0, copyBitValue, dest);
-    }
+    dest <<= 1;
+
+    Utils::setBit(0, copyBitValue, dest);
+
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
+    handleUndocumentedFlags(dest);
+
+    if (updateAllFlags) {
+        setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+        setFlag(CPUFlag::zero, dest == 0);
+        setFlag(CPUFlag::overflowParity, getParity(dest));
+    }
     return dest;
 }
 
 unsigned char CPUZ80::rlc(unsigned char dest) {
-    return shiftLeft(dest, ShiftBitToCopy::copyPreviousValue);
+    // 8-bit rotation to the left. The bit leaving on the left is copied into the carry, and to bit 0.
+    return shiftLeft(dest, ShiftBitToCopy::copyOutgoingValue, true);
+}
+
+void CPUZ80::rlca() {
+    // Performs RLC A much quicker, and modifies the flags differently.
+    gpRegisters[cpuReg::AF].hi = shiftLeft(gpRegisters[cpuReg::AF].hi, ShiftBitToCopy::copyOutgoingValue, false);
 }
 
 unsigned char CPUZ80::rl(unsigned char dest) {
-    return shiftLeft(dest, ShiftBitToCopy::copyCarryFlag);
+    // 9-bit rotation to the left. the register's bits are shifted left. The carry value is put into 0th bit of the register, and the leaving 7th bit is put into the carry.
+    return shiftLeft(dest, ShiftBitToCopy::copyCarryFlag, true);
+}
+
+void CPUZ80::rla() {
+    // Performs an RL A, but is much faster and S, Z, and P/V flags are preserved.
+    gpRegisters[cpuReg::AF].hi = shiftLeft(gpRegisters[cpuReg::AF].hi, ShiftBitToCopy::copyCarryFlag, false);
 }
 
 unsigned char CPUZ80::sla(unsigned char dest) {
-    return shiftLeft(dest, ShiftBitToCopy::copyZero);
+    // Shift all bits left, copy a 0 onto the low bit
+    return shiftLeft(dest, ShiftBitToCopy::copyZero, true);
 }
 
 unsigned char CPUZ80::sll(unsigned char dest) {
-    return shiftLeft(dest, ShiftBitToCopy::copyOne);
+    // An "undocumented" instruction. Functions like sla, except a 1 is inserted into the low bit.
+    return shiftLeft(dest, ShiftBitToCopy::copyOne, true);
 }
 
-unsigned char CPUZ80::shiftRight(unsigned char dest, ShiftBitToCopy copyMode) {
+unsigned char CPUZ80::shiftRight(unsigned char dest, ShiftBitToCopy highBitCopyMode, bool updateAllFlags) {
     bool previousCarryFlagValue = getFlag(CPUFlag::carry);
     bool bit0 = Utils::testBit(0, dest);
 
     setFlag(CPUFlag::carry, bit0);
-    dest >>= 1;
 
     bool copyBitValue = false;
 
-    switch (copyMode) {
-        case ShiftBitToCopy::copyPreviousValue:
+    switch (highBitCopyMode) {
+        case ShiftBitToCopy::copyOutgoingValue:
             copyBitValue = bit0;
             break;
         case ShiftBitToCopy::copyCarryFlag:
             copyBitValue = previousCarryFlagValue;
             break;
-        case ShiftBitToCopy::copyNothing:
+        case ShiftBitToCopy::preserve:
+            copyBitValue = Utils::testBit(7, dest);
+            break;
         case ShiftBitToCopy::copyZero:
             break;
         case ShiftBitToCopy::copyOne:
@@ -526,29 +572,51 @@ unsigned char CPUZ80::shiftRight(unsigned char dest, ShiftBitToCopy copyMode) {
             break;
     }
 
-    if (copyMode != ShiftBitToCopy::copyNothing) {
-        Utils::setBit(7, copyBitValue, dest);
-    }
+    dest >>= 1;
+
+    Utils::setBit(7, copyBitValue, dest);
 
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
+    handleUndocumentedFlags(dest);
+
+    if (updateAllFlags) {
+        setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+        setFlag(CPUFlag::zero, dest == 0);
+        setFlag(CPUFlag::overflowParity, getParity(dest));
+    }
+
     return dest;
 }
 
 unsigned char CPUZ80::rrc(unsigned char dest) {
-    return shiftRight(dest, ShiftBitToCopy::copyPreviousValue);
+    // 8-bit rotation to the right. the bit leaving on the right is copied into the carry, and into bit 7.
+    return shiftRight(dest, ShiftBitToCopy::copyOutgoingValue, true);
+}
+
+void CPUZ80::rrca() {
+    // Performs RRC A faster and modifies the flags differently.
+    gpRegisters[cpuReg::AF].hi = shiftRight(gpRegisters[cpuReg::AF].hi, ShiftBitToCopy::copyOutgoingValue, false);
 }
 
 unsigned char CPUZ80::rr(unsigned char dest) {
-    return shiftRight(dest, ShiftBitToCopy::copyCarryFlag);
+    // 9-bit rotation to the right. The carry is copied into bit 7, and the bit leaving on the right is copied into the carry.
+    return shiftRight(dest, ShiftBitToCopy::copyCarryFlag, true);
+}
+
+void CPUZ80::rra() {
+    // Performs RR A faster, and modifies the flags differently.
+    gpRegisters[cpuReg::AF].hi = shiftRight(gpRegisters[cpuReg::AF].hi, ShiftBitToCopy::copyCarryFlag, false);
 }
 
 unsigned char CPUZ80::sra(unsigned char dest) {
-    return shiftRight(dest, ShiftBitToCopy::copyNothing);
+    // Arithmetic shift right 1 bit, bit 0 goes to carry flag, bit 7 remains unchanged.
+    return shiftRight(dest, ShiftBitToCopy::preserve, true);
 }
 
 unsigned char CPUZ80::srl(unsigned char dest) {
-    return shiftRight(dest,  ShiftBitToCopy::copyZero);
+    // Like SRA, except a 0 is put into bit 7. The bits are all shifted right, with bit 0 put into the carry flag.
+    return shiftRight(dest,  ShiftBitToCopy::copyZero, true);
 }
 
 void CPUZ80::exchange8Bit(unsigned char &register1, unsigned char &register2) {
@@ -731,4 +799,12 @@ unsigned short CPUZ80::readMemory16Bit(unsigned short location) {
         memoryAddress = location;
     #endif
     return value;
+}
+
+void CPUZ80::ccf() {
+    setFlag(CPUFlag::halfCarry, getFlag(CPUFlag::carry));
+    setFlag(CPUFlag::carry, !getFlag(CPUFlag::carry));
+    setFlag(CPUFlag::subtractNegative, false);
+    // TODO documentation says x/y should be set from A, but the emulator I am comparing results against seems to use F, change this when done with debugging if need be.
+    handleUndocumentedFlags(gpRegisters[cpuReg::AF].lo);
 }

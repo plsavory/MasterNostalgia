@@ -45,9 +45,9 @@ enum CPUFlag : unsigned char {
 
 enum ShiftBitToCopy {
     copyCarryFlag,
-    copyPreviousValue,
+    copyOutgoingValue,
     copyZero,
-    copyNothing,
+    preserve,
     copyOne
 };
 
@@ -173,6 +173,8 @@ private:
 
     void subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry);
 
+    void subSbc16Bit(unsigned short &dest, unsigned short value, bool withCarry);
+
     void sub8Bit(unsigned char &dest, unsigned char value);
 
     void sbc8Bit(unsigned char &dest, unsigned char value);
@@ -211,21 +213,29 @@ private:
 
     void store(unsigned short location, unsigned char hi, unsigned char lo);
 
-    unsigned char shiftLeft(unsigned char dest, ShiftBitToCopy copyMode);
+    unsigned char shiftLeft(unsigned char dest, ShiftBitToCopy lowBitCopyMode, bool updateAllFlags);
 
     unsigned char rlc(unsigned char dest);
 
+    void rlca();
+
     unsigned char rl(unsigned char dest);
+
+    void rla();
 
     unsigned char sla(unsigned char dest);
 
     unsigned char sll(unsigned char dest);
 
-    unsigned char shiftRight(unsigned char dest, ShiftBitToCopy copyMode);
+    unsigned char shiftRight(unsigned char dest, ShiftBitToCopy highBitCopyMode, bool updateAllFlags);
 
     unsigned char rrc(unsigned char dest);
 
+    void rrca();
+
     unsigned char rr(unsigned char dest);
+
+   void rra();
 
     unsigned char sra(unsigned char dest);
 
@@ -286,6 +296,8 @@ private:
     unsigned char res(unsigned char bitNumber, unsigned char value);
 
     unsigned char set(unsigned char bitNumber, unsigned char value);
+
+    void ccf();
 
     // Stack
     void pushStack(unsigned char value);

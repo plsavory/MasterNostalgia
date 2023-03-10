@@ -48,10 +48,10 @@ void CPUZ80::reset() {
 
     state = CPUState::Running;
 
-//    gpRegisters[cpuReg::BC].whole = 0x0;
-//    gpRegisters[cpuReg::DE].whole = 0xC714;
-//    gpRegisters[cpuReg::HL].whole = 0x0293;
-//    gpRegisters[cpuReg::AF].whole = 0xAB40;
+    gpRegisters[cpuReg::BC].whole = 0x0;
+    gpRegisters[cpuReg::DE].whole = 0xC714;
+    gpRegisters[cpuReg::HL].whole = 0x0293;
+    gpRegisters[cpuReg::AF].whole = 0xAB40;
 }
 
 int CPUZ80::execute() {
@@ -78,6 +78,11 @@ int CPUZ80::executeOpcode() {
         originalRegisterValues[i] = gpRegisters[i];
     }
 
+    if (enableInterrupts) {
+        iff1 = iff2 = true;
+        enableInterrupts = false;
+    }
+
     if (resetRequest == ResetRequest::pending) {
         resetRequest = ResetRequest::processing;
         pushStack(programCounter);
@@ -91,11 +96,6 @@ int CPUZ80::executeOpcode() {
         pushStack(programCounter);
         programCounter = 0x38;
         iff1 = iff2 = false;
-    }
-
-    if (enableInterrupts) {
-        iff1 = iff2 = true;
-        enableInterrupts = false;
     }
 
     if (state == CPUState::Halt) {
@@ -145,7 +145,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x07:
             // rlca
-            gpRegisters[cpuReg::AF].hi = rlc(gpRegisters[cpuReg::AF].hi);
+            rlca();
             cyclesTaken = 4;
             break;
         case 0x08:
@@ -185,7 +185,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x0F:
             // rrca
-            gpRegisters[cpuReg::AF].hi = rrc(gpRegisters[cpuReg::AF].hi);
+            rrca();
             cyclesTaken = 4;
             break;
         case 0x10:
@@ -224,7 +224,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x17:
             // rla
-            gpRegisters[cpuReg::AF].hi = rl(gpRegisters[cpuReg::AF].hi);
+            rla();
             cyclesTaken = 4;
             break;
         case 0x18:
@@ -263,7 +263,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x1F:
             // rra
-            gpRegisters[cpuReg::AF].hi = rr(gpRegisters[cpuReg::AF].hi);
+            rra();
             cyclesTaken = 4;
             break;
         case 0x20:
@@ -421,9 +421,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x3F:
             // ccf
-            setFlag(CPUFlag::carry, !getFlag(CPUFlag::carry));
-            setFlag(CPUFlag::halfCarry, !getFlag(CPUFlag::halfCarry));
-            setFlag(CPUFlag::subtractNegative, false);
+            ccf();
             cyclesTaken = 4;
             break;
         case 0x40:
@@ -583,7 +581,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x5F:
             // ld e, a
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::AF].hi);
+            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 4;
             break;
         case 0x60:
@@ -2619,7 +2617,7 @@ bool CPUZ80::hasMetJumpCondition(JPCondition condition) {
 }
 
 void CPUZ80::pushStack(unsigned char value) {
-    writeMemory(stackPointer--, value);
+    writeMemory(--stackPointer, value);
 }
 
 void CPUZ80::pushStack(unsigned short value) {
@@ -2630,7 +2628,7 @@ void CPUZ80::pushStack(unsigned short value) {
 }
 
 unsigned char CPUZ80::popStack() {
-    return readMemory(++stackPointer);
+    return readMemory(stackPointer++);
 }
 
 unsigned short CPUZ80::popStack16() {

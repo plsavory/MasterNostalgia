@@ -8,12 +8,14 @@
 #include "Z80IO.h"
 #include "VDP.h"
 #include "PSG.h"
+#include "Cartridge.h"
+#include "Memory.h"
 
 class MasterSystemZ80IO : public Z80IO {
 
 public:
 
-    MasterSystemZ80IO(VDP *vdp, PSG *psg);
+    MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory);
 
     void write(unsigned char address, unsigned char value) final;
 
@@ -28,6 +30,8 @@ private:
     VDP *vdp;
 
     PSG *psg;
+
+    Memory *memory;
 };
 
 #endif //MASTALGIA_MASTERSYSTEMZ80IO_H

@@ -5,21 +5,27 @@
 //#define DEBUG_IO_WRITE
 //#define DEBUG_IO_READ
 
-MasterSystemZ80IO::MasterSystemZ80IO(VDP *vdp, PSG *psg) {
+MasterSystemZ80IO::MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory) {
     this->vdp = vdp;
     this->psg = psg;
+    this->memory = memory;
 }
 
 void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
     // TODO handle the Game Gear I/O port map if I ever add support for it
+    // TODO disable I/O if the memory media control register has i/o set to disabled (for FM audio support)
 
     #ifdef DEBUG_IO_WRITE
     std::cout<<"PORT "<<std::hex<<Utils::formatHexNumber(address)<<" WRITE: VAL: " << Utils::formatHexNumber(value)<<std::endl;
     #endif
 
     if (address <= 0x3F) {
+        if (address % 2) {
+            // Write to I/O control register
+            return;
+        }
         // TODO even address - write to memory control register
-        // TODO odd address - write to I/O control register
+        memory->writeMediaControlRegister(value);
         return;
     }
 
@@ -46,6 +52,7 @@ void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
 }
 
 unsigned char MasterSystemZ80IO::read(unsigned char address) {
+    // TODO disable I/O if the memory media control register has i/o set to disabled (For FM audio support)
     if (address <= 0x3F) {
         // Return the last byte of the instruction which read the port
         // TODO or 0xFF if emulating Master System 2

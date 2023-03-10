@@ -12,7 +12,7 @@ MasterSystem::MasterSystem() {
     smsMemory = new Memory(smsCartridge);
     smsVdp = new VDP();
     smsPSG = new PSG();
-    z80Io = new MasterSystemZ80IO(smsVdp, smsPSG);
+    z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory);
     smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;
 }

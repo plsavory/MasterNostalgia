@@ -4,6 +4,9 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#ifndef CARTRIDGE_INCLUDED
+#define CARTRIDGE_INCLUDED
+
 #define MAX_CARTRIDGE_SIZE 0x100000
 
 enum CartridgeRegion {
@@ -34,3 +37,5 @@ private:
     CartridgeRegion region;
     bool megCartridge;
 };
+
+#endif

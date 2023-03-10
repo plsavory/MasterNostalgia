@@ -19,10 +19,11 @@ Master System memory map:
 
 Memory::Memory(Cartridge *cart) {
     smsCartridge = cart;
+    controlRegister = 0xBF; // Enable cartridge slot by default for now // TODO enable BIOS if one is detected
 
     // Clear memory
-    for (int i = 0; i < 0x10000; i++) {
-        ram[i] = 0x0;
+    for (unsigned char & i : ram) {
+        i = 0x0;
     }
 
     // Clear RAM banks
@@ -56,20 +57,20 @@ unsigned char Memory::read(unsigned short location) {
     }
 
     if (!smsCartridge->isCodemasters() && location < 0x400) {
-        return smsCartridge->read(location);
+        return readMedia(location);
     }
 
     if (location < 0x4000) {
         // Page 1
         unsigned short address = location + (0x4000 * memoryPages[0]);
-        return smsCartridge->read(address);
+        return readMedia(address);
     }
 
     if (location < 0x8000) {
         // Page 2
         unsigned short address = location + (0x4000 * memoryPages[1]);
         address -= 0x4000; // Remove offset
-        return smsCartridge->read(address);
+        return readMedia(address);
     }
 
     if (location < 0xC000) {
@@ -80,10 +81,19 @@ unsigned char Memory::read(unsigned short location) {
 
         unsigned short address = location + (0x4000 * memoryPages[2]);
         address -= 0x8000;
-        return smsCartridge->read(address);
+        return readMedia(address);
     }
 
     return ram[location];
+}
+
+unsigned char Memory::readMedia(unsigned short location) {
+    // TODO allow reading from BIOS, also determine which priority these should be if multiple flags are turned on
+    if (!Utils::testBit(MemoryControlRegisterFlags::enableCartridgeSlot, controlRegister)) {
+        return smsCartridge->read(location);
+    }
+
+    return 0xFF;
 }
 
 unsigned short Memory::read16Bit(unsigned short location) {
@@ -112,6 +122,7 @@ void Memory::write(unsigned short location, unsigned char value) {
 
     if (location < 0xC000) {
         // Allow a write if RAM is banked into this address range
+        // TODO should the media/memory control register effect this also for when attempting to write to CART RAM?
         if (currentPage3RamBank < 0) {
             return;
         }
@@ -195,4 +206,8 @@ void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char
         default:
             break;
     }
+}
+
+void Memory::writeMediaControlRegister(unsigned char value) {
+    controlRegister = value;
 }

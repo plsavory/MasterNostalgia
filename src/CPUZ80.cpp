@@ -22,6 +22,7 @@ CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
 
     resetRequest = ResetRequest::none;
 
+    enableLogging = false;
     // Reset the CPU to its initial state
     reset();
 }
@@ -52,6 +53,8 @@ void CPUZ80::reset() {
     gpRegisters[cpuReg::DE].whole = 0xC714;
     gpRegisters[cpuReg::HL].whole = 0x0293;
     gpRegisters[cpuReg::AF].whole = 0xAB40;
+    gpRegisters[cpuReg::IX].whole = 0x7A67;
+    gpRegisters[cpuReg::IY].whole = 0x7E3C;
 }
 
 int CPUZ80::execute() {
@@ -107,6 +110,10 @@ int CPUZ80::executeOpcode() {
 
     displayOpcodePrefix = 0x0;
     displayOpcode = opcode;
+
+    if (originalProgramCounterValue == 0x2561 && opcode == 0x79) {
+        enableLogging = true;
+    }
 
     switch (opcode) {
         case 0x00:
@@ -1793,7 +1800,7 @@ void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPr
             break;
         case 0x26:
             // ld ixh, n
-            ldReg8(gpRegisters[interruptMode].hi, NB());
+            ldReg8(gpRegisters[indexRegister].hi, NB());
             cyclesTaken = 11;
             break;
         case 0x29:
@@ -1823,7 +1830,7 @@ void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPr
             break;
         case 0x2E:
             // ld ixl, n
-            ldReg8(gpRegisters[interruptMode].lo, NB());
+            ldReg8(gpRegisters[indexRegister].lo, NB());
             cyclesTaken = 11;
             break;
         case 0x34:
@@ -1980,7 +1987,7 @@ void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPr
             break;
         case 0x57:
             // ld d, a
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
+            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::AF].hi);
             cyclesTaken = 8;
             break;
         case 0x58:
@@ -2545,8 +2552,8 @@ void CPUZ80::iyOpcodes() {
  * [logCPUState Log the CPU's current state to the console]
  */
 void CPUZ80::logCPUState() {
-    std::cout << std::uppercase << std::hex << Utils::formatHexNumber(displayOpcodePrefix) << Utils::formatHexNumber(displayOpcode) << ": "
-              << Utils::padString(executedInstructionName, 10) << " BC="
+    return;
+    std::cout << std::uppercase << "BC="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP="
@@ -3939,7 +3946,7 @@ void CPUZ80::bitOpcodes() {
 
 void CPUZ80::indexBitOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
     // Opcode format is offset, opcode
-    unsigned short address = readMemory(gpRegisters[indexRegister].whole + signedNB());
+    unsigned short address = gpRegisters[indexRegister].whole + signedNB();
     unsigned char opcode = NBHideFromTrace();
     displayOpcodePrefix = (displayOpcodePrefix << 8) + opcodePrefix;
     displayOpcode = opcode;

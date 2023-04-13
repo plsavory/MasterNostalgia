@@ -12,7 +12,8 @@ MasterSystem::MasterSystem() {
     smsMemory = new Memory(smsCartridge);
     smsVdp = new VDP();
     smsPSG = new PSG();
-    z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory);
+    smsInput = new MasterSystemInput();
+    z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory, smsInput);
     smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;
 }
@@ -66,4 +67,8 @@ double MasterSystem::getMachineClicksPerFrame() {
 
 sf::Uint8* MasterSystem::getVideoOutput() {
     return smsVdp->getVideoOutput();
+}
+
+void MasterSystem::storeUserInput() {
+    smsInput->setState();
 }

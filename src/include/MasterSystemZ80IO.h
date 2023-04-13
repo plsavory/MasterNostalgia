@@ -10,12 +10,13 @@
 #include "PSG.h"
 #include "Cartridge.h"
 #include "Memory.h"
+#include "MasterSystemInput.h"
 
 class MasterSystemZ80IO : public Z80IO {
 
 public:
 
-    MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory);
+    MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory, MasterSystemInput *input);
 
     void write(unsigned char address, unsigned char value) final;
 
@@ -32,6 +33,8 @@ private:
     PSG *psg;
 
     Memory *memory;
+
+    MasterSystemInput *input;
 };
 
 #endif //MASTALGIA_MASTERSYSTEMZ80IO_H

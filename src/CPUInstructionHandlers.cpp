@@ -60,12 +60,19 @@ void CPUZ80::ldReg16(unsigned short &dest, unsigned short value) {
 
 void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
     unsigned char originalValue = dest;
-    unsigned short result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+
+    unsigned char originalValueToAdd = value;
+
+    if (withCarry) {
+        value += getFlag(CPUFlag::carry) ? 1 : 0;
+    }
+
+    unsigned short result = dest + value;
     dest = (unsigned char)result;
     setFlag(CPUFlag::zero, dest == 0);
-    setFlag(CPUFlag::overflowParity, (originalValue & 0x80) == (value & 0x80) && (originalValue & 0x80) != (result & 0x80));
+    setFlag(CPUFlag::overflowParity, (originalValue & 0x80) == (originalValueToAdd & 0x80) && (originalValue & 0x80) != (result & 0x80));
     setFlag(CPUFlag::subtractNegative, false);
-    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ originalValueToAdd) & 0x10);
     setFlag(CPUFlag::carry, result > 0xFF);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     handleUndocumentedFlags(dest);
@@ -85,16 +92,23 @@ void CPUZ80::adc8Bit(unsigned char &dest, unsigned char value) {
 
 void CPUZ80::addAdc16Bit(unsigned short &dest, unsigned short value, bool withCarry) {
     unsigned short originalValue = dest;
-    unsigned long result = dest + (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+
+    unsigned short originalValueToAdd = value;
+
+    if (withCarry) {
+        value += getFlag(CPUFlag::carry) ? 1 : 0;
+    }
+
+    unsigned long result = dest + value;
     dest = result & 0xFFFF;
     setFlag(CPUFlag::subtractNegative, false);
-    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x1000);
+    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ originalValueToAdd) & 0x1000);
     setFlag(CPUFlag::carry, result > 0xFFFF);
 
     if (withCarry) {
         setFlag(CPUFlag::sign, Utils::testBit(15, dest));
         setFlag(CPUFlag::zero, dest == 0);
-        setFlag(CPUFlag::overflowParity, (originalValue & 0x8000) == (value & 0x8000) && (value & 0x8000) != (dest & 0x8000));
+        setFlag(CPUFlag::overflowParity, (originalValue & 0x8000) == (originalValueToAdd & 0x8000) && (originalValueToAdd & 0x8000) != (dest & 0x8000));
     }
 
     handleUndocumentedFlags((unsigned char)(dest >> 8));
@@ -109,20 +123,32 @@ void CPUZ80::adc16Bit(unsigned short &dest, unsigned short value) {
 }
 
 void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry) {
-    unsigned char originalValue = dest;
-    dest = dest - (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+
+    unsigned char originalSubtractValue = value;
+
+    if (withCarry) {
+        value += getFlag(CPUFlag::carry) ? 1 : 0;
+    }
+
+    unsigned char originalRegisterValue = dest;
+    dest = dest - value;
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::subtractNegative, true);
-    setFlag(CPUFlag::carry, originalValue < value);
-    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ value) & 0x10);
+    setFlag(CPUFlag::carry, originalRegisterValue < value);
+    setFlag(CPUFlag::halfCarry, (originalRegisterValue ^ dest ^ originalSubtractValue) & 0x10);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
-    setFlag(CPUFlag::overflowParity, ((originalValue & 0x80) != (value & 0x80)) && ((dest & 0x80) == (value & 0x80)));
+    setFlag(CPUFlag::overflowParity, ((originalRegisterValue & 0x80) != (originalSubtractValue & 0x80)) && ((dest & 0x80) == (originalSubtractValue & 0x80)));
     handleUndocumentedFlags(dest);
 }
 
 void CPUZ80::subSbc16Bit(unsigned short &dest, unsigned short value, bool withCarry) {
     unsigned short originalValue = dest;
-    dest = dest - (value + (withCarry ? (int) getFlag(CPUFlag::carry) : 0));
+
+    if (withCarry) {
+        value += getFlag(CPUFlag::carry) ? 1 : 0;
+    }
+
+    dest = dest - value;
     unsigned char highResult = dest >> 8;
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::subtractNegative, true);
@@ -388,7 +414,11 @@ void CPUZ80::outi(bool increment) {
     unsigned char valueToWrite = memory->read(gpRegisters[cpuReg::HL].whole);
     portOut(gpRegisters[cpuReg::BC].lo,valueToWrite);
 
-    gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
+    if (increment) {
+        gpRegisters[cpuReg::HL].whole += 1;
+    } else {
+        gpRegisters[cpuReg::HL].whole -= 1;
+    }
 
     // TODO should the DEC function do the exact same behaviour as below with the flags? if so just move this logic in there and call that.
     --gpRegisters[cpuReg::BC].hi;
@@ -698,8 +728,12 @@ void CPUZ80::reti() {
 }
 
 void CPUZ80::rrd(unsigned char &dest) {
+    /**
+     * Moves the lower four bits of A (0-3) into the upper four bits of (HL) (4-7); moves the upper four bits of (HL) (4-7)
+     * into the lower four bits of (HL) (0-3); moves the lower four bits of (HL) (0-3) into the lower four bits of A (0-3).
+     */
     // TODO test/debug this, there is a lot going on here
-    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].hi);
+    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].whole);
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + (memoryCurrentValue & 0x0F);
     memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)((previousRegisterLowerNibble << 4) + (memoryCurrentValue >> 4)));
@@ -712,8 +746,12 @@ void CPUZ80::rrd(unsigned char &dest) {
 }
 
 void CPUZ80::rld(unsigned char &dest) {
+    /**
+     * Moves the lower four bits of HL (0-3) into the upper four bits of (HL) (4-7); moves the upper four bits of (HL) (4-7)
+     * into the lower four bits of A (0-3); moves the lower four bits of A (0-3) into the lower four bits of (HL) (0-3).
+     */
     // TODO test/debug this, there is a lot going on here
-    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].hi);
+    unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].whole);
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + ((memoryCurrentValue & 0xF0) >> 4);
     memory->write(gpRegisters[cpuReg::HL].whole, (unsigned char)(((memoryCurrentValue & 0x0F) << 4) + previousRegisterLowerNibble));

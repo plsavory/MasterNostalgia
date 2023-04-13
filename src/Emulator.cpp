@@ -29,7 +29,7 @@ void Emulator::run() {
     // Create SFML window for video output
     float width = 256;
     float height = 224;
-    float displayScale = 2;
+    float displayScale = 3;
 
     int windowWidth = (int)(width * displayScale);
     int windowHeight = (int)(height * displayScale);
@@ -66,6 +66,6 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
         delete(window);
     }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Mastalgia", sf::Style::Close);
+    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Mastalgia", sf::Style::Default);
 }
 

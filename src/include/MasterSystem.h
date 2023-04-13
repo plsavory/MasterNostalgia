@@ -10,6 +10,7 @@ Licensed under the GPLv3 license.
 #include "VDP.h"
 #include "PSG.h"
 #include "Console.h"
+#include "MasterSystemInput.h"
 #include "MasterSystemZ80IO.h"
 
 class MasterSystem : public Console {
@@ -26,12 +27,15 @@ public:
 
     sf::Uint8* getVideoOutput() final;
 
+    void storeUserInput() final;
+
 private:
     CPUZ80 *smsCPU;
     Memory *smsMemory;
     Cartridge *smsCartridge;
     VDP *smsVdp;
     PSG *smsPSG;
+    MasterSystemInput *smsInput;
     MasterSystemZ80IO *z80Io;
     bool running;
 protected:

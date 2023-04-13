@@ -51,7 +51,11 @@ add_executable(${EXECUTABLE_NAME}
         src/Emulator.cpp
         src/include/Z80IO.h
         src/include/MasterSystemZ80IO.h
-        src/MasterSystemZ80IO.cpp)
+        src/MasterSystemZ80IO.cpp
+        src/include/MasterSystemController.h
+        src/MasterSystemController.cpp
+        src/include/MasterSystemInput.h
+        src/MasterSystemInput.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

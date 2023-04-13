@@ -5,10 +5,11 @@
 //#define DEBUG_IO_WRITE
 //#define DEBUG_IO_READ
 
-MasterSystemZ80IO::MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory) {
+MasterSystemZ80IO::MasterSystemZ80IO(VDP *vdp, PSG *psg, Memory *memory, MasterSystemInput *input) {
     this->vdp = vdp;
     this->psg = psg;
     this->memory = memory;
+    this->input = input;
 }
 
 void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
@@ -75,7 +76,7 @@ unsigned char MasterSystemZ80IO::read(unsigned char address) {
     }
 
     if (address == 0xDC || address == 0xC0) {
-        // Controller port 1 TODO implement
+        // Controller port 1
         /**
          *    bits - 0 for pressed, 1 for released
          *    7: Joypad 2 Down
@@ -87,11 +88,11 @@ unsigned char MasterSystemZ80IO::read(unsigned char address) {
          *    1: Joypad 1 Down
          *    0: Joypad 1 Up
          */
-        return 0xFF;
+        return input->readPortDC();
     }
 
     if (address == 0xDD || address == 0xC1) {
-        // Controller port 2, also console region TODO implement
+        // Controller port 2, also console region
         /**
          *    7: Lightgun 2 + Nationalisation bit 2
          *    6: Lightgun 1 + Nationalisation bit 1
@@ -102,7 +103,7 @@ unsigned char MasterSystemZ80IO::read(unsigned char address) {
          *    1: Joypad 2 Right
          *    0: Joypad 2 Left
          */
-         return 0xFF;
+         return input->readPortDD();
     }
     // TODO even address - return I/O port A/B register
     // TODO odd address - return I/O port B/misc register

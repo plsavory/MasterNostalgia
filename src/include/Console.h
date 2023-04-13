@@ -13,6 +13,7 @@ public:
     virtual bool init(std::string romFilename) = 0;
 
     void emulateFrame() {
+        storeUserInput(); // TODO should this happen more often than once per frame?
         double machineClicksPerFrame = getMachineClicksPerFrame();
         unsigned int currentClicks = 0;
 
@@ -26,6 +27,8 @@ public:
     virtual unsigned int tick() = 0;
 
     virtual sf::Uint8* getVideoOutput() = 0;
+
+    virtual void storeUserInput() = 0;
 
 protected:
 

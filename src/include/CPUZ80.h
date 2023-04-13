@@ -95,6 +95,8 @@ private:
     unsigned short displayOpcodePrefix;
     unsigned char displayOpcode;
 
+    bool enableLogging;
+
     unsigned short readValue;
 
     unsigned char ioPortAddress;

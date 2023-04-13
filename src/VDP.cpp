@@ -361,6 +361,10 @@ void VDP::renderSpritesMode4() {
 
         spriteCount += 1;
 
+        if (!Utils::testBit(6, registers[0x1])) {
+            continue;
+        }
+
         unsigned char x = vRAM[baseAddress + 128 + (i*2)];
 
         if (shiftLeft) {
@@ -422,6 +426,10 @@ void VDP::renderSpritesMode4() {
 
 void VDP::renderBackgroundMode4() {
 
+    if (!Utils::testBit(6, registers[0x1])) {
+        return;
+    }
+
     unsigned short nameTableBaseAddress = getNameTableBaseAddress();
 
     unsigned char vScrollTileOffset = vScroll >> 3;
@@ -472,6 +480,9 @@ void VDP::renderBackgroundMode4() {
             }
 
             unsigned short nameTableOffsetAddress = nameTableBaseAddress + (currentVRow * 64) + (column * 2);
+
+            // AND the contents of bit 0 of register 2 with bit 10 of the name table offset address, Ys apparently relies on this.
+            nameTableOffsetAddress |= (nameTableOffsetAddress & 0x400) & ((registers[0x2] & 0x1) << 10);
 
             unsigned short tileData = vRAM[nameTableOffsetAddress] + (vRAM[nameTableOffsetAddress+1] << 8);
 

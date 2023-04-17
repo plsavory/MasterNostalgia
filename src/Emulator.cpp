@@ -59,14 +59,14 @@ void Emulator::run() {
         window->display();
 
         // Lazy way to debug the VDP...
-        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-            system->printVDPInformation();
-            hasPrintedVdpInfo = true;
-        }
-
-        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-            hasPrintedVdpInfo = false;
-        }
+//        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+//            system->printVDPInformation();
+//            hasPrintedVdpInfo = true;
+//        }
+//
+//        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+//            hasPrintedVdpInfo = false;
+//        }
     }
     delete(window);
     window = nullptr;
@@ -79,5 +79,7 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
     }
 
     window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Mastalgia", sf::Style::Default);
+    window->setFramerateLimit(60);
+    window->setVerticalSyncEnabled(true);
 }
 

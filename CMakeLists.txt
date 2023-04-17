@@ -4,6 +4,14 @@ project(Mastalgia)
 set(CMAKE_CXX_STANDARD 14)
 set(EXECUTABLE_NAME "Mastalgia")
 
+#if(NOT CMAKE_BUILD_TYPE)
+#    set(CMAKE_BUILD_TYPE Release)
+#endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -O3")
+#set(CMAKE_CXX_FLAGS_DEBUG "-g")
+#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

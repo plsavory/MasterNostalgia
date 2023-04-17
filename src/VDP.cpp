@@ -334,7 +334,7 @@ void VDP::renderSpritesMode4() {
     for (int i = 0; i < 64; i++) {
 
         // Sprite format: byte0 = y, byte1 = x, byte2 = unused, byte3 = pattern id
-        unsigned char y = vRAM[baseAddress + i];
+        int y = vRAM[baseAddress + i] + 1;
 
         if (y == 0xD0 && (displayMode.getActiveDisplayEnd() == 192)) {
             break;
@@ -348,7 +348,7 @@ void VDP::renderSpritesMode4() {
             continue;
         }
 
-        if (vCounter > y + height) {
+        if (vCounter >= y + height) {
             continue;
         }
 
@@ -383,7 +383,7 @@ void VDP::renderSpritesMode4() {
             }
         }
 
-        unsigned short patternAddress = (patternId * 32) + (4 * vCounter - y);
+        unsigned short patternAddress = (patternId * 32) + (4 * (vCounter - y));
 
         unsigned char pattern1 = vRAM[patternAddress];
         unsigned char pattern2 = vRAM[patternAddress+1];
@@ -417,7 +417,7 @@ void VDP::renderSpritesMode4() {
             unsigned char rgb = cRAM[paletteId + 16];
             unsigned char r = getColourValue(rgb & 0x3);
             unsigned char g = getColourValue((rgb >> 2) & 0x3);
-            unsigned char b = getColourValue((rgb >> 4) * 0x3);
+            unsigned char b = getColourValue((rgb >> 4) & 0x3);
 
             putPixel(x + xPixel, vCounter, r, g, b);
         }
@@ -433,7 +433,7 @@ void VDP::renderBackgroundMode4() {
     unsigned short nameTableBaseAddress = getNameTableBaseAddress();
 
     unsigned char vScrollTileOffset = vScroll >> 3;
-    unsigned char hScrollTileOffset = registers[0x8] >> 3;
+    unsigned char hTileOffset = registers[0x8] >> 3;
     unsigned char vScrollPixelOffset = vScroll & 0x7;
     unsigned char hScrollPixelOffset = registers[0x8] & 0x7;
 
@@ -460,7 +460,7 @@ void VDP::renderBackgroundMode4() {
 
             if (allowHScroll) {
                 // Should be the first pixel of the starting column * tile width + the current screen pixel + the fine scroll offset
-                onScreenPixelX = ((hScrollTileOffset * 8) + pixelCounter + hScrollPixelOffset) % 255;
+                onScreenPixelX = ((hTileOffset * 8) + pixelCounter + hScrollPixelOffset) % 255;
             }
 
             bool allowVScroll = !(limitVScroll && (xPixelDataOffset/8) > 23);
@@ -548,14 +548,14 @@ void VDP::renderBackgroundMode4() {
             }
 
             if (!isMasking && !isHighPriority && !doesPixelMatch(onScreenPixelX, vCounter, 0, 0, 1)) {
-                // This isn't a high priority pixel and there is nothing here, so don't draw it.
+                // This isn't a high priority pixel and there is something here, so don't draw it.
                 continue;
             }
 
             putPixel(onScreenPixelX, vCounter, r, g, b);
         }
 
-        hScrollTileOffset = (hScrollTileOffset + 1) % 0x32;
+        hTileOffset = (hTileOffset + 1) % 32;
     }
 }
 

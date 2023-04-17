@@ -44,7 +44,7 @@ unsigned int MasterSystem::tick() {
 
     int z80ClockCycles = smsCPU->execute();
 
-    unsigned int machineClicks = z80ClockCycles * 3;
+    float machineClicks = (float)z80ClockCycles * 3;
 
     float vdpCycles = machineClicks / 2;
 

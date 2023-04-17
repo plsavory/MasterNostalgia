@@ -62,13 +62,13 @@ unsigned char Memory::read(unsigned short location) {
 
     if (location < 0x4000) {
         // Page 1
-        unsigned short address = location + (0x4000 * memoryPages[0]);
+        unsigned long address = location + (0x4000 * memoryPages[0]);
         return readMedia(address);
     }
 
     if (location < 0x8000) {
         // Page 2
-        unsigned short address = location + (0x4000 * memoryPages[1]);
+        unsigned long address = location + (0x4000 * memoryPages[1]);
         address -= 0x4000; // Remove offset
         return readMedia(address);
     }
@@ -79,7 +79,7 @@ unsigned char Memory::read(unsigned short location) {
             return ramBank[currentPage3RamBank][location - 0x8000];
         }
 
-        unsigned short address = location + (0x4000 * memoryPages[2]);
+        unsigned long address = location + (0x4000 * memoryPages[2]);
         address -= 0x8000;
         return readMedia(address);
     }
@@ -87,7 +87,7 @@ unsigned char Memory::read(unsigned short location) {
     return ram[location];
 }
 
-unsigned char Memory::readMedia(unsigned short location) {
+unsigned char Memory::readMedia(unsigned long location) {
     // TODO allow reading from BIOS, also determine which priority these should be if multiple flags are turned on
     if (!Utils::testBit(MemoryControlRegisterFlags::enableCartridgeSlot, controlRegister)) {
         return smsCartridge->read(location);

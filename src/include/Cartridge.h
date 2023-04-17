@@ -25,7 +25,7 @@ public:
 
     bool isMegCartridge();
 
-    unsigned char read(unsigned short location);
+    unsigned char read(unsigned long location);
 
 private:
     int currentBankState;

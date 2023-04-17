@@ -22,7 +22,6 @@ CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
 
     resetRequest = ResetRequest::none;
 
-    enableLogging = false;
     // Reset the CPU to its initial state
     reset();
 }
@@ -110,10 +109,6 @@ int CPUZ80::executeOpcode() {
 
     displayOpcodePrefix = 0x0;
     displayOpcode = opcode;
-
-    if (originalProgramCounterValue == 0x2561 && opcode == 0x79) {
-        enableLogging = true;
-    }
 
     switch (opcode) {
         case 0x00:
@@ -1428,7 +1423,7 @@ void CPUZ80::extendedOpcodes() {
             break;
         case 0x44:
             // neg
-            sub8Bit(gpRegisters[cpuReg::AF].hi, -gpRegisters[cpuReg::AF].hi);
+            neg();
             cyclesTaken = 8;
             break;
         case 0x45:

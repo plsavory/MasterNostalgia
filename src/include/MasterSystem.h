@@ -29,6 +29,8 @@ public:
 
     void storeUserInput() final;
 
+    void printVDPInformation() final;
+
 private:
     CPUZ80 *smsCPU;
     Memory *smsMemory;

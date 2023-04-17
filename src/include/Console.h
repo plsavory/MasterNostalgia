@@ -30,6 +30,8 @@ public:
 
     virtual void storeUserInput() = 0;
 
+    virtual void printVDPInformation() = 0;
+
 protected:
 
     virtual double getMachineClicksPerFrame() = 0;

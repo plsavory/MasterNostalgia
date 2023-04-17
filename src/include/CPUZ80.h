@@ -95,8 +95,6 @@ private:
     unsigned short displayOpcodePrefix;
     unsigned char displayOpcode;
 
-    bool enableLogging;
-
     unsigned short readValue;
 
     unsigned char ioPortAddress;
@@ -292,6 +290,8 @@ private:
     void retn();
 
     void reti();
+
+    void neg();
 
     void bit(unsigned char bitNumber, unsigned char value);
 

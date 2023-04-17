@@ -182,6 +182,6 @@ bool Cartridge::isMegCartridge() {
     return megCartridge;
 }
 
-unsigned char Cartridge::read(unsigned short location) {
+unsigned char Cartridge::read(unsigned long location) {
     return cartridgeData[location];
 }

@@ -45,7 +45,7 @@ private:
 
     unsigned char controlRegister;
 
-    unsigned char readMedia(unsigned short location);
+    unsigned char readMedia(unsigned long location);
 };
 
 #endif

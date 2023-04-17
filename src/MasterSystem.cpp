@@ -72,3 +72,7 @@ sf::Uint8* MasterSystem::getVideoOutput() {
 void MasterSystem::storeUserInput() {
     smsInput->setState();
 }
+
+void MasterSystem::printVDPInformation() {
+    smsVdp->printDebugInfo();
+}

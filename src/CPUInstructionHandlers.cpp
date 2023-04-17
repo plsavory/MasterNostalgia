@@ -63,17 +63,15 @@ void CPUZ80::addAdc8Bit(unsigned char &dest, unsigned char value, bool withCarry
 
     unsigned char originalValueToAdd = value;
 
-    if (withCarry) {
-        value += getFlag(CPUFlag::carry) ? 1 : 0;
-    }
+    unsigned short result = dest + value + (withCarry && getFlag(CPUFlag::carry) ? 1 : 0);
 
-    unsigned short result = dest + value;
+    unsigned short carryBits = (originalValue ^ originalValueToAdd ^ result);
     dest = (unsigned char)result;
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::overflowParity, (originalValue & 0x80) == (originalValueToAdd & 0x80) && (originalValue & 0x80) != (result & 0x80));
     setFlag(CPUFlag::subtractNegative, false);
-    setFlag(CPUFlag::halfCarry, (originalValue ^ dest ^ originalValueToAdd) & 0x10);
-    setFlag(CPUFlag::carry, result > 0xFF);
+    setFlag(CPUFlag::halfCarry, carryBits & 0x10);
+    setFlag(CPUFlag::carry, carryBits & 0x100);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     handleUndocumentedFlags(dest);
 }
@@ -126,16 +124,14 @@ void CPUZ80::subSbc8Bit(unsigned char &dest, unsigned char value, bool withCarry
 
     unsigned char originalSubtractValue = value;
 
-    if (withCarry) {
-        value += getFlag(CPUFlag::carry) ? 1 : 0;
-    }
-
     unsigned char originalRegisterValue = dest;
-    dest = dest - value;
+    unsigned short result = dest - value - (withCarry && getFlag(CPUFlag::carry) ? 1 : 0);
+    unsigned short carryBits = (originalRegisterValue ^ originalSubtractValue ^ result);
+    dest = (unsigned char) result;
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::subtractNegative, true);
-    setFlag(CPUFlag::carry, originalRegisterValue < value);
-    setFlag(CPUFlag::halfCarry, (originalRegisterValue ^ dest ^ originalSubtractValue) & 0x10);
+    setFlag(CPUFlag::carry, carryBits & 0x100);
+    setFlag(CPUFlag::halfCarry, carryBits & 0x10);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     setFlag(CPUFlag::overflowParity, ((originalRegisterValue & 0x80) != (originalSubtractValue & 0x80)) && ((dest & 0x80) == (originalSubtractValue & 0x80)));
     handleUndocumentedFlags(dest);
@@ -315,17 +311,8 @@ unsigned char CPUZ80::getInc8BitValue(unsigned char initialValue) {
 }
 
 void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
-    unsigned char originalValue = gpRegisters[cpuReg::AF].hi;
-    unsigned char comparisonResult = gpRegisters[cpuReg::AF].hi - valueToSubtract;
-    setFlag(CPUFlag::zero, comparisonResult == 0);
-    setFlag(CPUFlag::subtractNegative, true);
-    setFlag(CPUFlag::carry, originalValue < valueToSubtract);
-    setFlag(CPUFlag::halfCarry, (originalValue ^ comparisonResult ^ valueToSubtract) & 0x10);
-    setFlag(CPUFlag::carry, originalValue < valueToSubtract);
-    setFlag(CPUFlag::sign, Utils::testBit(7, comparisonResult));
-    setFlag(CPUFlag::overflowParity, ((originalValue & 0x80) != (valueToSubtract & 0x80)) && ((comparisonResult & 0x80) == (valueToSubtract & 0x80)));
-    handleUndocumentedFlags(valueToSubtract);
-
+    unsigned char aValue = gpRegisters[cpuReg::AF].hi;
+    subSbc8Bit(aValue, valueToSubtract, false);
     #ifdef DEBUG_VALUES
     readValue = valueToSubtract;
     #endif
@@ -357,8 +344,26 @@ void CPUZ80::inir(bool increment) {
 }
 
 void CPUZ80::cpi(bool increment) {
-    compare8Bit(memory->read(gpRegisters[cpuReg::HL].whole));
+    unsigned char value = memory->read(gpRegisters[cpuReg::HL].whole);
+    unsigned char originalRegisterValue = gpRegisters[cpuReg::AF].hi;
+
+    unsigned char result = originalRegisterValue - value;
+    unsigned char carryBits = (originalRegisterValue ^ value ^ result);
+    unsigned char finalResult = result;
+
+    if (getFlag(CPUFlag::halfCarry)) {
+        finalResult -= 1;
+    }
+
+    setFlag(CPUFlag::sign, Utils::testBit(7, result));
+    setFlag(CPUFlag::zero, result == 0);
+    setFlag(CPUFlag::halfCarry, carryBits & 0x10);
+    setFlag(CPUFlag::xf, finalResult & 0x2);
+    setFlag(CPUFlag::yf, finalResult & 0x8);
+
     --gpRegisters[cpuReg::BC].whole;
+    setFlag(CPUFlag::overflowParity, gpRegisters[cpuReg::BC].whole != 0);
+    setFlag(CPUFlag::subtractNegative, true);
     cyclesTaken = 16;
 
     gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
@@ -845,4 +850,10 @@ void CPUZ80::ccf() {
     setFlag(CPUFlag::subtractNegative, false);
     // TODO documentation says x/y should be set from A, but the emulator I am comparing results against seems to use F, change this when done with debugging if need be.
     handleUndocumentedFlags(gpRegisters[cpuReg::AF].lo);
+}
+
+void CPUZ80::neg() {
+    unsigned char value = 0;
+    sub8Bit(value, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::AF].hi = value;
 }

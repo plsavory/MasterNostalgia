@@ -41,6 +41,8 @@ void Emulator::run() {
     videoOutputSprite.setPosition(0.f, 0.f);
     videoOutputSprite.setScale(displayScale, displayScale);
 
+    bool hasPrintedVdpInfo = false;
+
     while (window->isOpen()) {
 
         sf::Event event;
@@ -55,6 +57,16 @@ void Emulator::run() {
         window->clear(sf::Color::Black);
         window->draw(videoOutputSprite);
         window->display();
+
+        // Lazy way to debug the VDP...
+        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+            system->printVDPInformation();
+            hasPrintedVdpInfo = true;
+        }
+
+        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+            hasPrintedVdpInfo = false;
+        }
     }
     delete(window);
     window = nullptr;

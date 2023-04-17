@@ -629,6 +629,13 @@ void VDP::printDebugInfo() {
 
     std::cout << std::endl << std::endl;
 
+    // Misc
+    std::cout << "Misc: " << std::endl << std::endl;
+    std::cout << "Tileset nametable address: " << Utils::formatHexNumber(getNameTableBaseAddress()) << std::endl;
+    std::cout << "Sprite Allocation Table Address: " << Utils::formatHexNumber(getSpriteAllocationTableBaseAddress()) << std::endl;
+
+    std::cout << std::endl << std::endl;
+
     // VRAM
     std::cout<<"VRAM: " << std::endl << std::endl;
 

@@ -83,13 +83,19 @@ bool Utils::testBit(int bit, const unsigned short variable) {
 std::string Utils::getVersionString(bool verboseString) {
     std::stringstream stringStream;
 
+    std::string projectVersion = PROJECT_VERSION;
+
+    #ifdef DISPLAY_BRANCH_IN_VERSION
+    projectVersion.append(implodeString({"-", BRANCH_STRING}));
+    #endif
+
     if (verboseString) {
-        stringStream << PROJECT_NAME << " " << PROJECT_VERSION << PROJECT_OS << PROJECT_ARCH << " (Compiled: "
+        stringStream << PROJECT_NAME << " " << projectVersion << PROJECT_OS << PROJECT_ARCH << " (Compiled: "
                      << __DATE__
                      << " - " << __TIME__ << ") " << "branch: " << BRANCH_STRING << " - commit: "
                      << CURRENT_COMMIT_STRING;
     } else {
-        stringStream << PROJECT_NAME << " " << PROJECT_VERSION;
+        stringStream << PROJECT_NAME << " " << projectVersion;
     }
 
     return stringStream.str();

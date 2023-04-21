@@ -29,6 +29,10 @@ execute_process(
 add_definitions("-DCURRENT_COMMIT=${GIT_COMMIT_HASH}")
 add_definitions("-DCURRENT_BRANCH=${GIT_BRANCH}")
 
+if (NOT ${GIT_BRANCH} STREQUAL "master")
+    add_definitions("-DDISPLAY_BRANCH_IN_VERSION")
+endif()
+
 include_directories(src/include)
 
 add_executable(${EXECUTABLE_NAME}

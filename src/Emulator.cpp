@@ -79,7 +79,7 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
         delete(window);
     }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::implodeString({PROJECT_NAME, " v", PROJECT_VERSION}), sf::Style::Default);
+    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), sf::Style::Default);
     window->setFramerateLimit(60);
     window->setVerticalSyncEnabled(true);
 }

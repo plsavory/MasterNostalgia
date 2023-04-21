@@ -1,4 +1,5 @@
 #include "Emulator.h"
+#include "ProjectInfo.h"
 
 Emulator::Emulator() {
     system = nullptr;
@@ -78,7 +79,7 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
         delete(window);
     }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), "Mastalgia", sf::Style::Default);
+    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::implodeString({PROJECT_NAME, " v", PROJECT_VERSION}), sf::Style::Default);
     window->setFramerateLimit(60);
     window->setVerticalSyncEnabled(true);
 }

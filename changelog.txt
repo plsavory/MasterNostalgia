@@ -1,0 +1,3 @@
+Mastalgia 1.0.0 - 2023-04-21
+
+First release which is capable of running some games correctly.

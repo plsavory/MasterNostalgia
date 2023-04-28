@@ -40,7 +40,7 @@ Memory::Memory(Cartridge *cart) {
     memoryPages[2] = 2;
 
     ramBanked = false;
-    currentPage3RamBank = 0;
+    currentPage3RamBank = -1;
 }
 
 Memory::~Memory() = default;

@@ -1,11 +1,9 @@
 /*
 Mastalgia - a (soon to be) Sega Master System emulator.
-Lisenced under the GPLv3 license.
-@author: Peter Savory
  */
 
 #define PROJECT_NAME "Mastalgia"
-#define PROJECT_VERSION "1.0.0"
+#define PROJECT_VERSION "1.1.0"
 
 #define MAKE_STRING2(x) #x
 #define MAKE_STRING(x) MAKE_STRING2(x)

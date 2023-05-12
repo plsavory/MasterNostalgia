@@ -674,22 +674,39 @@ void CPUZ80::popStackExchange(unsigned short &destinationRegister) {
 }
 
 void CPUZ80::da(unsigned char &dest) {
-    bool requiresFirstAddition = (dest & 0x0F) > 0x09 || getFlag(CPUFlag::halfCarry);
-    bool requiresSecondAddition = ((dest & 0xF0) >> 4) > 0x09 || getFlag(CPUFlag::carry);
+    bool subtract = getFlag(CPUFlag::subtractNegative);
 
-    if (requiresFirstAddition) {
-        dest+=0x6;
+    unsigned char diff = 0;
+
+    if (((dest & 0x0F) > 0x09) || getFlag(CPUFlag::halfCarry)) {
+        diff += 0x6;
     }
 
-    if (requiresSecondAddition) {
-        dest+=0x60;
+    if ((dest > 0x99) || getFlag(CPUFlag::carry)) {
+        diff += 0x60;
+        setFlag(CPUFlag::carry, true);
     }
 
-    setFlag(CPUFlag::carry, requiresSecondAddition);
+    if (subtract && !getFlag(CPUFlag::halfCarry)) {
+        setFlag(CPUFlag::halfCarry, false);
+    } else {
+        if (subtract && getFlag(CPUFlag::halfCarry)) {
+            setFlag(CPUFlag::halfCarry, (dest & 0x6) < 6);
+        } else {
+            setFlag(CPUFlag::halfCarry, (dest & 0xF) >= 0xA);
+        }
+    }
+
+    if (subtract) {
+        dest -= diff;
+    } else {
+        dest += diff;
+    }
+
     setFlag(CPUFlag::overflowParity, getParity(dest));
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
-    setFlag(CPUFlag::halfCarry, false);
+    handleUndocumentedFlags(dest);
 }
 
 void CPUZ80::cpl(unsigned char &dest) {

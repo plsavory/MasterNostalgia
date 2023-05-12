@@ -7,7 +7,7 @@ Licensed under the GPLv3 license.
 #ifndef CARTRIDGE_INCLUDED
 #define CARTRIDGE_INCLUDED
 
-#define MAX_CARTRIDGE_SIZE 0x100000
+#define MAX_CARTRIDGE_SIZE 0x400000
 
 enum CartridgeRegion {
     Japan, USA, Europe, Unknown

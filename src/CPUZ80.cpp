@@ -107,6 +107,10 @@ int CPUZ80::executeOpcode() {
     unsigned char opcode = NBHideFromTrace();
     unsigned char upperOpcode; // Use for 2-byte instructions
 
+    // The first 7 bits of R should be incremented upon fetching each instruction.
+    registerR += 1;
+    registerR &= 0x7F;
+
     displayOpcodePrefix = 0x0;
     displayOpcode = opcode;
 

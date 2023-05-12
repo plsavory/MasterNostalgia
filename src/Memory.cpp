@@ -111,9 +111,8 @@ void Memory::write(unsigned short location, unsigned short value) {
  * @param value    [The byte to write]
  */
 void Memory::write(unsigned short location, unsigned char value) {
-    if (smsCartridge->isCodemasters() && (location == 0x0 || location == 0x4000 || location == 0x8000)) {
-        memoryPage(true, location, value);
-    }
+
+    handleMemoryPaging(location, value);
 
     if (location < 0x8000) {
         // Attempting to write to ROM, disallow this...
@@ -134,11 +133,6 @@ void Memory::write(unsigned short location, unsigned char value) {
     // If we've reached this point, it's all good to write to RAM
     ram[location] = value;
 
-    if (location >= 0xFFFC) {
-        memoryPage(false, location, value);
-        return;
-    }
-
     // Handle mirrored addresses
     if (location >= 0xC000 && location < 0xDFFC) {
         ram[location - 0x2000] = value;
@@ -156,8 +150,14 @@ void Memory::write(unsigned short location, unsigned char value) {
  * [Memory::memoryPage Perform a memory page operation]
  * @param Codemasters [Whether the game is codemasters or not]
  */
-void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char value) {
-    if (!Codemasters) {
+void Memory::handleMemoryPaging(unsigned short location, unsigned char value) {
+
+    if (!smsCartridge->isCodemasters()) {
+
+        if (location < 0xFFFC) {
+            return;
+        }
+
         unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
 
         switch (location) {
@@ -187,24 +187,25 @@ void Memory::memoryPage(bool Codemasters, unsigned short location, unsigned char
             default:
                 break;
         }
-
         return;
     }
 
-    unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
+    if (location == 0x0 || location == 0x4000 || location == 0x8000) {
+        unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
 
-    switch (location) {
-        case 0x0:
-            memoryPages[0] = page;
-            break;
-        case 0x4000:
-            memoryPages[1] = page;
-            break;
-        case 0x8000:
-            memoryPages[2] = page;
-            break;
-        default:
-            break;
+        switch (location) {
+            case 0x0:
+                memoryPages[0] = page;
+                break;
+            case 0x4000:
+                memoryPages[1] = page;
+                break;
+            case 0x8000:
+                memoryPages[2] = page;
+                break;
+            default:
+                break;
+        }
     }
 }
 

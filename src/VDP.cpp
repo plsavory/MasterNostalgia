@@ -334,7 +334,7 @@ void VDP::renderSpritesMode4() {
     for (int i = 0; i < 64; i++) {
 
         // Sprite format: byte0 = y, byte1 = x, byte2 = unused, byte3 = pattern id
-        int y = vRAM[baseAddress + i] + 1;
+        int y = vRAM[baseAddress + i];
 
         if (y == 0xD0 && (displayMode.getActiveDisplayEnd() == 192)) {
             break;
@@ -343,6 +343,8 @@ void VDP::renderSpritesMode4() {
         if (y > 0xD0) {
             y -= 0x100;
         }
+
+        y += 1;
 
         if (vCounter < y) {
             continue;

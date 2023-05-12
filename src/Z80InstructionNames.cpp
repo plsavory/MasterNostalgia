@@ -59,7 +59,7 @@ std::vector<std::string> CPUZ80::getIXInstructionNames() {
         "", "", "", "", "INC D", "DEC D", "LD D,n", "", "", "ADD IX,DE", "", "", "INC E", "DEC E", "LD E,n", "",
         "", "LD IX,nn", "ld (NN),IX", "INC IX", "INC IXH", "DEC IXH", "LD IX,n", "", "", "ADD IX,IX", "LD IX,(nn)", "DEC IX", "INC IXL", "DEC IXL", "LD IXL,n", "",
         "", "", "", "", "INC (IX+d)", "DEC (IX+d)", "LD (IX+d),n", "", "", "ADD IX,SP", "", "", "INC A", "DEC A", "LD A,N", "",
-        "LD B,B", "LD B,C", "LD B,D", "LD B,E", "LD B,IXH", "LD B,IXL", "LD B,(IX+d)", "LD B,A", "LD C,B", "LD C,C", "LD C,D", "LD C,E", "LD C,IXH", "LD C,IXL", "LD E,(IX+d)", "LD C,A",
+        "LD B,B", "LD B,C", "LD B,D", "LD B,E", "LD B,IXH", "LD B,IXL", "LD B,(IX+d)", "LD B,A", "LD C,B", "LD C,C", "LD C,D", "LD C,E", "LD C,IXH", "LD C,IXL", "LD C,(IX+d)", "LD C,A",
         "LD D,B", "LD D,C", "LD D,D", "LD D,E", "LD D,IXH", "LD D,IXL", "LD D,(IX+d)", "LD D,A", "LD E,B", "LD E,C", "LD E,D", "LD E,E", "LD E,IXH", "LD E,IXL", "LD E,(IX+d)", "LD E,A",
         "LD IXH,B", "LD IXH,C", "LD IXH,D", "LD IXH,E", "LD IXH,IXH", "LX IDH,IXL", "LD H,(IX+d)", "LD IXH,A", "LD IXL,B", "LD IXL,C", "LD IXL,D", "LD IXL,E", "LD IXL,IXH", "LD IXL,IXL", "LD L,(IX+d)", "LD E,A",
         "LD (IX+d),B", "LD (IX+d),C", "LD (IX+d),D", "LD (IX+d),E", "LD (IX+d),H", "LD (IX+d),L", "", "LD (IX+d),A", "LD A,B", "LD A,C", "LD A,D", "LD A,E", "LD A,IXH", "LD A,IXL", "LD A,(IX+d)", "LD A,A",

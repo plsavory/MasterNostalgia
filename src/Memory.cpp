@@ -158,7 +158,7 @@ void Memory::handleMemoryPaging(unsigned short location, unsigned char value) {
             return;
         }
 
-        unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
+        unsigned short page = value & smsCartridge->getBankMask();
 
         switch (location) {
             case 0xFFFC:
@@ -191,7 +191,7 @@ void Memory::handleMemoryPaging(unsigned short location, unsigned char value) {
     }
 
     if (location == 0x0 || location == 0x4000 || location == 0x8000) {
-        unsigned short page = smsCartridge->isMegCartridge() ? value & 0x3F : value & 0x1F;
+        unsigned short page = value & smsCartridge->getBankMask();
 
         switch (location) {
             case 0x0:

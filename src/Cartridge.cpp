@@ -73,7 +73,7 @@ bool Cartridge::load(std::string fileName) {
 
     bool headerFound;
 
-    // Note: This 'header' isn't an actual file header, it is a piece of information included in the game ROMs for the USA/EU SMS/GG BIOS to varify the validity of the game.
+    // Note: This 'header' isn't an actual file header, it is a piece of information included in the game ROMs for the USA/EU SMS/GG BIOS to verify the validity of the game.
     for (unsigned int i = 0; i <= 2; i++) {
 
         // Search for the usual ASCII text which should be present in all ROM headers to determine where it is.
@@ -130,8 +130,8 @@ bool Cartridge::load(std::string fileName) {
         region = CartridgeRegion::Japan;
     }
 
-    // Figure out if the cartridge is larger than 1mb, needed later for memory paging
-    megCartridge = ROMSize > 0x80000;
+    // Determine cartridge size, as mapping needs to work slightly differently depending on that.
+    determineCartridgeSize(ROMSize);
 
     // Copy the ROM contents into system memory, excluding the actual ROM header at the start of the file
 
@@ -153,6 +153,25 @@ bool Cartridge::load(std::string fileName) {
     return true;
 }
 
+void Cartridge::determineCartridgeSize(size_t ROMSize) {
+
+    if ((ROMSize % 0x4000) == 512) {
+        ROMSize -= 512;
+    }
+
+    if (ROMSize > (0x3F * 0x4000)) {
+        bankMask = 0xFF;
+        return;
+    }
+
+    if (ROMSize > (0x1F * 0x4000)) {
+        bankMask = 0x3F;
+        return;
+    }
+
+    bankMask = 0x1F;
+}
+
 /**
  * [cartridge::clearCartridge Clear cartridge data so that nothing remains upon reload]
  */
@@ -160,6 +179,8 @@ void Cartridge::clearCartridge() {
     for (unsigned char & i : cartridgeData) {
         i = 0x0;
     }
+
+    bankMask = 0x0;
 
 #ifdef VERBOSE_MODE
     std::cout<<"Clearing cartridge data..."<<std::endl;
@@ -174,14 +195,10 @@ bool Cartridge::isCodemasters() {
     return isCodemastersCart;
 }
 
-/**
- * [Cartridge::isMegCartridge Is the cartridge a megabit cartridge or not]
- * @return [description]
- */
-bool Cartridge::isMegCartridge() {
-    return megCartridge;
-}
-
 unsigned char Cartridge::read(unsigned long location) {
     return cartridgeData[location];
+}
+
+unsigned char Cartridge::getBankMask() {
+    return bankMask;
 }

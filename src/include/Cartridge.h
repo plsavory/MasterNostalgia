@@ -23,9 +23,9 @@ public:
 
     bool isCodemasters();
 
-    bool isMegCartridge();
-
     unsigned char read(unsigned long location);
+
+    unsigned char getBankMask();
 
 private:
     int currentBankState;
@@ -35,7 +35,10 @@ private:
     void clearCartridge();
 
     CartridgeRegion region;
-    bool megCartridge;
+
+    void determineCartridgeSize(size_t ROMSize);
+
+    unsigned char bankMask;
 };
 
 #endif

@@ -379,10 +379,13 @@ void VDP::renderSpritesMode4() {
         if (Utils::testBit(2, registers[0x6])) {
             // Using second pattern table
             patternId += 256;
+        }
 
-            if (spriteSize8x16) {
-                Utils::setBit(0, false, patternId);
-            }
+        if (spriteSize8x16 && y-vCounter < 9) {
+            /* In 8x16 mode, force the top half of the sprite's tile id to be the nearest-lowest even number,
+             * as the tile immediately after this is now considered to be part of the same sprite and can't be drawn
+             * independently as the first 8 pixels of another.*/
+            patternId &= 0xFE;
         }
 
         unsigned short patternAddress = (patternId * 32) + (4 * (vCounter - y));

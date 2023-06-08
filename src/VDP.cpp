@@ -385,7 +385,7 @@ void VDP::renderSpritesMode4() {
             /* In 8x16 mode, force the top half of the sprite's tile id to be the nearest-lowest even number,
              * as the tile immediately after this is now considered to be part of the same sprite and can't be drawn
              * independently as the first 8 pixels of another.*/
-            patternId &= 0xFE;
+            patternId &= 0xFFFE;
         }
 
         unsigned short patternAddress = (patternId * 32) + (4 * (vCounter - y));

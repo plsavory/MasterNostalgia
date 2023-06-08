@@ -235,7 +235,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x18:
             // jr d
-            jr(NB());
+            jr();
             break;
         case 0x19:
             // add hl, de
@@ -274,7 +274,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x20:
             // jr nz, d
-            jrCondition(JPCondition::NZ, NB());
+            jrCondition(JPCondition::NZ);
             break;
         case 0x21:
             // ld hl, nn
@@ -313,7 +313,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x28:
             // jr z, d
-            jrCondition(JPCondition::Z, NB());
+            jrCondition(JPCondition::Z);
             break;
         case 0x29:
             // add hl, hl
@@ -352,7 +352,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x30:
             // jr nc, d
-            jrCondition(JPCondition::NC, NB());
+            jrCondition(JPCondition::NC);
             break;
         case 0x31:
             // ld sp, nn
@@ -393,7 +393,7 @@ int CPUZ80::executeOpcode() {
             break;
         case 0x38:
             // jr c, d
-            jrCondition(JPCondition::C, NB());
+            jrCondition(JPCondition::C);
             break;
         case 0x39:
             // add hl, sp
@@ -1389,7 +1389,7 @@ unsigned char CPUZ80::NBHideFromTrace() {
  * @return
  */
 signed char CPUZ80::signedNB() {
-    return static_cast<signed char>(readMemory(programCounter++));
+    return (signed char)readMemory(programCounter++);
 }
 
 unsigned short CPUZ80::getIndexedOffsetAddress(unsigned short registerValue) {

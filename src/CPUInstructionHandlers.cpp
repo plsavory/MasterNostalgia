@@ -233,17 +233,19 @@ void CPUZ80::jpCondition(JPCondition condition) {
     programCounter = jumpLocation;
 }
 
-void CPUZ80::jrCondition(JPCondition condition, unsigned char offset) {
+void CPUZ80::jrCondition(JPCondition condition) {
+
+    signed char offset = signedNB();
 
     if (!hasMetJumpCondition(condition)) {
         cyclesTaken = 7;
         return;
     }
 
-    programCounter += static_cast<signed char>(offset);
+    programCounter += offset;
     cyclesTaken = 12;
     #ifdef DEBUG_VALUES
-    readValue = offset;
+    readValue = (unsigned char)offset;
     #endif
 }
 
@@ -257,12 +259,9 @@ void CPUZ80::retCondition(JPCondition condition) {
     programCounter = popStack16();
 }
 
-void CPUZ80::jr(unsigned char offset) {
-    programCounter += static_cast<signed char>(offset);
+void CPUZ80::jr() {
+    programCounter += signedNB();
     cyclesTaken = 12;
-    #ifdef DEBUG_VALUES
-    readValue = offset;
-    #endif
 }
 
 /**
@@ -496,7 +495,7 @@ void CPUZ80::store(unsigned short location, unsigned char hi, unsigned char lo) 
 
 void CPUZ80::djnz() {
 
-    char offset  = static_cast<signed char>(NB());
+    signed char offset = signedNB();
 
     if (--gpRegisters[cpuReg::BC].hi == 0) {
         cyclesTaken = 7;

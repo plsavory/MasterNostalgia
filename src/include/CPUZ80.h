@@ -4,6 +4,7 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
+#include <bitset>
 #include "Z80IO.h"
 #include "Utils.h"
 
@@ -140,11 +141,11 @@ private:
 
     void jpCondition(JPCondition condition);
 
-    void jrCondition(JPCondition condition, unsigned char offset);
+    void jrCondition(JPCondition condition);
 
     void retCondition(JPCondition condition);
 
-    void jr(unsigned char offset);
+    void jr();
 
     void jpImm();
 

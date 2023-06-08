@@ -67,6 +67,8 @@ public:
 private:
     std::string fullMessage;
 
+    using std::exception::what;
+
     /**
      * Writes information about the exception to the error log
      */

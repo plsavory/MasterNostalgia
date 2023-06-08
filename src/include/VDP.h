@@ -47,6 +47,8 @@ public:
 
     void printDebugInfo();
 
+    VDPDisplayMode getDisplayMode();
+
 private:
 
     /**

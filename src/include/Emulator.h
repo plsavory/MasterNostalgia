@@ -28,7 +28,16 @@ private:
 
     void setVideoMode(unsigned int width, unsigned int height);
 
+    void setRenderingTexture();
+
+    unsigned short renderWidth;
+    unsigned short renderHeight;
+
+    unsigned short windowWidth;
+    unsigned short windowHeight;
+
     sf::Texture videoOutputTexture;
+
     sf::Sprite videoOutputSprite;
 };
 

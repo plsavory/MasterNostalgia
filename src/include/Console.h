@@ -32,6 +32,12 @@ public:
 
     virtual void printVDPInformation() = 0;
 
+    virtual unsigned short getCurrentDisplayWidth() = 0;
+
+    virtual unsigned short getCurrentDisplayHeight() = 0;
+
+    virtual unsigned char getCurrentFrameRate() = 0;
+
 protected:
 
     virtual double getMachineClicksPerFrame() = 0;

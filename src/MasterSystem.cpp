@@ -76,3 +76,15 @@ void MasterSystem::storeUserInput() {
 void MasterSystem::printVDPInformation() {
     smsVdp->printDebugInfo();
 }
+
+unsigned short MasterSystem::getCurrentDisplayWidth() {
+    return 256;
+}
+
+unsigned short MasterSystem::getCurrentDisplayHeight() {
+    return smsVdp->getDisplayMode().getActiveDisplayEnd();
+}
+
+unsigned char MasterSystem::getCurrentFrameRate() {
+    return 60; // TODO return 50 if in PAL mode
+}

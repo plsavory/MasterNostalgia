@@ -4,6 +4,12 @@
 Emulator::Emulator() {
     system = nullptr;
     window = nullptr;
+
+    renderWidth = 256;
+    renderHeight = 224;
+
+    windowWidth = 640;
+    windowHeight = 480;
 }
 
 Emulator::~Emulator() {
@@ -28,32 +34,22 @@ void Emulator::init(const std::string &fileName) {
 
 void Emulator::run() {
     // Create SFML window for video output
-    float width = 256;
-    float height = 224;
-    float displayScale = 3;
+    setVideoMode((unsigned int)windowWidth, (unsigned int)windowHeight);
+    setRenderingTexture();
 
-    int windowWidth = (int)(width * displayScale);
-    int windowHeight = (int)(height * displayScale);
-
-    setVideoMode(windowWidth, windowHeight);
-
-    videoOutputTexture.create((int)width, (int)height);
-    videoOutputSprite.setTexture(videoOutputTexture);
-    videoOutputSprite.setPosition(0.f, 0.f);
-    videoOutputSprite.setScale(displayScale, displayScale);
-
-    bool hasPrintedVdpInfo = false;
+//    bool hasPrintedVdpInfo = false;
 
     while (window->isOpen()) {
 
         sf::Event event;
         while (window->pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
+            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
                 window->close();
                 return;
             }
         }
         system->emulateFrame();
+
         videoOutputTexture.update(system->getVideoOutput());
         window->clear(sf::Color::Black);
         window->draw(videoOutputSprite);
@@ -68,6 +64,16 @@ void Emulator::run() {
 //        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
 //            hasPrintedVdpInfo = false;
 //        }
+
+        // TODO determine if the render mode needs to be changed, if the console has changed vindow output mode and change accordingly
+        unsigned short consoleDisplayWidth = system->getCurrentDisplayWidth();
+        unsigned short consoleDisplayHeight = system->getCurrentDisplayHeight();
+
+        if (consoleDisplayWidth != renderWidth || consoleDisplayHeight != renderHeight) {
+            renderWidth = consoleDisplayWidth;
+            renderHeight = consoleDisplayHeight;
+            setRenderingTexture();
+        }
     }
     delete(window);
     window = nullptr;
@@ -82,5 +88,13 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
     window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), sf::Style::Default);
     window->setFramerateLimit(60);
     window->setVerticalSyncEnabled(true);
+}
+
+void Emulator::setRenderingTexture() {
+    // TODO add a way to keep the aspect ratio of the console's display, to prevent scaling artifacts.
+    videoOutputTexture.create((int)renderWidth, (int)renderHeight);
+    videoOutputSprite.setTexture(videoOutputTexture);
+    videoOutputSprite.setPosition(0.f, 0.f);
+    videoOutputSprite.setScale((float)windowWidth/(float)renderWidth, (float)windowHeight/(float)renderHeight);
 }
 

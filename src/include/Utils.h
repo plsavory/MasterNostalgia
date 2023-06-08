@@ -48,7 +48,7 @@ public:
 
     static std::string strToLower(std::string subject);
 
-    static std::string padString(const std::string &string, int length);
+    static std::string padString(const std::string &string, unsigned long length);
 
     static std::string formatHexNumber(unsigned short value);
 

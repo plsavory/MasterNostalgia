@@ -28,8 +28,9 @@ public:
     unsigned char getBankMask();
 
 private:
-    int currentBankState;
+
     bool isCodemastersCart;
+
     unsigned char cartridgeData[MAX_CARTRIDGE_SIZE];
 
     void clearCartridge();

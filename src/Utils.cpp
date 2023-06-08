@@ -336,7 +336,7 @@ std::string Utils::strToLower(std::string subject) {
 }
 
 
-std::string Utils::padString(const std::string &string, int length) {
+std::string Utils::padString(const std::string &string, unsigned long length) {
     return string.length() >= length ? string : string + std::string(length - string.size(), ' ');
 }
 

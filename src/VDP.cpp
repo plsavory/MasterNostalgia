@@ -320,7 +320,6 @@ void VDP::renderSpritesMode4() {
     bool spriteSize8x16 = Utils::testBit(1, registers[0x1]);
     bool shiftLeft = Utils::testBit(3, registers[0x0]);
 
-    unsigned char width = 8;
     unsigned char height = spriteSize8x16 ? 16 : 8;
 
     if (zoomSprites) {
@@ -453,7 +452,6 @@ void VDP::renderBackgroundMode4() {
     for (int column = 0; column < 32; column++) {
         // Draw each tile to the screen
         for (int pixelCounter = 0; pixelCounter < 8; pixelCounter++) {
-            int currentPixel = pixelCounter; // We will need to modify this if we are scrolling
 
             // We should not allow horizontal scrolling here if we are on the first row and the appropriate flag is not set
             bool allowHScroll = (row > 1 || !limitHScroll);
@@ -671,4 +669,8 @@ void VDP::printDebugInfo() {
         }
         std::cout<<std::endl;
     }
+}
+
+VDPDisplayMode VDP::getDisplayMode() {
+    return displayMode;
 }

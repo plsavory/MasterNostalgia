@@ -200,7 +200,6 @@ void CPUZ80::and8Bit(unsigned char &dest, unsigned char value) {
 }
 
 void CPUZ80::or8Bit(unsigned char &dest, unsigned char value) {
-    unsigned char originalValue = dest;
     dest = dest | value;
     setFlag(CPUFlag::carry, false);
     setFlag(CPUFlag::subtractNegative, false);

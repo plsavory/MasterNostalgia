@@ -13,7 +13,7 @@ Licensed under the GPLv3 license.
 #include "MasterSystemInput.h"
 #include "MasterSystemZ80IO.h"
 
-class MasterSystem : public Console {
+class MasterSystem final : public Console {
 public:
     MasterSystem();
 
@@ -30,6 +30,12 @@ public:
     void storeUserInput() final;
 
     void printVDPInformation() final;
+
+    unsigned short getCurrentDisplayWidth() final;
+
+    unsigned short getCurrentDisplayHeight() final;
+
+    unsigned char getCurrentFrameRate() final;
 
 private:
     CPUZ80 *smsCPU;

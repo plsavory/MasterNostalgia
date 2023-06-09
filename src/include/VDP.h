@@ -136,9 +136,9 @@ private:
 
     void fillVideoOutput();
 
-    void putPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b);
+    void putPixel(unsigned long index, unsigned char r, unsigned char g, unsigned char b);
 
-    bool doesPixelMatch(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b);
+    bool isPixelUsed(unsigned long index);
 
     static unsigned int getPixelBitmapIndex(unsigned char x, unsigned char y);
     //endregion

@@ -396,7 +396,9 @@ void VDP::renderSpritesMode4() {
 
         for (unsigned char xPixel = 0; xPixel < 8; xPixel++) {
 
-            if (!doesPixelMatch(x + xPixel, vCounter, 0, 0, 1)) {
+            unsigned int pixelIndex = getPixelBitmapIndex(x + xPixel, vCounter);
+
+            if (isPixelUsed(pixelIndex)) {
                 // Flag a sprite collision
                 Utils::setBit(5, true, statusRegister);
                 continue;
@@ -423,7 +425,7 @@ void VDP::renderSpritesMode4() {
             unsigned char g = getColourValue((rgb >> 2) & 0x3);
             unsigned char b = getColourValue((rgb >> 4) & 0x3);
 
-            putPixel(x + xPixel, vCounter, r, g, b);
+            putPixel(pixelIndex, r, g, b);
         }
     }
 }
@@ -550,12 +552,14 @@ void VDP::renderBackgroundMode4() {
                 break;
             }
 
-            if (!isMasking && !isHighPriority && !doesPixelMatch(onScreenPixelX, vCounter, 0, 0, 1)) {
+            unsigned int pixelIndex = getPixelBitmapIndex(onScreenPixelX, vCounter);
+
+            if (!isMasking && !isHighPriority && isPixelUsed(pixelIndex)) {
                 // This isn't a high priority pixel and there is something here, so don't draw it.
                 continue;
             }
 
-            putPixel(onScreenPixelX, vCounter, r, g, b);
+            putPixel(pixelIndex, r, g, b);
         }
 
         hTileOffset = (hTileOffset + 1) % 32;
@@ -583,8 +587,8 @@ void VDP::clearScreen() {
     for (int i = 0; i <= ((256 * 224) * 4); i += 4) {
         workingBuffer[i] = 0; // R
         workingBuffer[i + 1] = 0; // G
-        workingBuffer[i + 2] = 1; // B
-        workingBuffer[i + 3] = 255; // A
+        workingBuffer[i + 2] = 0; // B
+        workingBuffer[i + 3] = 0; // A
     }
 }
 
@@ -597,17 +601,15 @@ void VDP::fillVideoOutput() {
     }
 }
 
-void VDP::putPixel(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b) {
-    unsigned int index = getPixelBitmapIndex(x, y);
+void VDP::putPixel(unsigned long index, unsigned char r, unsigned char g, unsigned char b) {
     workingBuffer[index] = r;
     workingBuffer[index + 1] = g;
     workingBuffer[index + 2] = b;
     workingBuffer[index + 3] = 255;
 }
 
-bool VDP::doesPixelMatch(unsigned char x, unsigned char y, unsigned char r, unsigned char g, unsigned char b) {
-    unsigned int index = getPixelBitmapIndex(x, y);
-    return workingBuffer[index] == r && workingBuffer[index + 1] == g && workingBuffer[index + 2] == b;
+bool VDP::isPixelUsed(unsigned long index) {
+    return workingBuffer[index + 3] == 255;
 }
 
 inline unsigned int VDP::getPixelBitmapIndex(unsigned char x, unsigned char y) {

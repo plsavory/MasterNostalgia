@@ -4,8 +4,6 @@ Licensed under the GPLv3 license.
 @author: Peter Savory
  */
 
-#define VERBOSE_MODE
-
 #include <iostream>
 #include "Cartridge.h"
 #include "Memory.h"
@@ -1358,11 +1356,12 @@ int CPUZ80::executeOpcode() {
             throw Z80Exception(ss.str());
     }
 
+#ifdef VERBOSE_MODE
+
     if (executedInstructionName.empty()) {
         executedInstructionName = getInstructionName(opcode, 0x0, 0x0);
     }
 
-#ifdef VERBOSE_MODE
     if (state != CPUState::Error)
         logCPUState();
 #endif
@@ -1682,9 +1681,11 @@ void CPUZ80::extendedOpcodes() {
             throw Z80Exception(ss.str());
     }
 
+#ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
         executedInstructionName = getInstructionName(0xED, opcode, 0x0);
     }
+#endif
 }
 
 void CPUZ80::ixOpcodes() {
@@ -2537,9 +2538,11 @@ void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPr
             throw Z80Exception(ss.str());
     }
 
+#ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
         executedInstructionName = getInstructionName(indexRegister == cpuReg::IX ? 0xDD : 0xFD, opcode, 0x0);
     }
+#endif
 }
 
 void CPUZ80::iyOpcodes() {
@@ -2550,8 +2553,7 @@ void CPUZ80::iyOpcodes() {
  * [logCPUState Log the CPU's current state to the console]
  */
 void CPUZ80::logCPUState() {
-    return;
-    std::cout << std::uppercase << "BC="
+    std::cout << std::uppercase << Utils::padString(executedInstructionName, 15) << "BC="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::BC].whole) << " DE=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::DE].whole) << " HL="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::HL].whole) << " AF=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::AF].whole) << " IX="
               << Utils::formatHexNumber(originalRegisterValues[cpuReg::IX].whole) << " IY=" << Utils::formatHexNumber(originalRegisterValues[cpuReg::IY].whole) << " SP="
@@ -3936,9 +3938,11 @@ void CPUZ80::bitOpcodes() {
             throw Z80Exception(ss.str());
     }
 
+#ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
         executedInstructionName = getInstructionName(0xCB, opcode, 0x0);
     }
+#endif
 
 }
 

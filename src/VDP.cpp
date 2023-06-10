@@ -465,7 +465,7 @@ void VDP::renderBackgroundMode4() {
 
             if (allowHScroll) {
                 // Should be the first pixel of the starting column * tile width + the current screen pixel + the fine scroll offset
-                onScreenPixelX = ((hTileOffset * 8) + pixelCounter + hScrollPixelOffset) % 255;
+                onScreenPixelX = ((hTileOffset * 8) + pixelCounter + hScrollPixelOffset) % 256;
             }
 
             bool allowVScroll = !(limitVScroll && (xPixelDataOffset/8) > 23);

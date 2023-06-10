@@ -16,6 +16,8 @@ CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
     memory = smsMemory;
     this->z80Io = z80Io;
 
+    initialiseOpcodeHandlerPointers();
+
     cyclesTaken = 0;
 
     resetRequest = ResetRequest::none;
@@ -111,1250 +113,8 @@ int CPUZ80::executeOpcode() {
     displayOpcodePrefix = 0x0;
     displayOpcode = opcode;
 
-    switch (opcode) {
-        case 0x00:
-            // nop
-            cyclesTaken = 4;
-            break;
-        case 0x01:
-            // ld bc, nn
-            ldReg16(gpRegisters[cpuReg::BC].whole, build16BitNumber(), false);
-            cyclesTaken = 10;
-            break;
-        case 0x02:
-            // ld (bc), a
-            writeMemory(gpRegisters[cpuReg::BC].whole, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x03:
-            // inc bc
-            inc16Bit(gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x04:
-            // inc b
-            inc8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x05:
-            // dec b
-            dec8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x06:
-            // ld b, n
-            ldReg8(gpRegisters[cpuReg::BC].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x07:
-            // rlca
-            rlca();
-            cyclesTaken = 4;
-            break;
-        case 0x08:
-            // ex af, af'
-            exchange16Bit(gpRegisters[cpuReg::AF].whole, gpRegisters[cpuReg::AFS].whole);
-            cyclesTaken = 4;
-            break;
-        case 0x09:
-            // add hl, bc
-            add16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 11;
-            break;
-        case 0x0A:
-            // ld a, (bc)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::BC].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x0B:
-            // dec bc
-            dec16Bit(gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x0C:
-            // inc c
-            inc8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x0D:
-            // dec c
-            dec8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x0E:
-            // ld c, n
-            ldReg8(gpRegisters[cpuReg::BC].lo, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x0F:
-            // rrca
-            rrca();
-            cyclesTaken = 4;
-            break;
-        case 0x10:
-            // djnz, d
-            djnz();
-            break;
-        case 0x11:
-            // ld de, nn
-            ldReg16(gpRegisters[cpuReg::DE].whole, build16BitNumber(), false);
-            cyclesTaken = 10;
-            break;
-        case 0x12:
-            // ld (de), a
-            writeMemory(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x13:
-            // inc de
-            inc16Bit(gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x14:
-            // inc d
-            inc8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x15:
-            // dec d
-            dec8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x16:
-            // ld d, n
-            ldReg8(gpRegisters[cpuReg::DE].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x17:
-            // rla
-            rla();
-            cyclesTaken = 4;
-            break;
-        case 0x18:
-            // jr d
-            jr();
-            break;
-        case 0x19:
-            // add hl, de
-            add16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 11;
-            break;
-        case 0X1A:
-            // ld a, (de)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::DE].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x1B:
-            // dec de
-            dec16Bit(gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x1C:
-            // inc e
-            inc8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x1D:
-            // dec e
-            dec8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x1E:
-            // ld e, n
-            ldReg8(gpRegisters[cpuReg::DE].lo, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x1F:
-            // rra
-            rra();
-            cyclesTaken = 4;
-            break;
-        case 0x20:
-            // jr nz, d
-            jrCondition(JPCondition::NZ);
-            break;
-        case 0x21:
-            // ld hl, nn
-            ldReg16(gpRegisters[cpuReg::HL].whole, build16BitNumber(), false);
-            cyclesTaken = 10;
-            break;
-        case 0x22:
-            // ld (nn), hl
-            store(build16BitNumber(), gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 16;
-            break;
-        case 0x23:
-            // inc hl
-            inc16Bit(gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x24:
-            // inc h
-            inc8Bit(gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x25:
-            // dec h
-            dec8Bit(gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x26:
-            // ld h, n
-            ldReg8(gpRegisters[cpuReg::HL].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x27:
-            // daa
-            da(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x28:
-            // jr z, d
-            jrCondition(JPCondition::Z);
-            break;
-        case 0x29:
-            // add hl, hl
-            add16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 11;
-            break;
-        case 0x2A:
-            // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(build16BitNumber()), false);
-            cyclesTaken = 16;
-            break;
-        case 0x2B:
-            // dec hl
-            dec16Bit(gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 6;
-            break;
-        case 0x2C:
-            // inc l
-            inc8Bit(gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x2D:
-            // dec l
-            dec8Bit(gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x2E:
-            // ld l, n
-            ldReg8(gpRegisters[cpuReg::HL].lo, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x2F:
-            // cpl
-            cpl(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x30:
-            // jr nc, d
-            jrCondition(JPCondition::NC);
-            break;
-        case 0x31:
-            // ld sp, nn
-            ldReg16(stackPointer, build16BitNumber(), false);
-            cyclesTaken = 10;
-            break;
-        case 0x32:
-            // ld (nn), a
-            writeMemory(build16BitNumber(), gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 13;
-            break;
-        case 0x33:
-            // inc sp
-            inc16Bit(stackPointer);
-            cyclesTaken = 6;
-            break;
-        case 0x34:
-            // inc (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, getInc8BitValue(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 11;
-            break;
-        case 0x35:
-            // dec (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, getDec8BitValue(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 11;
-            break;
-        case 0x36:
-            // ld (hl), n
-            writeMemory(gpRegisters[cpuReg::HL].whole, NB());
-            cyclesTaken = 10;
-            break;
-        case 0x37:
-            // scf
-            setFlag(CPUFlag::carry, true);
-            setFlag(CPUFlag::subtractNegative, false);
-            setFlag(CPUFlag::halfCarry, false);
-            cyclesTaken = 4;
-            break;
-        case 0x38:
-            // jr c, d
-            jrCondition(JPCondition::C);
-            break;
-        case 0x39:
-            // add hl, sp
-            add16Bit(gpRegisters[cpuReg::HL].whole, stackPointer);
-            cyclesTaken = 11;
-            break;
-        case 0x3A:
-            // ld a, (nn)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(build16BitNumber()));
-            cyclesTaken = 13;
-            break;
-        case 0x3B:
-            // dec sp
-            dec16Bit(stackPointer);
-            cyclesTaken = 6;
-            break;
-        case 0x3C:
-            // inc a
-            inc8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-             break;
-        case 0x3D:
-            // dec a
-            dec8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x3E:
-            // ld a, n
-            ldReg8(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0x3F:
-            // ccf
-            ccf();
-            cyclesTaken = 4;
-            break;
-        case 0x40:
-            // ld b, b (Why does this even exist?)
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x41:
-            // ld b, c
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x42:
-            // ld b, d
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x43:
-            // ld b, e
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x44:
-            // ld b, h
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x45:
-            // ld b, l
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x46:
-            // ld b, (hl)
-            ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x47:
-            // ld b, a
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x48:
-            // ld c, b
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x49:
-            // ld c, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x4A:
-            // ld c, d
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x4B:
-            // ld c, e
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x4C:
-            // ld c, h
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x4D:
-            // ld c, l
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x4E:
-            // ld c, (hl)
-            ldReg8(gpRegisters[cpuReg::BC].lo, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x4F:
-            // ld c, a
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x50:
-            // ld d, b
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x51:
-            // ld d, c
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x52:
-            // ld d, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x53:
-            // ld d, e
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x54:
-            // ld d, h
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x55:
-            // ld d, l
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x56:
-            // ld d, (hl)
-            ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x57:
-            // ld d, a
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x58:
-            // ld e, b
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x59:
-            // ld e, c
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x5A:
-            // ld e, d
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x5B:
-            // ld e, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x5C:
-            // ld e, h
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x5D:
-            // ld e, l
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x5E:
-            // ld e, (hl)
-            ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x5F:
-            // ld e, a
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x60:
-            // ld h, b
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x61:
-            // ld h, c
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x62:
-            // ld h, d
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x63:
-            // ld h, e
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x64:
-            // ld h, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x65:
-            // ld h, l
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x66:
-            // ld h, (hl)
-            ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x67:
-            // ld h, a
-            ldReg8(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x68:
-            // ld l, b
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x69:
-            // ld l, c
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x6A:
-            // ld l, d
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x6B:
-            // ld l, e
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x6C:
-            // ld l, h
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x6D:
-            // ld l, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x6E:
-            // ld l, (hl)
-            ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x6F:
-            // ld l, a
-            ldReg8(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x70:
-            // ld (hl), b
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x71:
-            // ld (hl), c
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 7;
-            break;
-        case 0x72:
-            // ld (hl), d
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x73:
-            // ld (hl), e
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 7;
-            break;
-        case 0x74:
-            // ld (hl), h
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x75:
-            // ld (hl), l
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 7;
-            break;
-        case 0x76:
-            // halt
-            state = CPUState::Halt;
-            cyclesTaken = 4;
-            break;
-        case 0x77:
-            // ld (hl), a
-            writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 7;
-            break;
-        case 0x78:
-            // ld a, b
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x79:
-            // ld a, c
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x7A:
-            // ld a, d
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x7B:
-            // ld a, e
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x7C:
-            // ld a, h
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x7D:
-            // ld a, l
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x7E:
-            // ld a (hl)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x7F:
-            // ld a, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x80:
-            // add a, b
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x81:
-            // add a, c
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x82:
-            // add a, d
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x83:
-            // add a, e
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x84:
-            // add a, h
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x85:
-            // add a, l
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x86:
-            // add a, (hl)
-            add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x87:
-            // add a, a
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x88:
-            // adc a, b
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x89:
-            // adc a, c
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x8A:
-            // adc a, d
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x8B:
-            // adc a, e
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x8C:
-            // adc a, h
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x8D:
-            // adc a, l
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x8E:
-            // adc a, (hl)
-            adc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x8F:
-            // adc a, a
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x90:
-            // sub b
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x91:
-            // sub c
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x92:
-            // sub d
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x93:
-            // sub e
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x94:
-            // sub h
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x95:
-            // sub l
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x96:
-            // sub (hl)
-            sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x97:
-            // sub a
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x98:
-            // sbc a, b
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x99:
-            // sbc a, c
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x9A:
-            // sbc a, d
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x9B:
-            // sbc a, e
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x9C:
-            // sbc a, h
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0x9D:
-            // sbc a, l
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0x9E:
-            // sbc a, (hl)
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0x9F:
-            // sbc a, a
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA0:
-            // and b
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA1:
-            // and c
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xA2:
-            // and d
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA3:
-            // and e
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xA4:
-            // and h
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA5:
-            // and l
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xA6:
-            // and (hl)
-            and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 4;
-            break;
-        case 0xA7:
-            // and a
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA8:
-            // xor b
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xA9:
-            // xor c
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xAA:
-            // xor d
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xAB:
-            // xor e
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xAC:
-            // xor h
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xAD:
-            // xor l
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xAE:
-            // xor (hl)
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0xAF:
-            // xor a
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB0:
-            // or b
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB1:
-            // or c
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xB2:
-            // or d
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB3:
-            // or e
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xB4:
-            // or h
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB5:
-            // or l
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xB6:
-            // or (hl)
-            or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0xB7:
-            // or a
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB8:
-            // cp b
-            compare8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xB9:
-            // cp c
-            compare8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xBA:
-            // cp d
-            compare8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xBB:
-            // cp e
-            compare8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xBC:
-            // cp h
-            compare8Bit(gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xBD:
-            // cp l
-            compare8Bit(gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 4;
-            break;
-        case 0xBE:
-            // cp (hl)
-            compare8Bit(readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 7;
-            break;
-        case 0xBF:
-            // cp a
-            compare8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 4;
-            break;
-        case 0xC0:
-            // ret nz
-            retCondition(JPCondition::NZ);
-            break;
-        case 0xC1:
-            //pop bc
-            gpRegisters[cpuReg::BC].whole = popStack16();
-            cyclesTaken = 10;
-            break;
-        case 0xC2:
-            jpCondition(JPCondition::NZ);
-            break;
-        case 0xC3:
-            // jp nn
-            jpImm();
-            cyclesTaken = 10;
-            break;
-        case 0xC4:
-            // call nz, nn
-            callCondition(JPCondition::NZ);
-            break;
-        case 0xC5:
-            // push bc
-            pushStack(gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 11;
-            break;
-        case 0xC6:
-            // add a, n
-            add8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xC7:
-            // rst 00h
-            rst(0x00);
-            break;
-        case 0xC8:
-            // ret z
-            retCondition(JPCondition::Z);
-            break;
-        case 0xC9:
-            // ret
-            programCounter = popStack16();
-            cyclesTaken = 10;
-            break;
-        case 0xCA:
-            // jp z, nn
-            jpCondition(JPCondition::Z);
-            break;
-        case 0xCB:
-            // bit opcodes
-            bitOpcodes();
-            break;
-        case 0xCC:
-            // call z, nn
-            callCondition(JPCondition::Z);
-            break;
-        case 0xCD:
-            // call nn
-            call(build16BitNumber());
-            break;
-        case 0xCE:
-            // adc a, n
-            adc8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xCF:
-            // rst 08h
-            rst(0x08);
-            break;
-        case 0xD0:
-            // ret nc
-            retCondition(JPCondition::NC);
-            break;
-        case 0xD1:
-            // pop de
-            gpRegisters[cpuReg::DE].whole = popStack16();
-            cyclesTaken = 10;
-            break;
-        case 0xD2:
-            // jp nc, nn
-            jpCondition(JPCondition::NC);
-            break;
-        case 0xD3:
-            // out (n) a
-            portOut(NB(), gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 11;
-            break;
-        case 0xD4:
-            // call nc, nn
-            call(build16BitNumber(), !getFlag(CPUFlag::carry));
-            break;
-        case 0xD5:
-            // push de
-            pushStack(gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 11;
-            break;
-        case 0xD6:
-            // sub n
-            sub8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xD7:
-            // rst 10h
-            rst(0x10);
-            break;
-        case 0xD8:
-            // ret c
-            retCondition(JPCondition::C);
-            break;
-        case 0xD9:
-            // exx
-            exchange16Bit(gpRegisters[cpuReg::BC].whole, gpRegisters[cpuReg::BCS].whole);
-            exchange16Bit(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::DES].whole);
-            exchange16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HLS].whole);
-            cyclesTaken = 4;
-            break;
-        case 0xDA:
-            // jp c, nn
-            jpCondition(JPCondition::C);
-            break;
-        case 0xDB:
-            // in a, (n)
-            readPortToRegister(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 11;
-            break;
-        case 0xDC:
-            // call c, nn
-            callCondition(JPCondition::C);
-            break;
-        case 0xDD:
-            // ix opcodes
-            ixOpcodes();
-            break;
-        case 0xDE:
-            // sbc a, n
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xDF:
-            // rst 18h
-            rst(0x18);
-            break;
-        case 0xE0:
-            // ret po
-            retCondition(JPCondition::PO);
-            break;
-        case 0xE1:
-            // pop hl
-            gpRegisters[cpuReg::HL].whole = popStack16();
-            cyclesTaken = 10;
-            break;
-        case 0xE2:
-            // jp po, nn
-            jpCondition(JPCondition::PO);
-            break;
-        case 0xE3:
-            // ex (sp), hl
-            exStack(gpRegisters[cpuReg::HL].whole);
-            break;
-        case 0xE4:
-            // call po, nn
-            call(build16BitNumber(), !getFlag(CPUFlag::overflowParity));
-            break;
-        case 0xE5:
-            // push hl
-            pushStack(gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 11;
-            break;
-        case 0xE6:
-            // and n
-            and8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xE7:
-            // rst 20h
-            rst(0x20);
-            break;
-        case 0xE8:
-            // ret pe
-            retCondition(JPCondition::PE);
-            break;
-        case 0xE9:
-            // jp (hl) - This is not indirect, though the notation implies so
-            programCounter = gpRegisters[cpuReg::HL].whole;
-            cyclesTaken = 4;
-            break;
-        case 0xEA:
-            // jp pe, nn
-            jpCondition(JPCondition::PE);
-            break;
-        case 0xEB:
-            // ex de, hl
-            exchange16Bit(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 4;
-            break;
-        case 0xEC:
-            // call pe, nn
-            callCondition(JPCondition::PE);
-            break;
-        case 0xED:
-            extendedOpcodes();
-            break;
-        case 0xEE:
-            // xor n
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xEF:
-            // rst 28h
-            rst(0x28);
-            break;
-        case 0xF0:
-            // ret p
-            retCondition(JPCondition::P);
-            break;
-        case 0xF1:
-            // pop af
-            gpRegisters[cpuReg::AF].whole = popStack16();
-            cyclesTaken = 10;
-            break;
-        case 0xF2:
-            // jp p, nn
-            jpCondition(JPCondition::P);
-            cyclesTaken  = 10;
-            break;
-        case 0xF3:
-            // di
-            iff1 = iff2 = false;
-            cyclesTaken = 4;
-            break;
-        case 0xF4:
-            // call p, nn
-            callCondition(JPCondition::P);
-            break;
-        case 0xF5:
-            // push af
-            pushStack(gpRegisters[cpuReg::AF].whole);
-            cyclesTaken = 11;
-            break;
-        case 0xF6:
-            // or n
-            or8Bit(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 7;
-            break;
-        case 0xF7:
-            // rst 30h
-            rst(0x30);
-            break;
-        case 0xF8:
-            // ret m
-            retCondition(JPCondition::M);
-            break;
-        case 0xF9:
-            // ld sp, hl
-            ldReg16(stackPointer, gpRegisters[cpuReg::HL].whole, false);
-            cyclesTaken = 6;
-            break;
-        case 0xFA:
-            // jp m, nn
-            jpCondition(JPCondition::M);
-            break;
-        case 0xFB:
-            // ei
-            enableInterrupts = true; // Interrupts should be re-enabled when executing the next instruction
-            cyclesTaken = 4;
-            break;
-        case 0xFC:
-            // call m, nn
-            callCondition(JPCondition::M);
-            break;
-        case 0xFD:
-            iyOpcodes();
-            break;
-        case 0xFE:
-            // cp n
-            compare8Bit(NB());
-            cyclesTaken = 7;
-            break;
-        case 0xFF:
-            // rst 38h
-            rst(0x38);
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented opcode: 0x" << std::hex << (int) opcode << "-  At PC: 0x"
-                      << (int) originalProgramCounterValue << std::endl;
-            throw Z80Exception(ss.str());
-    }
+    // Execute the instruction through its opcode handler function pointer
+    (this->*standardOpcodeHandlers[opcode])();
 
 #ifdef VERBOSE_MODE
 
@@ -1403,283 +163,7 @@ void CPUZ80::extendedOpcodes() {
     displayOpcode = opcode;
     displayOpcodePrefix = 0xED;
 
-    switch (opcode) {
-        case 0x40:
-            // in b, (c)
-            readPortToRegister(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].lo);
-            break;
-        case 0x41:
-            // out (c), b
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 12;
-            break;
-        case 0x42:
-            // sbc hl, bc
-            sbc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x43:
-            // ld (nn), bc
-            writeMemory(build16BitNumber(), gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 20;
-            break;
-        case 0x44:
-            // neg
-            neg();
-            cyclesTaken = 8;
-            break;
-        case 0x45:
-            // retn
-            retn();
-            break;
-        case 0x46:
-            // im 0
-            setInterruptMode(0);
-            break;
-        case 0x47:
-            // ld i, a
-            ldReg8(registerI, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 9;
-            break;
-        case 0x48:
-            // in c, (c)
-            readPortToRegister(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
-            break;
-        case 0x49:
-            // out (c), c
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x4A:
-            // adc hl, bc
-            adc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x4B:
-            // ld bc, (nn)
-            ldReg16(gpRegisters[cpuReg::BC].whole, readMemory16Bit(build16BitNumber()), false);
-            cyclesTaken = 20;
-            break;
-        case 0x4D:
-            // reti
-            reti();
-            break;
-        case 0x4F:
-            // ld r, a
-            ldReg8(registerR, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 9;
-            break;
-        case 0x50:
-            // in d, (c)
-            readPortToRegister(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].lo);
-            break;
-        case 0x51:
-            // out (c), d
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 12;
-            break;
-        case 0x52:
-            // sbc hl, de
-            sbc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x53:
-            // ld (nn), de
-            writeMemory(build16BitNumber(), gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 20;
-            break;
-        case 0x56:
-            // im 1
-            setInterruptMode(1);
-            break;
-        case 0x57:
-            // ld a, i
-            ldReg8(gpRegisters[cpuReg::AF].hi, registerI, true);
-            cyclesTaken = 9;
-            break;
-        case 0x58:
-            // in e, (c)
-            readPortToRegister(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x59:
-            // out (c), e
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x5A:
-            // adc hl, de
-            adc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x5B:
-            // ld de, (nn)
-            ldReg16(gpRegisters[cpuReg::DE].whole, readMemory16Bit(build16BitNumber()));
-            cyclesTaken = 20;
-            break;
-        case 0x5E:
-            setInterruptMode(2);
-            break;
-        case 0x5F:
-            // ld a, r
-            ldReg8(gpRegisters[cpuReg::AF].hi, registerR, true);
-            cyclesTaken = 9;
-            break;
-        case 0x60:
-            // in h, (c)
-            readPortToRegister(gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x61:
-            // out (c), h
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 12;
-            break;
-        case 0x62:
-            // sbc hl, hl
-            sbc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x63:
-            // ld (nn), hl
-            writeMemory(build16BitNumber(), gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 20;
-            break;
-        case 0x67:
-            // rrd
-            rrd(gpRegisters[cpuReg::AF].hi);
-            break;
-        case 0x68:
-            // in l, (c)
-            readPortToRegister(gpRegisters[cpuReg::HL].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x69:
-            // out (c), l
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x6A:
-            // adc hl, hl
-            adc16Bit(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::HL].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x6B:
-            // ld hl, (nn)
-            ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(build16BitNumber()));
-            cyclesTaken = 20;
-            break;
-        case 0x6F:
-            // rld
-            rld(gpRegisters[cpuReg::AF].hi);
-            break;
-        case 0x70:
-            // in (c)
-            z80Io->read(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x71:
-            // out (c), 0
-            portOut(gpRegisters[cpuReg::BC].lo, 0);
-            cyclesTaken = 12;
-            break;
-        case 0x72:
-            // sbc hl, sp
-            sbc16Bit(gpRegisters[cpuReg::HL].whole, stackPointer);
-            cyclesTaken = 15;
-            break;
-        case 0x73:
-            // ld (nn), sp
-            writeMemory(build16BitNumber(), stackPointer);
-            cyclesTaken = 20;
-            break;
-        case 0x78:
-            // in a, (c)
-            readPortToRegister(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 12;
-            break;
-        case 0x79:
-            // out (c), a
-            portOut(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 12;
-            break;
-        case 0x7A:
-            // adc hl, sp
-            adc16Bit(gpRegisters[cpuReg::HL].whole, stackPointer);
-            cyclesTaken = 15;
-            break;
-        case 0x7B:
-            // ld sp, (nn)
-            ldReg16(stackPointer, readMemory16Bit(build16BitNumber()));
-            cyclesTaken = 20;
-            break;
-        case 0xA0:
-            // ldi
-            ldi(true);
-            break;
-        case 0xA1:
-            // cpi
-            cpi(true);
-            break;
-        case 0xA2:
-            // ini
-            ini(true);
-            break;
-        case 0xA3:
-            // outi
-            outi(true);
-            break;
-        case 0xA8:
-            // ldd
-            ldi(false);
-            break;
-        case 0xA9:
-            // cpd
-            cpi(false);
-            break;
-        case 0xAA:
-            ini(false);
-            break;
-        case 0xAB:
-            outi(false);
-            break;
-        case 0xB0:
-            // ldir
-            ldir(true);
-            break;
-        case 0xB1:
-            // cpir
-            cpir(true);
-            break;
-        case 0xB2:
-            // inir
-            inir(true);
-            break;
-        case 0xB3:
-            // otir
-            otir(true);
-            break;
-        case 0xB8:
-            // lddr
-            ldir(false);
-            break;
-        case 0xB9:
-            // cpdr
-            cpir(false);
-            break;
-        case 0xBA:
-            // indr
-            inir(false);
-            break;
-        case 0xBB:
-            // otdr
-            otir(false);
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented extended opcode: 0x" << std::hex << (int) opcode;
-            throw Z80Exception(ss.str());
-    }
+    (this->*extendedOpcodeHandlers[opcode])();
 
 #ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
@@ -1688,865 +172,18 @@ void CPUZ80::extendedOpcodes() {
 #endif
 }
 
-void CPUZ80::ixOpcodes() {
-    indexOpcodes(0xDD, "IX", cpuReg::IX);
-}
-
-void CPUZ80::indexOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
-
-    // TODO add the rest of the undocumented opcodes, not all of them are done.
-
+void CPUZ80::indexOpcodes(cpuReg indexRegister) {
     unsigned char opcode = NBHideFromTrace();
-    displayOpcodePrefix = opcodePrefix;
     displayOpcode = opcode;
-    unsigned short address = 0x0;
 
-    switch (opcode) {
-        case 0x04:
-            // inc b
-            inc8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x05:
-            // dec b
-            dec8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x06:
-            // ld b, n
-            ldReg8(gpRegisters[cpuReg::BC].hi, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x09:
-            // add ix, bc
-            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[cpuReg::BC].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x0C:
-            // inc c
-            inc8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x0D:
-            // dec c
-            dec8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x0E:
-            // ld c, n
-            ldReg8(gpRegisters[cpuReg::BC].lo, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x14:
-            // inc d
-            inc8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x15:
-            // dec d
-            dec8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x16:
-            // ld d, n
-            ldReg8(gpRegisters[cpuReg::DE].hi, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x19:
-            // add ix,de
-            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[cpuReg::DE].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x1C:
-            // inc e
-            inc8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x1D:
-            // dec e
-            dec8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x1E:
-            // ld e, n
-            ldReg8(gpRegisters[cpuReg::DE].lo, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x21:
-            // ld ix, nn
-            ldReg16(gpRegisters[indexRegister].whole, build16BitNumber());
-            cyclesTaken = 14;
-            break;
-        case 0x22:
-            // ld (nn), ix
-            writeMemory(build16BitNumber(), gpRegisters[indexRegister].whole);
-            cyclesTaken = 20;
-            break;
-        case 0x23:
-            // inc ix
-            inc16Bit(gpRegisters[indexRegister].whole);
-            cyclesTaken = 10;
-            break;
-        case 0x24:
-            // inc ixh
-            inc8Bit(gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x25:
-            // dec ixh
-            dec8Bit(gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x26:
-            // ld ixh, n
-            ldReg8(gpRegisters[indexRegister].hi, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x29:
-            // add ix, sp
-            add16Bit(gpRegisters[indexRegister].whole, gpRegisters[indexRegister].whole);
-            cyclesTaken = 15;
-            break;
-        case 0x2A:
-            // ld ix, (nn)
-            ldReg16(gpRegisters[indexRegister].whole, readMemory16Bit(build16BitNumber()));
-            cyclesTaken = 20;
-            break;
-        case 0x2B:
-            // dec ix
-            dec16Bit(gpRegisters[indexRegister].whole);
-            cyclesTaken = 10;
-            break;
-        case 0x2C:
-            // inc ixl
-            inc8Bit(gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x2D:
-            // dec ixl
-            dec8Bit(gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x2E:
-            // ld ixl, n
-            ldReg8(gpRegisters[indexRegister].lo, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x34:
-            // inc (ix+d)
-            address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
-            writeMemory(address, getInc8BitValue(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x35:
-            // dec (ix+d)
-            address = getIndexedOffsetAddress(gpRegisters[indexRegister].whole);
-            writeMemory(address, getDec8BitValue(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x36:
-            // ld (ix+d), n
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), NB());
-            cyclesTaken = 19;
-            break;
-        case 0x39:
-            // add ix, sp
-            add16Bit(gpRegisters[indexRegister].whole, stackPointer);
-            cyclesTaken = 15;
-            break;
-        case 0x3C:
-            // inc a
-            inc8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x3D:
-            // dec a
-            dec8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x3E:
-            // ld a, n
-            ldReg8(gpRegisters[cpuReg::AF].hi, NB());
-            cyclesTaken = 11;
-            break;
-        case 0x40:
-            // ld b, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x41:
-            // ld b, c
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x42:
-            // ld b, d
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x43:
-            // ld b, e
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x44:
-            // ld b, ixh
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x45:
-            // ld b, ixl
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x46:
-            // ld b, (ix+d)
-            ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x47:
-            // ld b, a
-            ldReg8(gpRegisters[cpuReg::BC].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x48:
-            // ld c, b
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x49:
-            // ld c, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4A:
-            // ld c, d
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x4B:
-            // ld c, e
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4C:
-            // ld c, ixh
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x4D:
-            // ld c, ixl
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4E:
-            // ld c, (ix+d)
-            ldReg8(gpRegisters[cpuReg::BC].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x4F:
-            // ld c, a
-            ldReg8(gpRegisters[cpuReg::BC].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x50:
-            // ld d, b
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x51:
-            // ld d, c
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x52:
-            // ld d, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x53:
-            // ld d, e
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x54:
-            // ld d, ixh
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x55:
-            // ld d, ixl
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x56:
-            // ld d, (ix+d)
-            ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x57:
-            // ld d, a
-            ldReg8(gpRegisters[cpuReg::DE].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x58:
-            // ld e, b
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x59:
-            // ld e, c
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5A:
-            // ld e, d
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x5B:
-            // ld e, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5C:
-            // ld e, ixh
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x5D:
-            // ld e, ixl
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5E:
-            // ld e, (ix+d)
-            ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x5F:
-            // ld e, a
-            ldReg8(gpRegisters[cpuReg::DE].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x60:
-            // ld ixh, b
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x61:
-            // ld ixh, c
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x62:
-            // ld ixh, d
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x63:
-            // ld ixh, e
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x64:
-            // ld ixh, ixh
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x65:
-            // ld ixh, ixl
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x66:
-            // ld h, (ix+d)
-            ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x67:
-            // ld ixh, a
-            ldReg8(gpRegisters[indexRegister].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x68:
-            // ld ixl, b
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x69:
-            // ld ixl, c
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6A:
-            // ld ixl, d
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x6B:
-            // ld ixl, e
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6C:
-            // ld ixl, ixh
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x6D:
-            // ld ixl, ixl
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6E:
-            // ld l, (ix+d)
-            ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x6F:
-            // ld ixl, a
-            ldReg8(gpRegisters[indexRegister].lo, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x70:
-            // ld (ix+d), b
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 19;
-            break;
-        case 0x71:
-            // ld (ix+d), c
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 19;
-            break;
-        case 0x72:
-            // ld (ix+d), d
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 19;
-            break;
-        case 0x73:
-            // ld (ix+d), e
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 19;
-            break;
-        case 0x74:
-            // ld (ix+d), h
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 19;
-            break;
-        case 0x75:
-            // ld (ix+d), l
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 19;
-            break;
-        case 0x77:
-            // ld (ix+d), a
-            writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole), gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 19;
-            break;
-        case 0x78:
-            // ld a, b
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x79:
-            // ld a, c
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7A:
-            // ld a, d
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x7B:
-            // ld a, e
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7C:
-            // ld a, ixh
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x7D:
-            // ld a, ixl
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7E:
-            // ld a, (ix+d)
-            ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x7F:
-            // ld a, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x80:
-            // add a, b
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x81:
-            // add a, c
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x82:
-            // add a, d
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x83:
-            // add a, e
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x84:
-            // add a, ixh
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x85:
-            // add a, ixl
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x86:
-            // add a, (ix+d)
-            add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x87:
-            // add a, a
-            add8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x88:
-            // adc a, b
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x89:
-            // adc a, c
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x8A:
-            // adc a, d
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x8B:
-            // adc a, e
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x8C:
-            // adc a, ixh
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x8D:
-            // adc a, ixl
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x8E:
-            // adc a, (ix+d)
-            adc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x8F:
-            // adc a, a
-            adc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x90:
-            // sub a, b
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x91:
-            // sub a, c
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x92:
-            // sub a, d
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x93:
-            // sub a, e
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x94:
-            // sub a, ixh
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x95:
-            // sub a, ixl
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x96:
-            // sub a, (ix+d)
-            sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x97:
-            // sub a, a
-            sub8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x98:
-            // sbc a, b
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x99:
-            // sbc a, c
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x9A:
-            // sbc a, d
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x9B:
-            // sbc a, e
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x9C:
-            // sbc a, ixh
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x9D:
-            // sbc a, ixl
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x9E:
-            // sbc a, (ix+d)
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0x9F:
-            // sbc a, a
-            sbc8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA0:
-            // and b
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA1:
-            // and c
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xA2:
-            // and d
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA3:
-            // and e
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xA4:
-            // and ixh
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA5:
-            // and ixl
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xA6:
-            // and a, (ix+d)
-            and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0xA7:
-            // and a
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA8:
-            // xor b
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xA9:
-            // xor c
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xAA:
-            // xor d
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xAB:
-            // xor e
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xAC:
-            // xor ixh
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xAD:
-            // xor ixl
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xAE:
-            // xor a, (ix+d)
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0xAF:
-            // xor a
-            exclusiveOr(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB0:
-            // or b
-            and8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB1:
-            // or c
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xB2:
-            // or d
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB3:
-            // or e
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xB4:
-            // or ixh
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB5:
-            // or ixl
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xB6:
-            // or a, (ix+d)
-            or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0xB7:
-            // or a
-            or8Bit(gpRegisters[cpuReg::AF].hi, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB8:
-            // cp b
-            compare8Bit(gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xB9:
-            // cp c
-            compare8Bit(gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xBA:
-            // cp d
-            compare8Bit(gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xBB:
-            // cp e
-            compare8Bit(gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xBC:
-            // cp ixh
-            compare8Bit(gpRegisters[indexRegister].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xBD:
-            // cp ixl
-            compare8Bit(gpRegisters[indexRegister].lo);
-            cyclesTaken = 8;
-            break;
-        case 0xBE:
-            // cp a, (ix+d)
-            compare8Bit(readMemory(getIndexedOffsetAddress(gpRegisters[indexRegister].whole)));
-            cyclesTaken = 19;
-            break;
-        case 0xBF:
-            // cp a
-            compare8Bit(gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0xCB:
-            displayOpcodePrefix = 0xCB;
-            indexBitOpcodes(opcodePrefix, indexPrefix, indexRegister);
-            break;
-        case 0xE1:
-            // pop ix
-            ldReg16(gpRegisters[indexRegister].whole, popStack16(), false);
-            cyclesTaken = 14;
-            break;
-        case 0xE3:
-            // ex (sp), ix
-            popStackExchange(gpRegisters[indexRegister].whole);
-            cyclesTaken = 23;
-            break;
-        case 0xE5:
-            // push ix
-            pushStack(gpRegisters[indexRegister].whole);
-            cyclesTaken = 15;
-            break;
-        case 0xE9:
-            // jp (ix) - Notation seems to indicate that this is indirect, but docs says that it is
-            programCounter = gpRegisters[indexRegister].whole;
-            cyclesTaken = 8;
-            break;
-        case 0xF9:
-            ldReg16(stackPointer, gpRegisters[indexRegister].whole);
-            cyclesTaken = 10;
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented ix opcode: 0x" << std::hex << (int) opcode << std::endl;
-            throw Z80Exception(ss.str());
-    }
+    indexRegisterForCurrentOpcode = indexRegister;
+    (this->*indexOpcodeHandlers[opcode])();
 
 #ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
         executedInstructionName = getInstructionName(indexRegister == cpuReg::IX ? 0xDD : 0xFD, opcode, 0x0);
     }
 #endif
-}
-
-void CPUZ80::iyOpcodes() {
-    indexOpcodes(0xFD, "IY", cpuReg::IY);
 }
 
 /**
@@ -2642,1301 +279,13 @@ unsigned short CPUZ80::popStack16() {
     return (popStack() + (popStack()<<8));
 }
 
-// BIT instructions below here - massive jump tables
-// TODO re-attempt trying to calculate this rather than have a switch, I did previously try calculating the instructions, destination registers and bit numbers but it seemed slower to execute than just having a switch.
-
 void CPUZ80::bitOpcodes() {
 
     unsigned char opcode = NBHideFromTrace();
     displayOpcodePrefix = 0xCB;
     displayOpcode = opcode;
 
-    switch (opcode) {
-        case 0x00:
-            // rlc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rlc(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x01:
-            // rlc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rlc(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x02:
-            // rlc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rlc(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x03:
-            // rlc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rlc(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x04:
-            // rlc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rlc(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x05:
-            // rlc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rlc(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x06:
-            // rlc (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, rlc(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x07:
-            // rlc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rlc(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x08:
-            // rrc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rrc(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x09:
-            // rrc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rrc(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x0A:
-            // rrc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rrc(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x0B:
-            // rrc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rrc(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x0C:
-            // rrc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rrc(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x0D:
-            // rrc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rrc(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x0E:
-            // rrc (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, rrc(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x0F:
-            // rrc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rrc(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x10:
-            // rl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rl(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x11:
-            // rl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rl(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x12:
-            // rl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rl(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x13:
-            // rl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rl(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x14:
-            // rl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rl(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x15:
-            // rl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rl(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x16:
-            // rl (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, rl(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x17:
-            // rl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rl(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x18:
-            // rr b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rr(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x19:
-            // rr c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rr(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x1A:
-            // rr d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rr(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x1B:
-            // rr e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rr(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x1C:
-            // rr h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rr(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x1D:
-            // rr l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rr(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x1E:
-            // rr (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, rr(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x1F:
-            // rr a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rr(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x20:
-            // sla b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sla(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x21:
-            // sla c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sla(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x22:
-            // sla d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sla(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x23:
-            // sla e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sla(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x24:
-            // sla h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sla(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x25:
-            // sla l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sla(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x26:
-            // sla (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, sla(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x27:
-            // sla a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sla(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x28:
-            // sra b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sra(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x29:
-            // sra c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sra(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x2A:
-            // sra d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sra(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x2B:
-            // sra e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sra(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x2C:
-            // sra h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sra(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x2D:
-            // sra l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sra(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x2E:
-            // sra (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, sra(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x2F:
-            // sra a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sra(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x30:
-            // sll b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sll(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x31:
-            // sll c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sll(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x32:
-            // sll d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sll(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x33:
-            // sll e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sll(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x34:
-            // sll h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sll(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x35:
-            // sll l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sll(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x36:
-            // sll (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, sll(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x37:
-            // sll a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sll(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x38:
-            // srl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, srl(gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x39:
-            // srl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, srl(gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x3A:
-            // srl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, srl(gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x3B:
-            // srl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, srl(gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x3C:
-            // srl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, srl(gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x3D:
-            // srl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, srl(gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x3E:
-            // srl (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, srl(readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x3F:
-            // srl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, srl(gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x40:
-            // bit 0, b
-            bit(0, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x41:
-            // bit 0, c
-            bit(0, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x42:
-            // bit 0, d
-            bit(0, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x43:
-            // bit 0, e
-            bit(0, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x44:
-            // bit 0, h
-            bit(0, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x45:
-            // bit 0, l
-            bit(0, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x46:
-            // bit 0, (hl);
-            bit(0, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x47:
-            // bit 0, a
-            bit(0, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x48:
-            // bit 1, b
-            bit(1, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x49:
-            // bit 1, c
-            bit(1, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4A:
-            // bit 1, d
-            bit(1, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x4B:
-            // bit 1, e
-            bit(1, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4C:
-            // bit 1, h
-            bit(1, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x4D:
-            // bit 1, l
-            bit(1, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x4E:
-            // bit 1, (hl);
-            bit(1, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x4F:
-            // bit 1, a
-            bit(1, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x50:
-            // bit 2, b
-            bit(2, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x51:
-            // bit 2, c
-            bit(2, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x52:
-            // bit 2, d
-            bit(2, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x53:
-            // bit 2, e
-            bit(2, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x54:
-            // bit 2, h
-            bit(2, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x55:
-            // bit 2, l
-            bit(2, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x56:
-            // bit 2, (hl);
-            bit(2, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x57:
-            // bit 2, a
-            bit(2, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x58:
-            // bit 3, b
-            bit(3, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x59:
-            // bit 3, c
-            bit(3, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5A:
-            // bit 3, d
-            bit(3, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x5B:
-            // bit 3, e
-            bit(3, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5C:
-            // bit 3, h
-            bit(3, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x5D:
-            // bit 3, l
-            bit(3, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x5E:
-            // bit 3, (hl);
-            bit(3, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x5F:
-            // bit 3, a
-            bit(3, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x60:
-            // bit 4, b
-            bit(4, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x61:
-            // bit 4, c
-            bit(4, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x62:
-            // bit 4, d
-            bit(4, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x63:
-            // bit 4, e
-            bit(4, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x64:
-            // bit 4, h
-            bit(4, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x65:
-            // bit 4, l
-            bit(4, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x66:
-            // bit 4, (hl);
-            bit(4, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x67:
-            // bit 4, a
-            bit(4, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x68:
-            // bit 5, b
-            bit(5, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x69:
-            // bit 5, c
-            bit(5, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6A:
-            // bit 5, d
-            bit(5, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x6B:
-            // bit 5, e
-            bit(5, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6C:
-            // bit 5, h
-            bit(5, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x6D:
-            // bit 5, l
-            bit(5, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x6E:
-            // bit 5, (hl);
-            bit(5, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x6F:
-            // bit 5, a
-            bit(5, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x70:
-            // bit 6, b
-            bit(6, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x71:
-            // bit 6, c
-            bit(6, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x72:
-            // bit 6, d
-            bit(6, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x73:
-            // bit 6, e
-            bit(6, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x74:
-            // bit 6, h
-            bit(6, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x75:
-            // bit 6, l
-            bit(6, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x76:
-            // bit 6, (hl);
-            bit(6, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x77:
-            // bit 6, a
-            bit(6, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x78:
-            // bit 7, b
-            bit(7, gpRegisters[cpuReg::BC].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x79:
-            // bit 7, c
-            bit(7, gpRegisters[cpuReg::BC].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7A:
-            // bit 7, d
-            bit(7, gpRegisters[cpuReg::DE].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x7B:
-            // bit 7, e
-            bit(7, gpRegisters[cpuReg::DE].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7C:
-            // bit 7, h
-            bit(7, gpRegisters[cpuReg::HL].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x7D:
-            // bit 7, l
-            bit(7, gpRegisters[cpuReg::HL].lo);
-            cyclesTaken = 8;
-            break;
-        case 0x7E:
-            // bit 7, (hl);
-            bit(7, readMemory(gpRegisters[cpuReg::HL].whole));
-            cyclesTaken = 12;
-            break;
-        case 0x7F:
-            // bit 7, a
-            bit(7, gpRegisters[cpuReg::AF].hi);
-            cyclesTaken = 8;
-            break;
-        case 0x80:
-            // res 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(0, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x81:
-            // res 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(0, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x82:
-            // res 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(0, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x83:
-            // res 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(0, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x84:
-            // res 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(0, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x85:
-            // res 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(0, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x86:
-            // res 0, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(0, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x87:
-            // res 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(0, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x88:
-            // res 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(1, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x89:
-            // res 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(1, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x8A:
-            // res 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(1, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x8B:
-            // res 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(1, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x8C:
-            // res 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(1, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x8D:
-            // res 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(1, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x8E:
-            // res 1, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(1, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x8F:
-            // res 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(1, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x90:
-            // res 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(2, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x91:
-            // res 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(2, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x92:
-            // res 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(2, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x93:
-            // res 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(2, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x94:
-            // res 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(2, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x95:
-            // res 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(2, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x96:
-            // res 2, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(2, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x97:
-            // res 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(2, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x98:
-            // res 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(3, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x99:
-            // res 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(3, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x9A:
-            // res 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(3, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x9B:
-            // res 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(3, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x9C:
-            // res 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(3, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0x9D:
-            // res 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(3, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0x9E:
-            // res 3, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(3, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0x9F:
-            // res 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(3, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA0:
-            // res 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(4, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA1:
-            // res 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(4, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xA2:
-            // res 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(4, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA3:
-            // res 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(4, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xA4:
-            // res 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(4, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA5:
-            // res 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(4, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xA6:
-            // res 4, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(4, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xA7:
-            // res 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(4, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA8:
-            // res 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(5, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xA9:
-            // res 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(5, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xAA:
-            // res 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(5, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xAB:
-            // res 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(5, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xAC:
-            // res 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(5, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xAD:
-            // res 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(5, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xAE:
-            // res 5, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(5, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xAF:
-            // res 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(5, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB0:
-            // res 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(6, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB1:
-            // res 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(6, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xB2:
-            // res 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(6, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB3:
-            // res 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(6, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xB4:
-            // res 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(6, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB5:
-            // res 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(6, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xB6:
-            // res 6, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(6, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xB7:
-            // res 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(6, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB8:
-            // res 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(7, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xB9:
-            // res 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(7, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xBA:
-            // res 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(7, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xBB:
-            // res 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(7, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xBC:
-            // res 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(7, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xBD:
-            // res 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(7, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xBE:
-            // res 7, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, res(7, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xBF:
-            // res 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(7, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC0:
-            // set 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(0, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC1:
-            // set 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(0, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xC2:
-            // set 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(0, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC3:
-            // set 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(0, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xC4:
-            // set 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(0, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC5:
-            // set 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(0, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xC6:
-            // set 0, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(0, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xC7:
-            // set 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(0, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC8:
-            // set 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(1, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xC9:
-            // set 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(1, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xCA:
-            // set 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(1, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xCB:
-            // set 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(1, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xCC:
-            // set 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(1, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xCD:
-            // set 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(1, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xCE:
-            // set 1, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(1, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xCF:
-            // set 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(1, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD0:
-            // set 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(2, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD1:
-            // set 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(2, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xD2:
-            // set 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(2, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD3:
-            // set 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(2, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xD4:
-            // set 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(2, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD5:
-            // set 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(2, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xD6:
-            // set 2, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(2, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xD7:
-            // set 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(2, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD8:
-            // set 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(3, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xD9:
-            // set 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(3, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xDA:
-            // set 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(3, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xDB:
-            // set 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(3, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xDC:
-            // set 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(3, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xDD:
-            // set 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(3, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xDE:
-            // set 3, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(3, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xDF:
-            // set 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(3, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE0:
-            // set 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(4, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE1:
-            // set 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(4, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xE2:
-            // set 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(4, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE3:
-            // set 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(4, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xE4:
-            // set 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(4, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE5:
-            // set 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(4, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xE6:
-            // set 4, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(4, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xE7:
-            // set 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(4, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE8:
-            // set 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(5, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xE9:
-            // set 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(5, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xEA:
-            // set 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(5, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xEB:
-            // set 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(5, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xEC:
-            // set 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(5, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xED:
-            // set 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(5, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xEE:
-            // set 5, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(5, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xEF:
-            // set 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(5, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF0:
-            // set 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(6, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF1:
-            // set 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(6, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xF2:
-            // set 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(6, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF3:
-            // set 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(6, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xF4:
-            // set 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(6, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF5:
-            // set 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(6, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xF6:
-            // set 6, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(6, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xF7:
-            // set 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(6, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF8:
-            // set 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(7, gpRegisters[cpuReg::BC].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xF9:
-            // set 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(7, gpRegisters[cpuReg::BC].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xFA:
-            // set 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(7, gpRegisters[cpuReg::DE].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xFB:
-            // set 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(7, gpRegisters[cpuReg::DE].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xFC:
-            // set 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(7, gpRegisters[cpuReg::HL].hi));
-            cyclesTaken = 8;
-            break;
-        case 0xFD:
-            // set 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(7, gpRegisters[cpuReg::HL].lo));
-            cyclesTaken = 8;
-            break;
-        case 0xFE:
-            // set 7, (hl)
-            writeMemory(gpRegisters[cpuReg::HL].whole, set(7, readMemory(gpRegisters[cpuReg::HL].whole)));
-            cyclesTaken = 15;
-            break;
-        case 0xFF:
-            // set 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(7, gpRegisters[cpuReg::AF].hi));
-            cyclesTaken = 8;
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented bit opcode: 0x" << std::hex << (int) opcode << std::endl;
-            throw Z80Exception(ss.str());
-    }
+    (this->*bitOpcodeHandlers[opcode])();
 
 #ifdef VERBOSE_MODE
     if (executedInstructionName.empty()) {
@@ -3946,1298 +295,1022 @@ void CPUZ80::bitOpcodes() {
 
 }
 
-void CPUZ80::indexBitOpcodes(unsigned char opcodePrefix, const std::string& indexPrefix, cpuReg indexRegister) {
+void CPUZ80::indexBitOpcodes(cpuReg indexRegister) {
     // Opcode format is offset, opcode
-    unsigned short address = gpRegisters[indexRegister].whole + signedNB();
+    indexedAddressForCurrentOpcode = gpRegisters[indexRegister].whole + signedNB();
     unsigned char opcode = NBHideFromTrace();
-    displayOpcodePrefix = (displayOpcodePrefix << 8) + opcodePrefix;
     displayOpcode = opcode;
 
-    switch (opcode) {
-        case 0x00:
-            // rlc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x01:
-            // rlc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x02:
-            // rlc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x03:
-            // rlc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x04:
-            // rlc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x05:
-            // rlc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x06:
-            // rlc (hl)
-            writeMemory(address, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x07:
-            // rlc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rlc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x08:
-            // rrc b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x09:
-            // rrc c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0A:
-            // rrc d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0B:
-            // rrc e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0C:
-            // rrc h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0D:
-            // rrc l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0E:
-            // rrc (hl)
-            writeMemory(address, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x0F:
-            // rrc a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rrc(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x10:
-            // rl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x11:
-            // rl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x12:
-            // rl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x13:
-            // rl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x14:
-            // rl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x15:
-            // rl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x16:
-            // rl (hl)
-            writeMemory(address, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x17:
-            // rl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x18:
-            // rr b
-            ldReg8(gpRegisters[cpuReg::BC].hi, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x19:
-            // rr c
-            ldReg8(gpRegisters[cpuReg::BC].lo, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1A:
-            // rr d
-            ldReg8(gpRegisters[cpuReg::DE].hi, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1B:
-            // rr e
-            ldReg8(gpRegisters[cpuReg::DE].lo, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1C:
-            // rr h
-            ldReg8(gpRegisters[cpuReg::HL].hi, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1D:
-            // rr l
-            ldReg8(gpRegisters[cpuReg::HL].lo, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1E:
-            // rr (hl)
-            writeMemory(address, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x1F:
-            // rr a
-            ldReg8(gpRegisters[cpuReg::AF].hi, rr(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x20:
-            // sla b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x21:
-            // sla c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x22:
-            // sla d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x23:
-            // sla e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x24:
-            // sla h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x25:
-            // sla l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x26:
-            // sla (hl)
-            writeMemory(address, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x27:
-            // sla a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sla(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x28:
-            // sra b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x29:
-            // sra c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2A:
-            // sra d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2B:
-            // sra e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2C:
-            // sra h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2D:
-            // sra l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2E:
-            // sra (hl)
-            writeMemory(address, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x2F:
-            // sra a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sra(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x30:
-            // sll b
-            ldReg8(gpRegisters[cpuReg::BC].hi, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x31:
-            // sll c
-            ldReg8(gpRegisters[cpuReg::BC].lo, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x32:
-            // sll d
-            ldReg8(gpRegisters[cpuReg::DE].hi, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x33:
-            // sll e
-            ldReg8(gpRegisters[cpuReg::DE].lo, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x34:
-            // sll h
-            ldReg8(gpRegisters[cpuReg::HL].hi, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x35:
-            // sll l
-            ldReg8(gpRegisters[cpuReg::HL].lo, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x36:
-            // sll (hl)
-            writeMemory(address, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x37:
-            // sll a
-            ldReg8(gpRegisters[cpuReg::AF].hi, sll(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x38:
-            // srl b
-            ldReg8(gpRegisters[cpuReg::BC].hi, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x39:
-            // srl c
-            ldReg8(gpRegisters[cpuReg::BC].lo, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3A:
-            // srl d
-            ldReg8(gpRegisters[cpuReg::DE].hi, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3B:
-            // srl e
-            ldReg8(gpRegisters[cpuReg::DE].lo, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3C:
-            // srl h
-            ldReg8(gpRegisters[cpuReg::HL].hi, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3D:
-            // srl l
-            ldReg8(gpRegisters[cpuReg::HL].lo, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3E:
-            // srl (hl)
-            writeMemory(address, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x3F:
-            // srl a
-            ldReg8(gpRegisters[cpuReg::AF].hi, srl(readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x40:
-            // bit 0, b
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x41:
-            // bit 0, c
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x42:
-            // bit 0, d
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x43:
-            // bit 0, e
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x44:
-            // bit 0, h
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x45:
-            // bit 0, l
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x46:
-            // bit 0, (hl);
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x47:
-            // bit 0, a
-            bit(0, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x48:
-            // bit 1, b
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x49:
-            // bit 1, c
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4A:
-            // bit 1, d
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4B:
-            // bit 1, e
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4C:
-            // bit 1, h
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4D:
-            // bit 1, l
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4E:
-            // bit 1, (hl);
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x4F:
-            // bit 1, a
-            bit(1, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x50:
-            // bit 2, b
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x51:
-            // bit 2, c
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x52:
-            // bit 2, d
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x53:
-            // bit 2, e
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x54:
-            // bit 2, h
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x55:
-            // bit 2, l
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x56:
-            // bit 2, (hl);
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x57:
-            // bit 2, a
-            bit(2, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x58:
-            // bit 3, b
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x59:
-            // bit 3, c
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5A:
-            // bit 3, d
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5B:
-            // bit 3, e
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5C:
-            // bit 3, h
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5D:
-            // bit 3, l
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5E:
-            // bit 3, (hl);
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x5F:
-            // bit 3, a
-            bit(3, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x60:
-            // bit 4, b
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x61:
-            // bit 4, c
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x62:
-            // bit 4, d
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x63:
-            // bit 4, e
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x64:
-            // bit 4, h
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x65:
-            // bit 4, l
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x66:
-            // bit 4, (hl);
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x67:
-            // bit 4, a
-            bit(4, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x68:
-            // bit 5, b
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x69:
-            // bit 5, c
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6A:
-            // bit 5, d
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6B:
-            // bit 5, e
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6C:
-            // bit 5, h
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6D:
-            // bit 5, l
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6E:
-            // bit 5, (hl);
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x6F:
-            // bit 5, a
-            bit(5, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x70:
-            // bit 6, b
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x71:
-            // bit 6, c
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x72:
-            // bit 6, d
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x73:
-            // bit 6, e
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x74:
-            // bit 6, h
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x75:
-            // bit 6, l
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x76:
-            // bit 6, (hl);
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x77:
-            // bit 6, a
-            bit(6, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x78:
-            // bit 7, b
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x79:
-            // bit 7, c
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7A:
-            // bit 7, d
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7B:
-            // bit 7, e
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7C:
-            // bit 7, h
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7D:
-            // bit 7, l
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7E:
-            // bit 7, (hl);
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x7F:
-            // bit 7, a
-            bit(7, readMemory(address));
-            cyclesTaken = 20;
-            break;
-        case 0x80:
-            // res 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x81:
-            // res 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x82:
-            // res 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x83:
-            // res 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x84:
-            // res 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x85:
-            // res 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x86:
-            // res 0, (hl)
-            writeMemory(address, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x87:
-            // res 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x88:
-            // res 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x89:
-            // res 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8A:
-            // res 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8B:
-            // res 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8C:
-            // res 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8D:
-            // res 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8E:
-            // res 1, (hl)
-            writeMemory(address, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x8F:
-            // res 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x90:
-            // res 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x91:
-            // res 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x92:
-            // res 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x93:
-            // res 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x94:
-            // res 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x95:
-            // res 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x96:
-            // res 2, (hl)
-            writeMemory(address, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x97:
-            // res 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x98:
-            // res 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x99:
-            // res 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9A:
-            // res 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9B:
-            // res 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9C:
-            // res 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9D:
-            // res 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9E:
-            // res 3, (hl)
-            writeMemory(address, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0x9F:
-            // res 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA0:
-            // res 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA1:
-            // res 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA2:
-            // res 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA3:
-            // res 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA4:
-            // res 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA5:
-            // res 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA6:
-            // res 4, (hl)
-            writeMemory(address, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA7:
-            // res 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA8:
-            // res 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xA9:
-            // res 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAA:
-            // res 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAB:
-            // res 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAC:
-            // res 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAD:
-            // res 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAE:
-            // res 5, (hl)
-            writeMemory(address, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xAF:
-            // res 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB0:
-            // res 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB1:
-            // res 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB2:
-            // res 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB3:
-            // res 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB4:
-            // res 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB5:
-            // res 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB6:
-            // res 6, (hl)
-            writeMemory(address, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB7:
-            // res 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB8:
-            // res 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xB9:
-            // res 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBA:
-            // res 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBB:
-            // res 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBC:
-            // res 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBD:
-            // res 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBE:
-            // res 7, (hl)
-            writeMemory(address, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xBF:
-            // res 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, res(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC0:
-            // set 0, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC1:
-            // set 0, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC2:
-            // set 0, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC3:
-            // set 0, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC4:
-            // set 0, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC5:
-            // set 0, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC6:
-            // set 0, (hl)
-            writeMemory(address, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC7:
-            // set 0, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(0, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC8:
-            // set 1, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xC9:
-            // set 1, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCA:
-            // set 1, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCB:
-            // set 1, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCC:
-            // set 1, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCD:
-            // set 1, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCE:
-            // set 1, (hl)
-            writeMemory(address, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xCF:
-            // set 1, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(1, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD0:
-            // set 2, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD1:
-            // set 2, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD2:
-            // set 2, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD3:
-            // set 2, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD4:
-            // set 2, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD5:
-            // set 2, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD6:
-            // set 2, (hl)
-            writeMemory(address, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD7:
-            // set 2, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(2, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD8:
-            // set 3, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xD9:
-            // set 3, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDA:
-            // set 3, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDB:
-            // set 3, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDC:
-            // set 3, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDD:
-            // set 3, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDE:
-            // set 3, (hl)
-            writeMemory(address, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xDF:
-            // set 3, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(3, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE0:
-            // set 4, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE1:
-            // set 4, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE2:
-            // set 4, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE3:
-            // set 4, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE4:
-            // set 4, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE5:
-            // set 4, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE6:
-            // set 4, (hl)
-            writeMemory(address, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE7:
-            // set 4, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(4, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE8:
-            // set 5, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xE9:
-            // set 5, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xEA:
-            // set 5, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xEB:
-            // set 5, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xEC:
-            // set 5, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xED:
-            // set 5, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xEE:
-            // set 5, (hl)
-            writeMemory(address, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xEF:
-            // set 5, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(5, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF0:
-            // set 6, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF1:
-            // set 6, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF2:
-            // set 6, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF3:
-            // set 6, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF4:
-            // set 6, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF5:
-            // set 6, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF6:
-            // set 6, (hl)
-            writeMemory(address, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF7:
-            // set 6, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(6, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF8:
-            // set 7, b
-            ldReg8(gpRegisters[cpuReg::BC].hi, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xF9:
-            // set 7, c
-            ldReg8(gpRegisters[cpuReg::BC].lo, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFA:
-            // set 7, d
-            ldReg8(gpRegisters[cpuReg::DE].hi, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFB:
-            // set 7, e
-            ldReg8(gpRegisters[cpuReg::DE].lo, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFC:
-            // set 7, h
-            ldReg8(gpRegisters[cpuReg::HL].hi, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFD:
-            // set 7, l
-            ldReg8(gpRegisters[cpuReg::HL].lo, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFE:
-            // set 7, (hl)
-            writeMemory(address, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        case 0xFF:
-            // set 7, a
-            ldReg8(gpRegisters[cpuReg::AF].hi, set(7, readMemory(address)));
-            cyclesTaken = 23;
-            break;
-        default:
-            std::stringstream ss;
-            ss << "Unimplemented" << indexPrefix << " bit opcode: 0x" << std::hex << (int) opcode << std::endl;
-            throw Z80Exception(ss.str());
+    (this->*indexBitOpcodeHandlers[opcode])();
+}
+
+void CPUZ80::initialiseOpcodeHandlerPointers() {
+    standardOpcodeHandlers[0x00] = &CPUZ80::standardOpcodeHandler0x00;
+    standardOpcodeHandlers[0x01] = &CPUZ80::standardOpcodeHandler0x01;
+    standardOpcodeHandlers[0x02] = &CPUZ80::standardOpcodeHandler0x02;
+    standardOpcodeHandlers[0x03] = &CPUZ80::standardOpcodeHandler0x03;
+    standardOpcodeHandlers[0x04] = &CPUZ80::standardOpcodeHandler0x04;
+    standardOpcodeHandlers[0x05] = &CPUZ80::standardOpcodeHandler0x05;
+    standardOpcodeHandlers[0x06] = &CPUZ80::standardOpcodeHandler0x06;
+    standardOpcodeHandlers[0x07] = &CPUZ80::standardOpcodeHandler0x07;
+    standardOpcodeHandlers[0x08] = &CPUZ80::standardOpcodeHandler0x08;
+    standardOpcodeHandlers[0x09] = &CPUZ80::standardOpcodeHandler0x09;
+    standardOpcodeHandlers[0x0A] = &CPUZ80::standardOpcodeHandler0x0A;
+    standardOpcodeHandlers[0x0B] = &CPUZ80::standardOpcodeHandler0x0B;
+    standardOpcodeHandlers[0x0C] = &CPUZ80::standardOpcodeHandler0x0C;
+    standardOpcodeHandlers[0x0D] = &CPUZ80::standardOpcodeHandler0x0D;
+    standardOpcodeHandlers[0x0E] = &CPUZ80::standardOpcodeHandler0x0E;
+    standardOpcodeHandlers[0x0F] = &CPUZ80::standardOpcodeHandler0x0F;
+    standardOpcodeHandlers[0x10] = &CPUZ80::standardOpcodeHandler0x10;
+    standardOpcodeHandlers[0x11] = &CPUZ80::standardOpcodeHandler0x11;
+    standardOpcodeHandlers[0x12] = &CPUZ80::standardOpcodeHandler0x12;
+    standardOpcodeHandlers[0x13] = &CPUZ80::standardOpcodeHandler0x13;
+    standardOpcodeHandlers[0x14] = &CPUZ80::standardOpcodeHandler0x14;
+    standardOpcodeHandlers[0x15] = &CPUZ80::standardOpcodeHandler0x15;
+    standardOpcodeHandlers[0x16] = &CPUZ80::standardOpcodeHandler0x16;
+    standardOpcodeHandlers[0x17] = &CPUZ80::standardOpcodeHandler0x17;
+    standardOpcodeHandlers[0x18] = &CPUZ80::standardOpcodeHandler0x18;
+    standardOpcodeHandlers[0x19] = &CPUZ80::standardOpcodeHandler0x19;
+    standardOpcodeHandlers[0x1A] = &CPUZ80::standardOpcodeHandler0x1A;
+    standardOpcodeHandlers[0x1B] = &CPUZ80::standardOpcodeHandler0x1B;
+    standardOpcodeHandlers[0x1C] = &CPUZ80::standardOpcodeHandler0x1C;
+    standardOpcodeHandlers[0x1D] = &CPUZ80::standardOpcodeHandler0x1D;
+    standardOpcodeHandlers[0x1E] = &CPUZ80::standardOpcodeHandler0x1E;
+    standardOpcodeHandlers[0x1F] = &CPUZ80::standardOpcodeHandler0x1F;
+    standardOpcodeHandlers[0x20] = &CPUZ80::standardOpcodeHandler0x20;
+    standardOpcodeHandlers[0x21] = &CPUZ80::standardOpcodeHandler0x21;
+    standardOpcodeHandlers[0x22] = &CPUZ80::standardOpcodeHandler0x22;
+    standardOpcodeHandlers[0x23] = &CPUZ80::standardOpcodeHandler0x23;
+    standardOpcodeHandlers[0x24] = &CPUZ80::standardOpcodeHandler0x24;
+    standardOpcodeHandlers[0x25] = &CPUZ80::standardOpcodeHandler0x25;
+    standardOpcodeHandlers[0x26] = &CPUZ80::standardOpcodeHandler0x26;
+    standardOpcodeHandlers[0x27] = &CPUZ80::standardOpcodeHandler0x27;
+    standardOpcodeHandlers[0x28] = &CPUZ80::standardOpcodeHandler0x28;
+    standardOpcodeHandlers[0x29] = &CPUZ80::standardOpcodeHandler0x29;
+    standardOpcodeHandlers[0x2A] = &CPUZ80::standardOpcodeHandler0x2A;
+    standardOpcodeHandlers[0x2B] = &CPUZ80::standardOpcodeHandler0x2B;
+    standardOpcodeHandlers[0x2C] = &CPUZ80::standardOpcodeHandler0x2C;
+    standardOpcodeHandlers[0x2D] = &CPUZ80::standardOpcodeHandler0x2D;
+    standardOpcodeHandlers[0x2E] = &CPUZ80::standardOpcodeHandler0x2E;
+    standardOpcodeHandlers[0x2F] = &CPUZ80::standardOpcodeHandler0x2F;
+    standardOpcodeHandlers[0x30] = &CPUZ80::standardOpcodeHandler0x30;
+    standardOpcodeHandlers[0x31] = &CPUZ80::standardOpcodeHandler0x31;
+    standardOpcodeHandlers[0x32] = &CPUZ80::standardOpcodeHandler0x32;
+    standardOpcodeHandlers[0x33] = &CPUZ80::standardOpcodeHandler0x33;
+    standardOpcodeHandlers[0x34] = &CPUZ80::standardOpcodeHandler0x34;
+    standardOpcodeHandlers[0x35] = &CPUZ80::standardOpcodeHandler0x35;
+    standardOpcodeHandlers[0x36] = &CPUZ80::standardOpcodeHandler0x36;
+    standardOpcodeHandlers[0x37] = &CPUZ80::standardOpcodeHandler0x37;
+    standardOpcodeHandlers[0x38] = &CPUZ80::standardOpcodeHandler0x38;
+    standardOpcodeHandlers[0x39] = &CPUZ80::standardOpcodeHandler0x39;
+    standardOpcodeHandlers[0x3A] = &CPUZ80::standardOpcodeHandler0x3A;
+    standardOpcodeHandlers[0x3B] = &CPUZ80::standardOpcodeHandler0x3B;
+    standardOpcodeHandlers[0x3C] = &CPUZ80::standardOpcodeHandler0x3C;
+    standardOpcodeHandlers[0x3D] = &CPUZ80::standardOpcodeHandler0x3D;
+    standardOpcodeHandlers[0x3E] = &CPUZ80::standardOpcodeHandler0x3E;
+    standardOpcodeHandlers[0x3F] = &CPUZ80::standardOpcodeHandler0x3F;
+    standardOpcodeHandlers[0x40] = &CPUZ80::standardOpcodeHandler0x40;
+    standardOpcodeHandlers[0x41] = &CPUZ80::standardOpcodeHandler0x41;
+    standardOpcodeHandlers[0x42] = &CPUZ80::standardOpcodeHandler0x42;
+    standardOpcodeHandlers[0x43] = &CPUZ80::standardOpcodeHandler0x43;
+    standardOpcodeHandlers[0x44] = &CPUZ80::standardOpcodeHandler0x44;
+    standardOpcodeHandlers[0x45] = &CPUZ80::standardOpcodeHandler0x45;
+    standardOpcodeHandlers[0x46] = &CPUZ80::standardOpcodeHandler0x46;
+    standardOpcodeHandlers[0x47] = &CPUZ80::standardOpcodeHandler0x47;
+    standardOpcodeHandlers[0x48] = &CPUZ80::standardOpcodeHandler0x48;
+    standardOpcodeHandlers[0x49] = &CPUZ80::standardOpcodeHandler0x49;
+    standardOpcodeHandlers[0x4A] = &CPUZ80::standardOpcodeHandler0x4A;
+    standardOpcodeHandlers[0x4B] = &CPUZ80::standardOpcodeHandler0x4B;
+    standardOpcodeHandlers[0x4C] = &CPUZ80::standardOpcodeHandler0x4C;
+    standardOpcodeHandlers[0x4D] = &CPUZ80::standardOpcodeHandler0x4D;
+    standardOpcodeHandlers[0x4E] = &CPUZ80::standardOpcodeHandler0x4E;
+    standardOpcodeHandlers[0x4F] = &CPUZ80::standardOpcodeHandler0x4F;
+    standardOpcodeHandlers[0x50] = &CPUZ80::standardOpcodeHandler0x50;
+    standardOpcodeHandlers[0x51] = &CPUZ80::standardOpcodeHandler0x51;
+    standardOpcodeHandlers[0x52] = &CPUZ80::standardOpcodeHandler0x52;
+    standardOpcodeHandlers[0x53] = &CPUZ80::standardOpcodeHandler0x53;
+    standardOpcodeHandlers[0x54] = &CPUZ80::standardOpcodeHandler0x54;
+    standardOpcodeHandlers[0x55] = &CPUZ80::standardOpcodeHandler0x55;
+    standardOpcodeHandlers[0x56] = &CPUZ80::standardOpcodeHandler0x56;
+    standardOpcodeHandlers[0x57] = &CPUZ80::standardOpcodeHandler0x57;
+    standardOpcodeHandlers[0x58] = &CPUZ80::standardOpcodeHandler0x58;
+    standardOpcodeHandlers[0x59] = &CPUZ80::standardOpcodeHandler0x59;
+    standardOpcodeHandlers[0x5A] = &CPUZ80::standardOpcodeHandler0x5A;
+    standardOpcodeHandlers[0x5B] = &CPUZ80::standardOpcodeHandler0x5B;
+    standardOpcodeHandlers[0x5C] = &CPUZ80::standardOpcodeHandler0x5C;
+    standardOpcodeHandlers[0x5D] = &CPUZ80::standardOpcodeHandler0x5D;
+    standardOpcodeHandlers[0x5E] = &CPUZ80::standardOpcodeHandler0x5E;
+    standardOpcodeHandlers[0x5F] = &CPUZ80::standardOpcodeHandler0x5F;
+    standardOpcodeHandlers[0x60] = &CPUZ80::standardOpcodeHandler0x60;
+    standardOpcodeHandlers[0x61] = &CPUZ80::standardOpcodeHandler0x61;
+    standardOpcodeHandlers[0x62] = &CPUZ80::standardOpcodeHandler0x62;
+    standardOpcodeHandlers[0x63] = &CPUZ80::standardOpcodeHandler0x63;
+    standardOpcodeHandlers[0x64] = &CPUZ80::standardOpcodeHandler0x64;
+    standardOpcodeHandlers[0x65] = &CPUZ80::standardOpcodeHandler0x65;
+    standardOpcodeHandlers[0x66] = &CPUZ80::standardOpcodeHandler0x66;
+    standardOpcodeHandlers[0x67] = &CPUZ80::standardOpcodeHandler0x67;
+    standardOpcodeHandlers[0x68] = &CPUZ80::standardOpcodeHandler0x68;
+    standardOpcodeHandlers[0x69] = &CPUZ80::standardOpcodeHandler0x69;
+    standardOpcodeHandlers[0x6A] = &CPUZ80::standardOpcodeHandler0x6A;
+    standardOpcodeHandlers[0x6B] = &CPUZ80::standardOpcodeHandler0x6B;
+    standardOpcodeHandlers[0x6C] = &CPUZ80::standardOpcodeHandler0x6C;
+    standardOpcodeHandlers[0x6D] = &CPUZ80::standardOpcodeHandler0x6D;
+    standardOpcodeHandlers[0x6E] = &CPUZ80::standardOpcodeHandler0x6E;
+    standardOpcodeHandlers[0x6F] = &CPUZ80::standardOpcodeHandler0x6F;
+    standardOpcodeHandlers[0x70] = &CPUZ80::standardOpcodeHandler0x70;
+    standardOpcodeHandlers[0x71] = &CPUZ80::standardOpcodeHandler0x71;
+    standardOpcodeHandlers[0x72] = &CPUZ80::standardOpcodeHandler0x72;
+    standardOpcodeHandlers[0x73] = &CPUZ80::standardOpcodeHandler0x73;
+    standardOpcodeHandlers[0x74] = &CPUZ80::standardOpcodeHandler0x74;
+    standardOpcodeHandlers[0x75] = &CPUZ80::standardOpcodeHandler0x75;
+    standardOpcodeHandlers[0x76] = &CPUZ80::standardOpcodeHandler0x76;
+    standardOpcodeHandlers[0x77] = &CPUZ80::standardOpcodeHandler0x77;
+    standardOpcodeHandlers[0x78] = &CPUZ80::standardOpcodeHandler0x78;
+    standardOpcodeHandlers[0x79] = &CPUZ80::standardOpcodeHandler0x79;
+    standardOpcodeHandlers[0x7A] = &CPUZ80::standardOpcodeHandler0x7A;
+    standardOpcodeHandlers[0x7B] = &CPUZ80::standardOpcodeHandler0x7B;
+    standardOpcodeHandlers[0x7C] = &CPUZ80::standardOpcodeHandler0x7C;
+    standardOpcodeHandlers[0x7D] = &CPUZ80::standardOpcodeHandler0x7D;
+    standardOpcodeHandlers[0x7E] = &CPUZ80::standardOpcodeHandler0x7E;
+    standardOpcodeHandlers[0x7F] = &CPUZ80::standardOpcodeHandler0x7F;
+    standardOpcodeHandlers[0x80] = &CPUZ80::standardOpcodeHandler0x80;
+    standardOpcodeHandlers[0x81] = &CPUZ80::standardOpcodeHandler0x81;
+    standardOpcodeHandlers[0x82] = &CPUZ80::standardOpcodeHandler0x82;
+    standardOpcodeHandlers[0x83] = &CPUZ80::standardOpcodeHandler0x83;
+    standardOpcodeHandlers[0x84] = &CPUZ80::standardOpcodeHandler0x84;
+    standardOpcodeHandlers[0x85] = &CPUZ80::standardOpcodeHandler0x85;
+    standardOpcodeHandlers[0x86] = &CPUZ80::standardOpcodeHandler0x86;
+    standardOpcodeHandlers[0x87] = &CPUZ80::standardOpcodeHandler0x87;
+    standardOpcodeHandlers[0x88] = &CPUZ80::standardOpcodeHandler0x88;
+    standardOpcodeHandlers[0x89] = &CPUZ80::standardOpcodeHandler0x89;
+    standardOpcodeHandlers[0x8A] = &CPUZ80::standardOpcodeHandler0x8A;
+    standardOpcodeHandlers[0x8B] = &CPUZ80::standardOpcodeHandler0x8B;
+    standardOpcodeHandlers[0x8C] = &CPUZ80::standardOpcodeHandler0x8C;
+    standardOpcodeHandlers[0x8D] = &CPUZ80::standardOpcodeHandler0x8D;
+    standardOpcodeHandlers[0x8E] = &CPUZ80::standardOpcodeHandler0x8E;
+    standardOpcodeHandlers[0x8F] = &CPUZ80::standardOpcodeHandler0x8F;
+    standardOpcodeHandlers[0x90] = &CPUZ80::standardOpcodeHandler0x90;
+    standardOpcodeHandlers[0x91] = &CPUZ80::standardOpcodeHandler0x91;
+    standardOpcodeHandlers[0x92] = &CPUZ80::standardOpcodeHandler0x92;
+    standardOpcodeHandlers[0x93] = &CPUZ80::standardOpcodeHandler0x93;
+    standardOpcodeHandlers[0x94] = &CPUZ80::standardOpcodeHandler0x94;
+    standardOpcodeHandlers[0x95] = &CPUZ80::standardOpcodeHandler0x95;
+    standardOpcodeHandlers[0x96] = &CPUZ80::standardOpcodeHandler0x96;
+    standardOpcodeHandlers[0x97] = &CPUZ80::standardOpcodeHandler0x97;
+    standardOpcodeHandlers[0x98] = &CPUZ80::standardOpcodeHandler0x98;
+    standardOpcodeHandlers[0x99] = &CPUZ80::standardOpcodeHandler0x99;
+    standardOpcodeHandlers[0x9A] = &CPUZ80::standardOpcodeHandler0x9A;
+    standardOpcodeHandlers[0x9B] = &CPUZ80::standardOpcodeHandler0x9B;
+    standardOpcodeHandlers[0x9C] = &CPUZ80::standardOpcodeHandler0x9C;
+    standardOpcodeHandlers[0x9D] = &CPUZ80::standardOpcodeHandler0x9D;
+    standardOpcodeHandlers[0x9E] = &CPUZ80::standardOpcodeHandler0x9E;
+    standardOpcodeHandlers[0x9F] = &CPUZ80::standardOpcodeHandler0x9F;
+    standardOpcodeHandlers[0xA0] = &CPUZ80::standardOpcodeHandler0xA0;
+    standardOpcodeHandlers[0xA1] = &CPUZ80::standardOpcodeHandler0xA1;
+    standardOpcodeHandlers[0xA2] = &CPUZ80::standardOpcodeHandler0xA2;
+    standardOpcodeHandlers[0xA3] = &CPUZ80::standardOpcodeHandler0xA3;
+    standardOpcodeHandlers[0xA4] = &CPUZ80::standardOpcodeHandler0xA4;
+    standardOpcodeHandlers[0xA5] = &CPUZ80::standardOpcodeHandler0xA5;
+    standardOpcodeHandlers[0xA6] = &CPUZ80::standardOpcodeHandler0xA6;
+    standardOpcodeHandlers[0xA7] = &CPUZ80::standardOpcodeHandler0xA7;
+    standardOpcodeHandlers[0xA8] = &CPUZ80::standardOpcodeHandler0xA8;
+    standardOpcodeHandlers[0xA9] = &CPUZ80::standardOpcodeHandler0xA9;
+    standardOpcodeHandlers[0xAA] = &CPUZ80::standardOpcodeHandler0xAA;
+    standardOpcodeHandlers[0xAB] = &CPUZ80::standardOpcodeHandler0xAB;
+    standardOpcodeHandlers[0xAC] = &CPUZ80::standardOpcodeHandler0xAC;
+    standardOpcodeHandlers[0xAD] = &CPUZ80::standardOpcodeHandler0xAD;
+    standardOpcodeHandlers[0xAE] = &CPUZ80::standardOpcodeHandler0xAE;
+    standardOpcodeHandlers[0xAF] = &CPUZ80::standardOpcodeHandler0xAF;
+    standardOpcodeHandlers[0xB0] = &CPUZ80::standardOpcodeHandler0xB0;
+    standardOpcodeHandlers[0xB1] = &CPUZ80::standardOpcodeHandler0xB1;
+    standardOpcodeHandlers[0xB2] = &CPUZ80::standardOpcodeHandler0xB2;
+    standardOpcodeHandlers[0xB3] = &CPUZ80::standardOpcodeHandler0xB3;
+    standardOpcodeHandlers[0xB4] = &CPUZ80::standardOpcodeHandler0xB4;
+    standardOpcodeHandlers[0xB5] = &CPUZ80::standardOpcodeHandler0xB5;
+    standardOpcodeHandlers[0xB6] = &CPUZ80::standardOpcodeHandler0xB6;
+    standardOpcodeHandlers[0xB7] = &CPUZ80::standardOpcodeHandler0xB7;
+    standardOpcodeHandlers[0xB8] = &CPUZ80::standardOpcodeHandler0xB8;
+    standardOpcodeHandlers[0xB9] = &CPUZ80::standardOpcodeHandler0xB9;
+    standardOpcodeHandlers[0xBA] = &CPUZ80::standardOpcodeHandler0xBA;
+    standardOpcodeHandlers[0xBB] = &CPUZ80::standardOpcodeHandler0xBB;
+    standardOpcodeHandlers[0xBC] = &CPUZ80::standardOpcodeHandler0xBC;
+    standardOpcodeHandlers[0xBD] = &CPUZ80::standardOpcodeHandler0xBD;
+    standardOpcodeHandlers[0xBE] = &CPUZ80::standardOpcodeHandler0xBE;
+    standardOpcodeHandlers[0xBF] = &CPUZ80::standardOpcodeHandler0xBF;
+    standardOpcodeHandlers[0xC0] = &CPUZ80::standardOpcodeHandler0xC0;
+    standardOpcodeHandlers[0xC1] = &CPUZ80::standardOpcodeHandler0xC1;
+    standardOpcodeHandlers[0xC2] = &CPUZ80::standardOpcodeHandler0xC2;
+    standardOpcodeHandlers[0xC3] = &CPUZ80::standardOpcodeHandler0xC3;
+    standardOpcodeHandlers[0xC4] = &CPUZ80::standardOpcodeHandler0xC4;
+    standardOpcodeHandlers[0xC5] = &CPUZ80::standardOpcodeHandler0xC5;
+    standardOpcodeHandlers[0xC6] = &CPUZ80::standardOpcodeHandler0xC6;
+    standardOpcodeHandlers[0xC7] = &CPUZ80::standardOpcodeHandler0xC7;
+    standardOpcodeHandlers[0xC8] = &CPUZ80::standardOpcodeHandler0xC8;
+    standardOpcodeHandlers[0xC9] = &CPUZ80::standardOpcodeHandler0xC9;
+    standardOpcodeHandlers[0xCA] = &CPUZ80::standardOpcodeHandler0xCA;
+    standardOpcodeHandlers[0xCB] = &CPUZ80::standardOpcodeHandler0xCB;
+    standardOpcodeHandlers[0xCC] = &CPUZ80::standardOpcodeHandler0xCC;
+    standardOpcodeHandlers[0xCD] = &CPUZ80::standardOpcodeHandler0xCD;
+    standardOpcodeHandlers[0xCE] = &CPUZ80::standardOpcodeHandler0xCE;
+    standardOpcodeHandlers[0xCF] = &CPUZ80::standardOpcodeHandler0xCF;
+    standardOpcodeHandlers[0xD0] = &CPUZ80::standardOpcodeHandler0xD0;
+    standardOpcodeHandlers[0xD1] = &CPUZ80::standardOpcodeHandler0xD1;
+    standardOpcodeHandlers[0xD2] = &CPUZ80::standardOpcodeHandler0xD2;
+    standardOpcodeHandlers[0xD3] = &CPUZ80::standardOpcodeHandler0xD3;
+    standardOpcodeHandlers[0xD4] = &CPUZ80::standardOpcodeHandler0xD4;
+    standardOpcodeHandlers[0xD5] = &CPUZ80::standardOpcodeHandler0xD5;
+    standardOpcodeHandlers[0xD6] = &CPUZ80::standardOpcodeHandler0xD6;
+    standardOpcodeHandlers[0xD7] = &CPUZ80::standardOpcodeHandler0xD7;
+    standardOpcodeHandlers[0xD8] = &CPUZ80::standardOpcodeHandler0xD8;
+    standardOpcodeHandlers[0xD9] = &CPUZ80::standardOpcodeHandler0xD9;
+    standardOpcodeHandlers[0xDA] = &CPUZ80::standardOpcodeHandler0xDA;
+    standardOpcodeHandlers[0xDB] = &CPUZ80::standardOpcodeHandler0xDB;
+    standardOpcodeHandlers[0xDC] = &CPUZ80::standardOpcodeHandler0xDC;
+    standardOpcodeHandlers[0xDD] = &CPUZ80::standardOpcodeHandler0xDD;
+    standardOpcodeHandlers[0xDE] = &CPUZ80::standardOpcodeHandler0xDE;
+    standardOpcodeHandlers[0xDF] = &CPUZ80::standardOpcodeHandler0xDF;
+    standardOpcodeHandlers[0xE0] = &CPUZ80::standardOpcodeHandler0xE0;
+    standardOpcodeHandlers[0xE1] = &CPUZ80::standardOpcodeHandler0xE1;
+    standardOpcodeHandlers[0xE2] = &CPUZ80::standardOpcodeHandler0xE2;
+    standardOpcodeHandlers[0xE3] = &CPUZ80::standardOpcodeHandler0xE3;
+    standardOpcodeHandlers[0xE4] = &CPUZ80::standardOpcodeHandler0xE4;
+    standardOpcodeHandlers[0xE5] = &CPUZ80::standardOpcodeHandler0xE5;
+    standardOpcodeHandlers[0xE6] = &CPUZ80::standardOpcodeHandler0xE6;
+    standardOpcodeHandlers[0xE7] = &CPUZ80::standardOpcodeHandler0xE7;
+    standardOpcodeHandlers[0xE8] = &CPUZ80::standardOpcodeHandler0xE8;
+    standardOpcodeHandlers[0xE9] = &CPUZ80::standardOpcodeHandler0xE9;
+    standardOpcodeHandlers[0xEA] = &CPUZ80::standardOpcodeHandler0xEA;
+    standardOpcodeHandlers[0xEB] = &CPUZ80::standardOpcodeHandler0xEB;
+    standardOpcodeHandlers[0xEC] = &CPUZ80::standardOpcodeHandler0xEC;
+    standardOpcodeHandlers[0xED] = &CPUZ80::standardOpcodeHandler0xED;
+    standardOpcodeHandlers[0xEE] = &CPUZ80::standardOpcodeHandler0xEE;
+    standardOpcodeHandlers[0xEF] = &CPUZ80::standardOpcodeHandler0xEF;
+    standardOpcodeHandlers[0xF0] = &CPUZ80::standardOpcodeHandler0xF0;
+    standardOpcodeHandlers[0xF1] = &CPUZ80::standardOpcodeHandler0xF1;
+    standardOpcodeHandlers[0xF2] = &CPUZ80::standardOpcodeHandler0xF2;
+    standardOpcodeHandlers[0xF3] = &CPUZ80::standardOpcodeHandler0xF3;
+    standardOpcodeHandlers[0xF4] = &CPUZ80::standardOpcodeHandler0xF4;
+    standardOpcodeHandlers[0xF5] = &CPUZ80::standardOpcodeHandler0xF5;
+    standardOpcodeHandlers[0xF6] = &CPUZ80::standardOpcodeHandler0xF6;
+    standardOpcodeHandlers[0xF7] = &CPUZ80::standardOpcodeHandler0xF7;
+    standardOpcodeHandlers[0xF8] = &CPUZ80::standardOpcodeHandler0xF8;
+    standardOpcodeHandlers[0xF9] = &CPUZ80::standardOpcodeHandler0xF9;
+    standardOpcodeHandlers[0xFA] = &CPUZ80::standardOpcodeHandler0xFA;
+    standardOpcodeHandlers[0xFB] = &CPUZ80::standardOpcodeHandler0xFB;
+    standardOpcodeHandlers[0xFC] = &CPUZ80::standardOpcodeHandler0xFC;
+    standardOpcodeHandlers[0xFD] = &CPUZ80::standardOpcodeHandler0xFD;
+    standardOpcodeHandlers[0xFE] = &CPUZ80::standardOpcodeHandler0xFE;
+    standardOpcodeHandlers[0xFF] = &CPUZ80::standardOpcodeHandler0xFF;
+
+    for (int i = 0; i < 0xFF; i++) {
+        // Not every possible number for extended opcodes is valid
+        extendedOpcodeHandlers[i] = &CPUZ80::opcodeHandlerInvalid;
     }
 
+    extendedOpcodeHandlers[0x40] = &CPUZ80::extendedOpcodeHandler0x40;
+    extendedOpcodeHandlers[0x41] = &CPUZ80::extendedOpcodeHandler0x41;
+    extendedOpcodeHandlers[0x42] = &CPUZ80::extendedOpcodeHandler0x42;
+    extendedOpcodeHandlers[0x43] = &CPUZ80::extendedOpcodeHandler0x43;
+    extendedOpcodeHandlers[0x44] = &CPUZ80::extendedOpcodeHandler0x44;
+    extendedOpcodeHandlers[0x45] = &CPUZ80::extendedOpcodeHandler0x45;
+    extendedOpcodeHandlers[0x46] = &CPUZ80::extendedOpcodeHandler0x46;
+    extendedOpcodeHandlers[0x47] = &CPUZ80::extendedOpcodeHandler0x47;
+    extendedOpcodeHandlers[0x48] = &CPUZ80::extendedOpcodeHandler0x48;
+    extendedOpcodeHandlers[0x49] = &CPUZ80::extendedOpcodeHandler0x49;
+    extendedOpcodeHandlers[0x4A] = &CPUZ80::extendedOpcodeHandler0x4A;
+    extendedOpcodeHandlers[0x4B] = &CPUZ80::extendedOpcodeHandler0x4B;
+    extendedOpcodeHandlers[0x4D] = &CPUZ80::extendedOpcodeHandler0x4D;
+    extendedOpcodeHandlers[0x4F] = &CPUZ80::extendedOpcodeHandler0x4F;
+    extendedOpcodeHandlers[0x50] = &CPUZ80::extendedOpcodeHandler0x50;
+    extendedOpcodeHandlers[0x51] = &CPUZ80::extendedOpcodeHandler0x51;
+    extendedOpcodeHandlers[0x52] = &CPUZ80::extendedOpcodeHandler0x52;
+    extendedOpcodeHandlers[0x53] = &CPUZ80::extendedOpcodeHandler0x53;
+    extendedOpcodeHandlers[0x56] = &CPUZ80::extendedOpcodeHandler0x56;
+    extendedOpcodeHandlers[0x57] = &CPUZ80::extendedOpcodeHandler0x57;
+    extendedOpcodeHandlers[0x58] = &CPUZ80::extendedOpcodeHandler0x58;
+    extendedOpcodeHandlers[0x59] = &CPUZ80::extendedOpcodeHandler0x59;
+    extendedOpcodeHandlers[0x5A] = &CPUZ80::extendedOpcodeHandler0x5A;
+    extendedOpcodeHandlers[0x5B] = &CPUZ80::extendedOpcodeHandler0x5B;
+    extendedOpcodeHandlers[0x5E] = &CPUZ80::extendedOpcodeHandler0x5E;
+    extendedOpcodeHandlers[0x5F] = &CPUZ80::extendedOpcodeHandler0x5F;
+    extendedOpcodeHandlers[0x60] = &CPUZ80::extendedOpcodeHandler0x60;
+    extendedOpcodeHandlers[0x61] = &CPUZ80::extendedOpcodeHandler0x61;
+    extendedOpcodeHandlers[0x62] = &CPUZ80::extendedOpcodeHandler0x62;
+    extendedOpcodeHandlers[0x63] = &CPUZ80::extendedOpcodeHandler0x63;
+    extendedOpcodeHandlers[0x67] = &CPUZ80::extendedOpcodeHandler0x67;
+    extendedOpcodeHandlers[0x68] = &CPUZ80::extendedOpcodeHandler0x68;
+    extendedOpcodeHandlers[0x69] = &CPUZ80::extendedOpcodeHandler0x69;
+    extendedOpcodeHandlers[0x6A] = &CPUZ80::extendedOpcodeHandler0x6A;
+    extendedOpcodeHandlers[0x6B] = &CPUZ80::extendedOpcodeHandler0x6B;
+    extendedOpcodeHandlers[0x6F] = &CPUZ80::extendedOpcodeHandler0x6F;
+    extendedOpcodeHandlers[0x70] = &CPUZ80::extendedOpcodeHandler0x70;
+    extendedOpcodeHandlers[0x71] = &CPUZ80::extendedOpcodeHandler0x71;
+    extendedOpcodeHandlers[0x72] = &CPUZ80::extendedOpcodeHandler0x72;
+    extendedOpcodeHandlers[0x73] = &CPUZ80::extendedOpcodeHandler0x73;
+    extendedOpcodeHandlers[0x78] = &CPUZ80::extendedOpcodeHandler0x78;
+    extendedOpcodeHandlers[0x79] = &CPUZ80::extendedOpcodeHandler0x79;
+    extendedOpcodeHandlers[0x7A] = &CPUZ80::extendedOpcodeHandler0x7A;
+    extendedOpcodeHandlers[0x7B] = &CPUZ80::extendedOpcodeHandler0x7B;
+    extendedOpcodeHandlers[0xA0] = &CPUZ80::extendedOpcodeHandler0xA0;
+    extendedOpcodeHandlers[0xA1] = &CPUZ80::extendedOpcodeHandler0xA1;
+    extendedOpcodeHandlers[0xA2] = &CPUZ80::extendedOpcodeHandler0xA2;
+    extendedOpcodeHandlers[0xA3] = &CPUZ80::extendedOpcodeHandler0xA3;
+    extendedOpcodeHandlers[0xA8] = &CPUZ80::extendedOpcodeHandler0xA8;
+    extendedOpcodeHandlers[0xA9] = &CPUZ80::extendedOpcodeHandler0xA9;
+    extendedOpcodeHandlers[0xAA] = &CPUZ80::extendedOpcodeHandler0xAA;
+    extendedOpcodeHandlers[0xAB] = &CPUZ80::extendedOpcodeHandler0xAB;
+    extendedOpcodeHandlers[0xB0] = &CPUZ80::extendedOpcodeHandler0xB0;
+    extendedOpcodeHandlers[0xB1] = &CPUZ80::extendedOpcodeHandler0xB1;
+    extendedOpcodeHandlers[0xB2] = &CPUZ80::extendedOpcodeHandler0xB2;
+    extendedOpcodeHandlers[0xB3] = &CPUZ80::extendedOpcodeHandler0xB3;
+    extendedOpcodeHandlers[0xB8] = &CPUZ80::extendedOpcodeHandler0xB8;
+    extendedOpcodeHandlers[0xB9] = &CPUZ80::extendedOpcodeHandler0xB9;
+    extendedOpcodeHandlers[0xBA] = &CPUZ80::extendedOpcodeHandler0xBA;
+    extendedOpcodeHandlers[0xBB] = &CPUZ80::extendedOpcodeHandler0xBB;
+
+    bitOpcodeHandlers[0x00] = &CPUZ80::bitOpcodeHandler0x00;
+    bitOpcodeHandlers[0x01] = &CPUZ80::bitOpcodeHandler0x01;
+    bitOpcodeHandlers[0x02] = &CPUZ80::bitOpcodeHandler0x02;
+    bitOpcodeHandlers[0x03] = &CPUZ80::bitOpcodeHandler0x03;
+    bitOpcodeHandlers[0x04] = &CPUZ80::bitOpcodeHandler0x04;
+    bitOpcodeHandlers[0x05] = &CPUZ80::bitOpcodeHandler0x05;
+    bitOpcodeHandlers[0x06] = &CPUZ80::bitOpcodeHandler0x06;
+    bitOpcodeHandlers[0x07] = &CPUZ80::bitOpcodeHandler0x07;
+    bitOpcodeHandlers[0x08] = &CPUZ80::bitOpcodeHandler0x08;
+    bitOpcodeHandlers[0x09] = &CPUZ80::bitOpcodeHandler0x09;
+    bitOpcodeHandlers[0x0A] = &CPUZ80::bitOpcodeHandler0x0A;
+    bitOpcodeHandlers[0x0B] = &CPUZ80::bitOpcodeHandler0x0B;
+    bitOpcodeHandlers[0x0C] = &CPUZ80::bitOpcodeHandler0x0C;
+    bitOpcodeHandlers[0x0D] = &CPUZ80::bitOpcodeHandler0x0D;
+    bitOpcodeHandlers[0x0E] = &CPUZ80::bitOpcodeHandler0x0E;
+    bitOpcodeHandlers[0x0F] = &CPUZ80::bitOpcodeHandler0x0F;
+    bitOpcodeHandlers[0x10] = &CPUZ80::bitOpcodeHandler0x10;
+    bitOpcodeHandlers[0x11] = &CPUZ80::bitOpcodeHandler0x11;
+    bitOpcodeHandlers[0x12] = &CPUZ80::bitOpcodeHandler0x12;
+    bitOpcodeHandlers[0x13] = &CPUZ80::bitOpcodeHandler0x13;
+    bitOpcodeHandlers[0x14] = &CPUZ80::bitOpcodeHandler0x14;
+    bitOpcodeHandlers[0x15] = &CPUZ80::bitOpcodeHandler0x15;
+    bitOpcodeHandlers[0x16] = &CPUZ80::bitOpcodeHandler0x16;
+    bitOpcodeHandlers[0x17] = &CPUZ80::bitOpcodeHandler0x17;
+    bitOpcodeHandlers[0x18] = &CPUZ80::bitOpcodeHandler0x18;
+    bitOpcodeHandlers[0x19] = &CPUZ80::bitOpcodeHandler0x19;
+    bitOpcodeHandlers[0x1A] = &CPUZ80::bitOpcodeHandler0x1A;
+    bitOpcodeHandlers[0x1B] = &CPUZ80::bitOpcodeHandler0x1B;
+    bitOpcodeHandlers[0x1C] = &CPUZ80::bitOpcodeHandler0x1C;
+    bitOpcodeHandlers[0x1D] = &CPUZ80::bitOpcodeHandler0x1D;
+    bitOpcodeHandlers[0x1E] = &CPUZ80::bitOpcodeHandler0x1E;
+    bitOpcodeHandlers[0x1F] = &CPUZ80::bitOpcodeHandler0x1F;
+    bitOpcodeHandlers[0x20] = &CPUZ80::bitOpcodeHandler0x20;
+    bitOpcodeHandlers[0x21] = &CPUZ80::bitOpcodeHandler0x21;
+    bitOpcodeHandlers[0x22] = &CPUZ80::bitOpcodeHandler0x22;
+    bitOpcodeHandlers[0x23] = &CPUZ80::bitOpcodeHandler0x23;
+    bitOpcodeHandlers[0x24] = &CPUZ80::bitOpcodeHandler0x24;
+    bitOpcodeHandlers[0x25] = &CPUZ80::bitOpcodeHandler0x25;
+    bitOpcodeHandlers[0x26] = &CPUZ80::bitOpcodeHandler0x26;
+    bitOpcodeHandlers[0x27] = &CPUZ80::bitOpcodeHandler0x27;
+    bitOpcodeHandlers[0x28] = &CPUZ80::bitOpcodeHandler0x28;
+    bitOpcodeHandlers[0x29] = &CPUZ80::bitOpcodeHandler0x29;
+    bitOpcodeHandlers[0x2A] = &CPUZ80::bitOpcodeHandler0x2A;
+    bitOpcodeHandlers[0x2B] = &CPUZ80::bitOpcodeHandler0x2B;
+    bitOpcodeHandlers[0x2C] = &CPUZ80::bitOpcodeHandler0x2C;
+    bitOpcodeHandlers[0x2D] = &CPUZ80::bitOpcodeHandler0x2D;
+    bitOpcodeHandlers[0x2E] = &CPUZ80::bitOpcodeHandler0x2E;
+    bitOpcodeHandlers[0x2F] = &CPUZ80::bitOpcodeHandler0x2F;
+    bitOpcodeHandlers[0x30] = &CPUZ80::bitOpcodeHandler0x30;
+    bitOpcodeHandlers[0x31] = &CPUZ80::bitOpcodeHandler0x31;
+    bitOpcodeHandlers[0x32] = &CPUZ80::bitOpcodeHandler0x32;
+    bitOpcodeHandlers[0x33] = &CPUZ80::bitOpcodeHandler0x33;
+    bitOpcodeHandlers[0x34] = &CPUZ80::bitOpcodeHandler0x34;
+    bitOpcodeHandlers[0x35] = &CPUZ80::bitOpcodeHandler0x35;
+    bitOpcodeHandlers[0x36] = &CPUZ80::bitOpcodeHandler0x36;
+    bitOpcodeHandlers[0x37] = &CPUZ80::bitOpcodeHandler0x37;
+    bitOpcodeHandlers[0x38] = &CPUZ80::bitOpcodeHandler0x38;
+    bitOpcodeHandlers[0x39] = &CPUZ80::bitOpcodeHandler0x39;
+    bitOpcodeHandlers[0x3A] = &CPUZ80::bitOpcodeHandler0x3A;
+    bitOpcodeHandlers[0x3B] = &CPUZ80::bitOpcodeHandler0x3B;
+    bitOpcodeHandlers[0x3C] = &CPUZ80::bitOpcodeHandler0x3C;
+    bitOpcodeHandlers[0x3D] = &CPUZ80::bitOpcodeHandler0x3D;
+    bitOpcodeHandlers[0x3E] = &CPUZ80::bitOpcodeHandler0x3E;
+    bitOpcodeHandlers[0x3F] = &CPUZ80::bitOpcodeHandler0x3F;
+    bitOpcodeHandlers[0x40] = &CPUZ80::bitOpcodeHandler0x40;
+    bitOpcodeHandlers[0x41] = &CPUZ80::bitOpcodeHandler0x41;
+    bitOpcodeHandlers[0x42] = &CPUZ80::bitOpcodeHandler0x42;
+    bitOpcodeHandlers[0x43] = &CPUZ80::bitOpcodeHandler0x43;
+    bitOpcodeHandlers[0x44] = &CPUZ80::bitOpcodeHandler0x44;
+    bitOpcodeHandlers[0x45] = &CPUZ80::bitOpcodeHandler0x45;
+    bitOpcodeHandlers[0x46] = &CPUZ80::bitOpcodeHandler0x46;
+    bitOpcodeHandlers[0x47] = &CPUZ80::bitOpcodeHandler0x47;
+    bitOpcodeHandlers[0x48] = &CPUZ80::bitOpcodeHandler0x48;
+    bitOpcodeHandlers[0x49] = &CPUZ80::bitOpcodeHandler0x49;
+    bitOpcodeHandlers[0x4A] = &CPUZ80::bitOpcodeHandler0x4A;
+    bitOpcodeHandlers[0x4B] = &CPUZ80::bitOpcodeHandler0x4B;
+    bitOpcodeHandlers[0x4C] = &CPUZ80::bitOpcodeHandler0x4C;
+    bitOpcodeHandlers[0x4D] = &CPUZ80::bitOpcodeHandler0x4D;
+    bitOpcodeHandlers[0x4E] = &CPUZ80::bitOpcodeHandler0x4E;
+    bitOpcodeHandlers[0x4F] = &CPUZ80::bitOpcodeHandler0x4F;
+    bitOpcodeHandlers[0x50] = &CPUZ80::bitOpcodeHandler0x50;
+    bitOpcodeHandlers[0x51] = &CPUZ80::bitOpcodeHandler0x51;
+    bitOpcodeHandlers[0x52] = &CPUZ80::bitOpcodeHandler0x52;
+    bitOpcodeHandlers[0x53] = &CPUZ80::bitOpcodeHandler0x53;
+    bitOpcodeHandlers[0x54] = &CPUZ80::bitOpcodeHandler0x54;
+    bitOpcodeHandlers[0x55] = &CPUZ80::bitOpcodeHandler0x55;
+    bitOpcodeHandlers[0x56] = &CPUZ80::bitOpcodeHandler0x56;
+    bitOpcodeHandlers[0x57] = &CPUZ80::bitOpcodeHandler0x57;
+    bitOpcodeHandlers[0x58] = &CPUZ80::bitOpcodeHandler0x58;
+    bitOpcodeHandlers[0x59] = &CPUZ80::bitOpcodeHandler0x59;
+    bitOpcodeHandlers[0x5A] = &CPUZ80::bitOpcodeHandler0x5A;
+    bitOpcodeHandlers[0x5B] = &CPUZ80::bitOpcodeHandler0x5B;
+    bitOpcodeHandlers[0x5C] = &CPUZ80::bitOpcodeHandler0x5C;
+    bitOpcodeHandlers[0x5D] = &CPUZ80::bitOpcodeHandler0x5D;
+    bitOpcodeHandlers[0x5E] = &CPUZ80::bitOpcodeHandler0x5E;
+    bitOpcodeHandlers[0x5F] = &CPUZ80::bitOpcodeHandler0x5F;
+    bitOpcodeHandlers[0x60] = &CPUZ80::bitOpcodeHandler0x60;
+    bitOpcodeHandlers[0x61] = &CPUZ80::bitOpcodeHandler0x61;
+    bitOpcodeHandlers[0x62] = &CPUZ80::bitOpcodeHandler0x62;
+    bitOpcodeHandlers[0x63] = &CPUZ80::bitOpcodeHandler0x63;
+    bitOpcodeHandlers[0x64] = &CPUZ80::bitOpcodeHandler0x64;
+    bitOpcodeHandlers[0x65] = &CPUZ80::bitOpcodeHandler0x65;
+    bitOpcodeHandlers[0x66] = &CPUZ80::bitOpcodeHandler0x66;
+    bitOpcodeHandlers[0x67] = &CPUZ80::bitOpcodeHandler0x67;
+    bitOpcodeHandlers[0x68] = &CPUZ80::bitOpcodeHandler0x68;
+    bitOpcodeHandlers[0x69] = &CPUZ80::bitOpcodeHandler0x69;
+    bitOpcodeHandlers[0x6A] = &CPUZ80::bitOpcodeHandler0x6A;
+    bitOpcodeHandlers[0x6B] = &CPUZ80::bitOpcodeHandler0x6B;
+    bitOpcodeHandlers[0x6C] = &CPUZ80::bitOpcodeHandler0x6C;
+    bitOpcodeHandlers[0x6D] = &CPUZ80::bitOpcodeHandler0x6D;
+    bitOpcodeHandlers[0x6E] = &CPUZ80::bitOpcodeHandler0x6E;
+    bitOpcodeHandlers[0x6F] = &CPUZ80::bitOpcodeHandler0x6F;
+    bitOpcodeHandlers[0x70] = &CPUZ80::bitOpcodeHandler0x70;
+    bitOpcodeHandlers[0x71] = &CPUZ80::bitOpcodeHandler0x71;
+    bitOpcodeHandlers[0x72] = &CPUZ80::bitOpcodeHandler0x72;
+    bitOpcodeHandlers[0x73] = &CPUZ80::bitOpcodeHandler0x73;
+    bitOpcodeHandlers[0x74] = &CPUZ80::bitOpcodeHandler0x74;
+    bitOpcodeHandlers[0x75] = &CPUZ80::bitOpcodeHandler0x75;
+    bitOpcodeHandlers[0x76] = &CPUZ80::bitOpcodeHandler0x76;
+    bitOpcodeHandlers[0x77] = &CPUZ80::bitOpcodeHandler0x77;
+    bitOpcodeHandlers[0x78] = &CPUZ80::bitOpcodeHandler0x78;
+    bitOpcodeHandlers[0x79] = &CPUZ80::bitOpcodeHandler0x79;
+    bitOpcodeHandlers[0x7A] = &CPUZ80::bitOpcodeHandler0x7A;
+    bitOpcodeHandlers[0x7B] = &CPUZ80::bitOpcodeHandler0x7B;
+    bitOpcodeHandlers[0x7C] = &CPUZ80::bitOpcodeHandler0x7C;
+    bitOpcodeHandlers[0x7D] = &CPUZ80::bitOpcodeHandler0x7D;
+    bitOpcodeHandlers[0x7E] = &CPUZ80::bitOpcodeHandler0x7E;
+    bitOpcodeHandlers[0x7F] = &CPUZ80::bitOpcodeHandler0x7F;
+    bitOpcodeHandlers[0x80] = &CPUZ80::bitOpcodeHandler0x80;
+    bitOpcodeHandlers[0x81] = &CPUZ80::bitOpcodeHandler0x81;
+    bitOpcodeHandlers[0x82] = &CPUZ80::bitOpcodeHandler0x82;
+    bitOpcodeHandlers[0x83] = &CPUZ80::bitOpcodeHandler0x83;
+    bitOpcodeHandlers[0x84] = &CPUZ80::bitOpcodeHandler0x84;
+    bitOpcodeHandlers[0x85] = &CPUZ80::bitOpcodeHandler0x85;
+    bitOpcodeHandlers[0x86] = &CPUZ80::bitOpcodeHandler0x86;
+    bitOpcodeHandlers[0x87] = &CPUZ80::bitOpcodeHandler0x87;
+    bitOpcodeHandlers[0x88] = &CPUZ80::bitOpcodeHandler0x88;
+    bitOpcodeHandlers[0x89] = &CPUZ80::bitOpcodeHandler0x89;
+    bitOpcodeHandlers[0x8A] = &CPUZ80::bitOpcodeHandler0x8A;
+    bitOpcodeHandlers[0x8B] = &CPUZ80::bitOpcodeHandler0x8B;
+    bitOpcodeHandlers[0x8C] = &CPUZ80::bitOpcodeHandler0x8C;
+    bitOpcodeHandlers[0x8D] = &CPUZ80::bitOpcodeHandler0x8D;
+    bitOpcodeHandlers[0x8E] = &CPUZ80::bitOpcodeHandler0x8E;
+    bitOpcodeHandlers[0x8F] = &CPUZ80::bitOpcodeHandler0x8F;
+    bitOpcodeHandlers[0x90] = &CPUZ80::bitOpcodeHandler0x90;
+    bitOpcodeHandlers[0x91] = &CPUZ80::bitOpcodeHandler0x91;
+    bitOpcodeHandlers[0x92] = &CPUZ80::bitOpcodeHandler0x92;
+    bitOpcodeHandlers[0x93] = &CPUZ80::bitOpcodeHandler0x93;
+    bitOpcodeHandlers[0x94] = &CPUZ80::bitOpcodeHandler0x94;
+    bitOpcodeHandlers[0x95] = &CPUZ80::bitOpcodeHandler0x95;
+    bitOpcodeHandlers[0x96] = &CPUZ80::bitOpcodeHandler0x96;
+    bitOpcodeHandlers[0x97] = &CPUZ80::bitOpcodeHandler0x97;
+    bitOpcodeHandlers[0x98] = &CPUZ80::bitOpcodeHandler0x98;
+    bitOpcodeHandlers[0x99] = &CPUZ80::bitOpcodeHandler0x99;
+    bitOpcodeHandlers[0x9A] = &CPUZ80::bitOpcodeHandler0x9A;
+    bitOpcodeHandlers[0x9B] = &CPUZ80::bitOpcodeHandler0x9B;
+    bitOpcodeHandlers[0x9C] = &CPUZ80::bitOpcodeHandler0x9C;
+    bitOpcodeHandlers[0x9D] = &CPUZ80::bitOpcodeHandler0x9D;
+    bitOpcodeHandlers[0x9E] = &CPUZ80::bitOpcodeHandler0x9E;
+    bitOpcodeHandlers[0x9F] = &CPUZ80::bitOpcodeHandler0x9F;
+    bitOpcodeHandlers[0xA0] = &CPUZ80::bitOpcodeHandler0xA0;
+    bitOpcodeHandlers[0xA1] = &CPUZ80::bitOpcodeHandler0xA1;
+    bitOpcodeHandlers[0xA2] = &CPUZ80::bitOpcodeHandler0xA2;
+    bitOpcodeHandlers[0xA3] = &CPUZ80::bitOpcodeHandler0xA3;
+    bitOpcodeHandlers[0xA4] = &CPUZ80::bitOpcodeHandler0xA4;
+    bitOpcodeHandlers[0xA5] = &CPUZ80::bitOpcodeHandler0xA5;
+    bitOpcodeHandlers[0xA6] = &CPUZ80::bitOpcodeHandler0xA6;
+    bitOpcodeHandlers[0xA7] = &CPUZ80::bitOpcodeHandler0xA7;
+    bitOpcodeHandlers[0xA8] = &CPUZ80::bitOpcodeHandler0xA8;
+    bitOpcodeHandlers[0xA9] = &CPUZ80::bitOpcodeHandler0xA9;
+    bitOpcodeHandlers[0xAA] = &CPUZ80::bitOpcodeHandler0xAA;
+    bitOpcodeHandlers[0xAB] = &CPUZ80::bitOpcodeHandler0xAB;
+    bitOpcodeHandlers[0xAC] = &CPUZ80::bitOpcodeHandler0xAC;
+    bitOpcodeHandlers[0xAD] = &CPUZ80::bitOpcodeHandler0xAD;
+    bitOpcodeHandlers[0xAE] = &CPUZ80::bitOpcodeHandler0xAE;
+    bitOpcodeHandlers[0xAF] = &CPUZ80::bitOpcodeHandler0xAF;
+    bitOpcodeHandlers[0xB0] = &CPUZ80::bitOpcodeHandler0xB0;
+    bitOpcodeHandlers[0xB1] = &CPUZ80::bitOpcodeHandler0xB1;
+    bitOpcodeHandlers[0xB2] = &CPUZ80::bitOpcodeHandler0xB2;
+    bitOpcodeHandlers[0xB3] = &CPUZ80::bitOpcodeHandler0xB3;
+    bitOpcodeHandlers[0xB4] = &CPUZ80::bitOpcodeHandler0xB4;
+    bitOpcodeHandlers[0xB5] = &CPUZ80::bitOpcodeHandler0xB5;
+    bitOpcodeHandlers[0xB6] = &CPUZ80::bitOpcodeHandler0xB6;
+    bitOpcodeHandlers[0xB7] = &CPUZ80::bitOpcodeHandler0xB7;
+    bitOpcodeHandlers[0xB8] = &CPUZ80::bitOpcodeHandler0xB8;
+    bitOpcodeHandlers[0xB9] = &CPUZ80::bitOpcodeHandler0xB9;
+    bitOpcodeHandlers[0xBA] = &CPUZ80::bitOpcodeHandler0xBA;
+    bitOpcodeHandlers[0xBB] = &CPUZ80::bitOpcodeHandler0xBB;
+    bitOpcodeHandlers[0xBC] = &CPUZ80::bitOpcodeHandler0xBC;
+    bitOpcodeHandlers[0xBD] = &CPUZ80::bitOpcodeHandler0xBD;
+    bitOpcodeHandlers[0xBE] = &CPUZ80::bitOpcodeHandler0xBE;
+    bitOpcodeHandlers[0xBF] = &CPUZ80::bitOpcodeHandler0xBF;
+    bitOpcodeHandlers[0xC0] = &CPUZ80::bitOpcodeHandler0xC0;
+    bitOpcodeHandlers[0xC1] = &CPUZ80::bitOpcodeHandler0xC1;
+    bitOpcodeHandlers[0xC2] = &CPUZ80::bitOpcodeHandler0xC2;
+    bitOpcodeHandlers[0xC3] = &CPUZ80::bitOpcodeHandler0xC3;
+    bitOpcodeHandlers[0xC4] = &CPUZ80::bitOpcodeHandler0xC4;
+    bitOpcodeHandlers[0xC5] = &CPUZ80::bitOpcodeHandler0xC5;
+    bitOpcodeHandlers[0xC6] = &CPUZ80::bitOpcodeHandler0xC6;
+    bitOpcodeHandlers[0xC7] = &CPUZ80::bitOpcodeHandler0xC7;
+    bitOpcodeHandlers[0xC8] = &CPUZ80::bitOpcodeHandler0xC8;
+    bitOpcodeHandlers[0xC9] = &CPUZ80::bitOpcodeHandler0xC9;
+    bitOpcodeHandlers[0xCA] = &CPUZ80::bitOpcodeHandler0xCA;
+    bitOpcodeHandlers[0xCB] = &CPUZ80::bitOpcodeHandler0xCB;
+    bitOpcodeHandlers[0xCC] = &CPUZ80::bitOpcodeHandler0xCC;
+    bitOpcodeHandlers[0xCD] = &CPUZ80::bitOpcodeHandler0xCD;
+    bitOpcodeHandlers[0xCE] = &CPUZ80::bitOpcodeHandler0xCE;
+    bitOpcodeHandlers[0xCF] = &CPUZ80::bitOpcodeHandler0xCF;
+    bitOpcodeHandlers[0xD0] = &CPUZ80::bitOpcodeHandler0xD0;
+    bitOpcodeHandlers[0xD1] = &CPUZ80::bitOpcodeHandler0xD1;
+    bitOpcodeHandlers[0xD2] = &CPUZ80::bitOpcodeHandler0xD2;
+    bitOpcodeHandlers[0xD3] = &CPUZ80::bitOpcodeHandler0xD3;
+    bitOpcodeHandlers[0xD4] = &CPUZ80::bitOpcodeHandler0xD4;
+    bitOpcodeHandlers[0xD5] = &CPUZ80::bitOpcodeHandler0xD5;
+    bitOpcodeHandlers[0xD6] = &CPUZ80::bitOpcodeHandler0xD6;
+    bitOpcodeHandlers[0xD7] = &CPUZ80::bitOpcodeHandler0xD7;
+    bitOpcodeHandlers[0xD8] = &CPUZ80::bitOpcodeHandler0xD8;
+    bitOpcodeHandlers[0xD9] = &CPUZ80::bitOpcodeHandler0xD9;
+    bitOpcodeHandlers[0xDA] = &CPUZ80::bitOpcodeHandler0xDA;
+    bitOpcodeHandlers[0xDB] = &CPUZ80::bitOpcodeHandler0xDB;
+    bitOpcodeHandlers[0xDC] = &CPUZ80::bitOpcodeHandler0xDC;
+    bitOpcodeHandlers[0xDD] = &CPUZ80::bitOpcodeHandler0xDD;
+    bitOpcodeHandlers[0xDE] = &CPUZ80::bitOpcodeHandler0xDE;
+    bitOpcodeHandlers[0xDF] = &CPUZ80::bitOpcodeHandler0xDF;
+    bitOpcodeHandlers[0xE0] = &CPUZ80::bitOpcodeHandler0xE0;
+    bitOpcodeHandlers[0xE1] = &CPUZ80::bitOpcodeHandler0xE1;
+    bitOpcodeHandlers[0xE2] = &CPUZ80::bitOpcodeHandler0xE2;
+    bitOpcodeHandlers[0xE3] = &CPUZ80::bitOpcodeHandler0xE3;
+    bitOpcodeHandlers[0xE4] = &CPUZ80::bitOpcodeHandler0xE4;
+    bitOpcodeHandlers[0xE5] = &CPUZ80::bitOpcodeHandler0xE5;
+    bitOpcodeHandlers[0xE6] = &CPUZ80::bitOpcodeHandler0xE6;
+    bitOpcodeHandlers[0xE7] = &CPUZ80::bitOpcodeHandler0xE7;
+    bitOpcodeHandlers[0xE8] = &CPUZ80::bitOpcodeHandler0xE8;
+    bitOpcodeHandlers[0xE9] = &CPUZ80::bitOpcodeHandler0xE9;
+    bitOpcodeHandlers[0xEA] = &CPUZ80::bitOpcodeHandler0xEA;
+    bitOpcodeHandlers[0xEB] = &CPUZ80::bitOpcodeHandler0xEB;
+    bitOpcodeHandlers[0xEC] = &CPUZ80::bitOpcodeHandler0xEC;
+    bitOpcodeHandlers[0xED] = &CPUZ80::bitOpcodeHandler0xED;
+    bitOpcodeHandlers[0xEE] = &CPUZ80::bitOpcodeHandler0xEE;
+    bitOpcodeHandlers[0xEF] = &CPUZ80::bitOpcodeHandler0xEF;
+    bitOpcodeHandlers[0xF0] = &CPUZ80::bitOpcodeHandler0xF0;
+    bitOpcodeHandlers[0xF1] = &CPUZ80::bitOpcodeHandler0xF1;
+    bitOpcodeHandlers[0xF2] = &CPUZ80::bitOpcodeHandler0xF2;
+    bitOpcodeHandlers[0xF3] = &CPUZ80::bitOpcodeHandler0xF3;
+    bitOpcodeHandlers[0xF4] = &CPUZ80::bitOpcodeHandler0xF4;
+    bitOpcodeHandlers[0xF5] = &CPUZ80::bitOpcodeHandler0xF5;
+    bitOpcodeHandlers[0xF6] = &CPUZ80::bitOpcodeHandler0xF6;
+    bitOpcodeHandlers[0xF7] = &CPUZ80::bitOpcodeHandler0xF7;
+    bitOpcodeHandlers[0xF8] = &CPUZ80::bitOpcodeHandler0xF8;
+    bitOpcodeHandlers[0xF9] = &CPUZ80::bitOpcodeHandler0xF9;
+    bitOpcodeHandlers[0xFA] = &CPUZ80::bitOpcodeHandler0xFA;
+    bitOpcodeHandlers[0xFB] = &CPUZ80::bitOpcodeHandler0xFB;
+    bitOpcodeHandlers[0xFC] = &CPUZ80::bitOpcodeHandler0xFC;
+    bitOpcodeHandlers[0xFD] = &CPUZ80::bitOpcodeHandler0xFD;
+    bitOpcodeHandlers[0xFE] = &CPUZ80::bitOpcodeHandler0xFE;
+    bitOpcodeHandlers[0xFF] = &CPUZ80::bitOpcodeHandler0xFF;
+
+    for (int i = 0; i < 0xFF; i++) {
+        // Not every possible number for extended opcodes is valid
+        indexOpcodeHandlers[i] = &CPUZ80::invalidIndexOpcodeHandler;
+    }
+
+    indexOpcodeHandlers[0x04] = &CPUZ80::indexOpcodeHandler0x04;
+    indexOpcodeHandlers[0x05] = &CPUZ80::indexOpcodeHandler0x05;
+    indexOpcodeHandlers[0x06] = &CPUZ80::indexOpcodeHandler0x06;
+    indexOpcodeHandlers[0x09] = &CPUZ80::indexOpcodeHandler0x09;
+    indexOpcodeHandlers[0x0C] = &CPUZ80::indexOpcodeHandler0x0C;
+    indexOpcodeHandlers[0x0D] = &CPUZ80::indexOpcodeHandler0x0D;
+    indexOpcodeHandlers[0x0E] = &CPUZ80::indexOpcodeHandler0x0E;
+    indexOpcodeHandlers[0x14] = &CPUZ80::indexOpcodeHandler0x14;
+    indexOpcodeHandlers[0x15] = &CPUZ80::indexOpcodeHandler0x15;
+    indexOpcodeHandlers[0x16] = &CPUZ80::indexOpcodeHandler0x16;
+    indexOpcodeHandlers[0x19] = &CPUZ80::indexOpcodeHandler0x19;
+    indexOpcodeHandlers[0x1C] = &CPUZ80::indexOpcodeHandler0x1C;
+    indexOpcodeHandlers[0x1D] = &CPUZ80::indexOpcodeHandler0x1D;
+    indexOpcodeHandlers[0x1E] = &CPUZ80::indexOpcodeHandler0x1E;
+    indexOpcodeHandlers[0x21] = &CPUZ80::indexOpcodeHandler0x21;
+    indexOpcodeHandlers[0x22] = &CPUZ80::indexOpcodeHandler0x22;
+    indexOpcodeHandlers[0x23] = &CPUZ80::indexOpcodeHandler0x23;
+    indexOpcodeHandlers[0x24] = &CPUZ80::indexOpcodeHandler0x24;
+    indexOpcodeHandlers[0x25] = &CPUZ80::indexOpcodeHandler0x25;
+    indexOpcodeHandlers[0x26] = &CPUZ80::indexOpcodeHandler0x26;
+    indexOpcodeHandlers[0x29] = &CPUZ80::indexOpcodeHandler0x29;
+    indexOpcodeHandlers[0x2A] = &CPUZ80::indexOpcodeHandler0x2A;
+    indexOpcodeHandlers[0x2B] = &CPUZ80::indexOpcodeHandler0x2B;
+    indexOpcodeHandlers[0x2C] = &CPUZ80::indexOpcodeHandler0x2C;
+    indexOpcodeHandlers[0x2D] = &CPUZ80::indexOpcodeHandler0x2D;
+    indexOpcodeHandlers[0x2E] = &CPUZ80::indexOpcodeHandler0x2E;
+    indexOpcodeHandlers[0x34] = &CPUZ80::indexOpcodeHandler0x34;
+    indexOpcodeHandlers[0x35] = &CPUZ80::indexOpcodeHandler0x35;
+    indexOpcodeHandlers[0x36] = &CPUZ80::indexOpcodeHandler0x36;
+    indexOpcodeHandlers[0x39] = &CPUZ80::indexOpcodeHandler0x39;
+    indexOpcodeHandlers[0x3C] = &CPUZ80::indexOpcodeHandler0x3C;
+    indexOpcodeHandlers[0x3D] = &CPUZ80::indexOpcodeHandler0x3D;
+    indexOpcodeHandlers[0x3E] = &CPUZ80::indexOpcodeHandler0x3E;
+    indexOpcodeHandlers[0x40] = &CPUZ80::indexOpcodeHandler0x40;
+    indexOpcodeHandlers[0x41] = &CPUZ80::indexOpcodeHandler0x41;
+    indexOpcodeHandlers[0x42] = &CPUZ80::indexOpcodeHandler0x42;
+    indexOpcodeHandlers[0x43] = &CPUZ80::indexOpcodeHandler0x43;
+    indexOpcodeHandlers[0x44] = &CPUZ80::indexOpcodeHandler0x44;
+    indexOpcodeHandlers[0x45] = &CPUZ80::indexOpcodeHandler0x45;
+    indexOpcodeHandlers[0x46] = &CPUZ80::indexOpcodeHandler0x46;
+    indexOpcodeHandlers[0x47] = &CPUZ80::indexOpcodeHandler0x47;
+    indexOpcodeHandlers[0x48] = &CPUZ80::indexOpcodeHandler0x48;
+    indexOpcodeHandlers[0x49] = &CPUZ80::indexOpcodeHandler0x49;
+    indexOpcodeHandlers[0x4A] = &CPUZ80::indexOpcodeHandler0x4A;
+    indexOpcodeHandlers[0x4B] = &CPUZ80::indexOpcodeHandler0x4B;
+    indexOpcodeHandlers[0x4C] = &CPUZ80::indexOpcodeHandler0x4C;
+    indexOpcodeHandlers[0x4D] = &CPUZ80::indexOpcodeHandler0x4D;
+    indexOpcodeHandlers[0x4E] = &CPUZ80::indexOpcodeHandler0x4E;
+    indexOpcodeHandlers[0x4F] = &CPUZ80::indexOpcodeHandler0x4F;
+    indexOpcodeHandlers[0x50] = &CPUZ80::indexOpcodeHandler0x50;
+    indexOpcodeHandlers[0x51] = &CPUZ80::indexOpcodeHandler0x51;
+    indexOpcodeHandlers[0x52] = &CPUZ80::indexOpcodeHandler0x52;
+    indexOpcodeHandlers[0x53] = &CPUZ80::indexOpcodeHandler0x53;
+    indexOpcodeHandlers[0x54] = &CPUZ80::indexOpcodeHandler0x54;
+    indexOpcodeHandlers[0x55] = &CPUZ80::indexOpcodeHandler0x55;
+    indexOpcodeHandlers[0x56] = &CPUZ80::indexOpcodeHandler0x56;
+    indexOpcodeHandlers[0x57] = &CPUZ80::indexOpcodeHandler0x57;
+    indexOpcodeHandlers[0x58] = &CPUZ80::indexOpcodeHandler0x58;
+    indexOpcodeHandlers[0x59] = &CPUZ80::indexOpcodeHandler0x59;
+    indexOpcodeHandlers[0x5A] = &CPUZ80::indexOpcodeHandler0x5A;
+    indexOpcodeHandlers[0x5B] = &CPUZ80::indexOpcodeHandler0x5B;
+    indexOpcodeHandlers[0x5C] = &CPUZ80::indexOpcodeHandler0x5C;
+    indexOpcodeHandlers[0x5D] = &CPUZ80::indexOpcodeHandler0x5D;
+    indexOpcodeHandlers[0x5E] = &CPUZ80::indexOpcodeHandler0x5E;
+    indexOpcodeHandlers[0x5F] = &CPUZ80::indexOpcodeHandler0x5F;
+    indexOpcodeHandlers[0x60] = &CPUZ80::indexOpcodeHandler0x60;
+    indexOpcodeHandlers[0x61] = &CPUZ80::indexOpcodeHandler0x61;
+    indexOpcodeHandlers[0x62] = &CPUZ80::indexOpcodeHandler0x62;
+    indexOpcodeHandlers[0x63] = &CPUZ80::indexOpcodeHandler0x63;
+    indexOpcodeHandlers[0x64] = &CPUZ80::indexOpcodeHandler0x64;
+    indexOpcodeHandlers[0x65] = &CPUZ80::indexOpcodeHandler0x65;
+    indexOpcodeHandlers[0x66] = &CPUZ80::indexOpcodeHandler0x66;
+    indexOpcodeHandlers[0x67] = &CPUZ80::indexOpcodeHandler0x67;
+    indexOpcodeHandlers[0x68] = &CPUZ80::indexOpcodeHandler0x68;
+    indexOpcodeHandlers[0x69] = &CPUZ80::indexOpcodeHandler0x69;
+    indexOpcodeHandlers[0x6A] = &CPUZ80::indexOpcodeHandler0x6A;
+    indexOpcodeHandlers[0x6B] = &CPUZ80::indexOpcodeHandler0x6B;
+    indexOpcodeHandlers[0x6C] = &CPUZ80::indexOpcodeHandler0x6C;
+    indexOpcodeHandlers[0x6D] = &CPUZ80::indexOpcodeHandler0x6D;
+    indexOpcodeHandlers[0x6E] = &CPUZ80::indexOpcodeHandler0x6E;
+    indexOpcodeHandlers[0x6F] = &CPUZ80::indexOpcodeHandler0x6F;
+    indexOpcodeHandlers[0x70] = &CPUZ80::indexOpcodeHandler0x70;
+    indexOpcodeHandlers[0x71] = &CPUZ80::indexOpcodeHandler0x71;
+    indexOpcodeHandlers[0x72] = &CPUZ80::indexOpcodeHandler0x72;
+    indexOpcodeHandlers[0x73] = &CPUZ80::indexOpcodeHandler0x73;
+    indexOpcodeHandlers[0x74] = &CPUZ80::indexOpcodeHandler0x74;
+    indexOpcodeHandlers[0x75] = &CPUZ80::indexOpcodeHandler0x75;
+    indexOpcodeHandlers[0x77] = &CPUZ80::indexOpcodeHandler0x77;
+    indexOpcodeHandlers[0x78] = &CPUZ80::indexOpcodeHandler0x78;
+    indexOpcodeHandlers[0x79] = &CPUZ80::indexOpcodeHandler0x79;
+    indexOpcodeHandlers[0x7A] = &CPUZ80::indexOpcodeHandler0x7A;
+    indexOpcodeHandlers[0x7B] = &CPUZ80::indexOpcodeHandler0x7B;
+    indexOpcodeHandlers[0x7C] = &CPUZ80::indexOpcodeHandler0x7C;
+    indexOpcodeHandlers[0x7D] = &CPUZ80::indexOpcodeHandler0x7D;
+    indexOpcodeHandlers[0x7E] = &CPUZ80::indexOpcodeHandler0x7E;
+    indexOpcodeHandlers[0x7F] = &CPUZ80::indexOpcodeHandler0x7F;
+    indexOpcodeHandlers[0x80] = &CPUZ80::indexOpcodeHandler0x80;
+    indexOpcodeHandlers[0x81] = &CPUZ80::indexOpcodeHandler0x81;
+    indexOpcodeHandlers[0x82] = &CPUZ80::indexOpcodeHandler0x82;
+    indexOpcodeHandlers[0x83] = &CPUZ80::indexOpcodeHandler0x83;
+    indexOpcodeHandlers[0x84] = &CPUZ80::indexOpcodeHandler0x84;
+    indexOpcodeHandlers[0x85] = &CPUZ80::indexOpcodeHandler0x85;
+    indexOpcodeHandlers[0x86] = &CPUZ80::indexOpcodeHandler0x86;
+    indexOpcodeHandlers[0x87] = &CPUZ80::indexOpcodeHandler0x87;
+    indexOpcodeHandlers[0x88] = &CPUZ80::indexOpcodeHandler0x88;
+    indexOpcodeHandlers[0x89] = &CPUZ80::indexOpcodeHandler0x89;
+    indexOpcodeHandlers[0x8A] = &CPUZ80::indexOpcodeHandler0x8A;
+    indexOpcodeHandlers[0x8B] = &CPUZ80::indexOpcodeHandler0x8B;
+    indexOpcodeHandlers[0x8C] = &CPUZ80::indexOpcodeHandler0x8C;
+    indexOpcodeHandlers[0x8D] = &CPUZ80::indexOpcodeHandler0x8D;
+    indexOpcodeHandlers[0x8E] = &CPUZ80::indexOpcodeHandler0x8E;
+    indexOpcodeHandlers[0x8F] = &CPUZ80::indexOpcodeHandler0x8F;
+    indexOpcodeHandlers[0x90] = &CPUZ80::indexOpcodeHandler0x90;
+    indexOpcodeHandlers[0x91] = &CPUZ80::indexOpcodeHandler0x91;
+    indexOpcodeHandlers[0x92] = &CPUZ80::indexOpcodeHandler0x92;
+    indexOpcodeHandlers[0x93] = &CPUZ80::indexOpcodeHandler0x93;
+    indexOpcodeHandlers[0x94] = &CPUZ80::indexOpcodeHandler0x94;
+    indexOpcodeHandlers[0x95] = &CPUZ80::indexOpcodeHandler0x95;
+    indexOpcodeHandlers[0x96] = &CPUZ80::indexOpcodeHandler0x96;
+    indexOpcodeHandlers[0x97] = &CPUZ80::indexOpcodeHandler0x97;
+    indexOpcodeHandlers[0x98] = &CPUZ80::indexOpcodeHandler0x98;
+    indexOpcodeHandlers[0x99] = &CPUZ80::indexOpcodeHandler0x99;
+    indexOpcodeHandlers[0x9A] = &CPUZ80::indexOpcodeHandler0x9A;
+    indexOpcodeHandlers[0x9B] = &CPUZ80::indexOpcodeHandler0x9B;
+    indexOpcodeHandlers[0x9C] = &CPUZ80::indexOpcodeHandler0x9C;
+    indexOpcodeHandlers[0x9D] = &CPUZ80::indexOpcodeHandler0x9D;
+    indexOpcodeHandlers[0x9E] = &CPUZ80::indexOpcodeHandler0x9E;
+    indexOpcodeHandlers[0x9F] = &CPUZ80::indexOpcodeHandler0x9F;
+    indexOpcodeHandlers[0xA0] = &CPUZ80::indexOpcodeHandler0xA0;
+    indexOpcodeHandlers[0xA1] = &CPUZ80::indexOpcodeHandler0xA1;
+    indexOpcodeHandlers[0xA2] = &CPUZ80::indexOpcodeHandler0xA2;
+    indexOpcodeHandlers[0xA3] = &CPUZ80::indexOpcodeHandler0xA3;
+    indexOpcodeHandlers[0xA4] = &CPUZ80::indexOpcodeHandler0xA4;
+    indexOpcodeHandlers[0xA5] = &CPUZ80::indexOpcodeHandler0xA5;
+    indexOpcodeHandlers[0xA6] = &CPUZ80::indexOpcodeHandler0xA6;
+    indexOpcodeHandlers[0xA7] = &CPUZ80::indexOpcodeHandler0xA7;
+    indexOpcodeHandlers[0xA8] = &CPUZ80::indexOpcodeHandler0xA8;
+    indexOpcodeHandlers[0xA9] = &CPUZ80::indexOpcodeHandler0xA9;
+    indexOpcodeHandlers[0xAA] = &CPUZ80::indexOpcodeHandler0xAA;
+    indexOpcodeHandlers[0xAB] = &CPUZ80::indexOpcodeHandler0xAB;
+    indexOpcodeHandlers[0xAC] = &CPUZ80::indexOpcodeHandler0xAC;
+    indexOpcodeHandlers[0xAD] = &CPUZ80::indexOpcodeHandler0xAD;
+    indexOpcodeHandlers[0xAE] = &CPUZ80::indexOpcodeHandler0xAE;
+    indexOpcodeHandlers[0xAF] = &CPUZ80::indexOpcodeHandler0xAF;
+    indexOpcodeHandlers[0xB0] = &CPUZ80::indexOpcodeHandler0xB0;
+    indexOpcodeHandlers[0xB1] = &CPUZ80::indexOpcodeHandler0xB1;
+    indexOpcodeHandlers[0xB2] = &CPUZ80::indexOpcodeHandler0xB2;
+    indexOpcodeHandlers[0xB3] = &CPUZ80::indexOpcodeHandler0xB3;
+    indexOpcodeHandlers[0xB4] = &CPUZ80::indexOpcodeHandler0xB4;
+    indexOpcodeHandlers[0xB5] = &CPUZ80::indexOpcodeHandler0xB5;
+    indexOpcodeHandlers[0xB6] = &CPUZ80::indexOpcodeHandler0xB6;
+    indexOpcodeHandlers[0xB7] = &CPUZ80::indexOpcodeHandler0xB7;
+    indexOpcodeHandlers[0xB8] = &CPUZ80::indexOpcodeHandler0xB8;
+    indexOpcodeHandlers[0xB9] = &CPUZ80::indexOpcodeHandler0xB9;
+    indexOpcodeHandlers[0xBA] = &CPUZ80::indexOpcodeHandler0xBA;
+    indexOpcodeHandlers[0xBB] = &CPUZ80::indexOpcodeHandler0xBB;
+    indexOpcodeHandlers[0xBC] = &CPUZ80::indexOpcodeHandler0xBC;
+    indexOpcodeHandlers[0xBD] = &CPUZ80::indexOpcodeHandler0xBD;
+    indexOpcodeHandlers[0xBE] = &CPUZ80::indexOpcodeHandler0xBE;
+    indexOpcodeHandlers[0xBF] = &CPUZ80::indexOpcodeHandler0xBF;
+    indexOpcodeHandlers[0xCB] = &CPUZ80::indexOpcodeHandler0xCB;
+    indexOpcodeHandlers[0xE1] = &CPUZ80::indexOpcodeHandler0xE1;
+    indexOpcodeHandlers[0xE3] = &CPUZ80::indexOpcodeHandler0xE3;
+    indexOpcodeHandlers[0xE5] = &CPUZ80::indexOpcodeHandler0xE5;
+    indexOpcodeHandlers[0xE9] = &CPUZ80::indexOpcodeHandler0xE9;
+    indexOpcodeHandlers[0xF9] = &CPUZ80::indexOpcodeHandler0xF9;
+
+    indexBitOpcodeHandlers[0x00] = &CPUZ80::indexBitOpcodeHandler0x00;
+    indexBitOpcodeHandlers[0x01] = &CPUZ80::indexBitOpcodeHandler0x01;
+    indexBitOpcodeHandlers[0x02] = &CPUZ80::indexBitOpcodeHandler0x02;
+    indexBitOpcodeHandlers[0x03] = &CPUZ80::indexBitOpcodeHandler0x03;
+    indexBitOpcodeHandlers[0x04] = &CPUZ80::indexBitOpcodeHandler0x04;
+    indexBitOpcodeHandlers[0x05] = &CPUZ80::indexBitOpcodeHandler0x05;
+    indexBitOpcodeHandlers[0x06] = &CPUZ80::indexBitOpcodeHandler0x06;
+    indexBitOpcodeHandlers[0x07] = &CPUZ80::indexBitOpcodeHandler0x07;
+    indexBitOpcodeHandlers[0x08] = &CPUZ80::indexBitOpcodeHandler0x08;
+    indexBitOpcodeHandlers[0x09] = &CPUZ80::indexBitOpcodeHandler0x09;
+    indexBitOpcodeHandlers[0x0A] = &CPUZ80::indexBitOpcodeHandler0x0A;
+    indexBitOpcodeHandlers[0x0B] = &CPUZ80::indexBitOpcodeHandler0x0B;
+    indexBitOpcodeHandlers[0x0C] = &CPUZ80::indexBitOpcodeHandler0x0C;
+    indexBitOpcodeHandlers[0x0D] = &CPUZ80::indexBitOpcodeHandler0x0D;
+    indexBitOpcodeHandlers[0x0E] = &CPUZ80::indexBitOpcodeHandler0x0E;
+    indexBitOpcodeHandlers[0x0F] = &CPUZ80::indexBitOpcodeHandler0x0F;
+    indexBitOpcodeHandlers[0x10] = &CPUZ80::indexBitOpcodeHandler0x10;
+    indexBitOpcodeHandlers[0x11] = &CPUZ80::indexBitOpcodeHandler0x11;
+    indexBitOpcodeHandlers[0x12] = &CPUZ80::indexBitOpcodeHandler0x12;
+    indexBitOpcodeHandlers[0x13] = &CPUZ80::indexBitOpcodeHandler0x13;
+    indexBitOpcodeHandlers[0x14] = &CPUZ80::indexBitOpcodeHandler0x14;
+    indexBitOpcodeHandlers[0x15] = &CPUZ80::indexBitOpcodeHandler0x15;
+    indexBitOpcodeHandlers[0x16] = &CPUZ80::indexBitOpcodeHandler0x16;
+    indexBitOpcodeHandlers[0x17] = &CPUZ80::indexBitOpcodeHandler0x17;
+    indexBitOpcodeHandlers[0x18] = &CPUZ80::indexBitOpcodeHandler0x18;
+    indexBitOpcodeHandlers[0x19] = &CPUZ80::indexBitOpcodeHandler0x19;
+    indexBitOpcodeHandlers[0x1A] = &CPUZ80::indexBitOpcodeHandler0x1A;
+    indexBitOpcodeHandlers[0x1B] = &CPUZ80::indexBitOpcodeHandler0x1B;
+    indexBitOpcodeHandlers[0x1C] = &CPUZ80::indexBitOpcodeHandler0x1C;
+    indexBitOpcodeHandlers[0x1D] = &CPUZ80::indexBitOpcodeHandler0x1D;
+    indexBitOpcodeHandlers[0x1E] = &CPUZ80::indexBitOpcodeHandler0x1E;
+    indexBitOpcodeHandlers[0x1F] = &CPUZ80::indexBitOpcodeHandler0x1F;
+    indexBitOpcodeHandlers[0x20] = &CPUZ80::indexBitOpcodeHandler0x20;
+    indexBitOpcodeHandlers[0x21] = &CPUZ80::indexBitOpcodeHandler0x21;
+    indexBitOpcodeHandlers[0x22] = &CPUZ80::indexBitOpcodeHandler0x22;
+    indexBitOpcodeHandlers[0x23] = &CPUZ80::indexBitOpcodeHandler0x23;
+    indexBitOpcodeHandlers[0x24] = &CPUZ80::indexBitOpcodeHandler0x24;
+    indexBitOpcodeHandlers[0x25] = &CPUZ80::indexBitOpcodeHandler0x25;
+    indexBitOpcodeHandlers[0x26] = &CPUZ80::indexBitOpcodeHandler0x26;
+    indexBitOpcodeHandlers[0x27] = &CPUZ80::indexBitOpcodeHandler0x27;
+    indexBitOpcodeHandlers[0x28] = &CPUZ80::indexBitOpcodeHandler0x28;
+    indexBitOpcodeHandlers[0x29] = &CPUZ80::indexBitOpcodeHandler0x29;
+    indexBitOpcodeHandlers[0x2A] = &CPUZ80::indexBitOpcodeHandler0x2A;
+    indexBitOpcodeHandlers[0x2B] = &CPUZ80::indexBitOpcodeHandler0x2B;
+    indexBitOpcodeHandlers[0x2C] = &CPUZ80::indexBitOpcodeHandler0x2C;
+    indexBitOpcodeHandlers[0x2D] = &CPUZ80::indexBitOpcodeHandler0x2D;
+    indexBitOpcodeHandlers[0x2E] = &CPUZ80::indexBitOpcodeHandler0x2E;
+    indexBitOpcodeHandlers[0x2F] = &CPUZ80::indexBitOpcodeHandler0x2F;
+    indexBitOpcodeHandlers[0x30] = &CPUZ80::indexBitOpcodeHandler0x30;
+    indexBitOpcodeHandlers[0x31] = &CPUZ80::indexBitOpcodeHandler0x31;
+    indexBitOpcodeHandlers[0x32] = &CPUZ80::indexBitOpcodeHandler0x32;
+    indexBitOpcodeHandlers[0x33] = &CPUZ80::indexBitOpcodeHandler0x33;
+    indexBitOpcodeHandlers[0x34] = &CPUZ80::indexBitOpcodeHandler0x34;
+    indexBitOpcodeHandlers[0x35] = &CPUZ80::indexBitOpcodeHandler0x35;
+    indexBitOpcodeHandlers[0x36] = &CPUZ80::indexBitOpcodeHandler0x36;
+    indexBitOpcodeHandlers[0x37] = &CPUZ80::indexBitOpcodeHandler0x37;
+    indexBitOpcodeHandlers[0x38] = &CPUZ80::indexBitOpcodeHandler0x38;
+    indexBitOpcodeHandlers[0x39] = &CPUZ80::indexBitOpcodeHandler0x39;
+    indexBitOpcodeHandlers[0x3A] = &CPUZ80::indexBitOpcodeHandler0x3A;
+    indexBitOpcodeHandlers[0x3B] = &CPUZ80::indexBitOpcodeHandler0x3B;
+    indexBitOpcodeHandlers[0x3C] = &CPUZ80::indexBitOpcodeHandler0x3C;
+    indexBitOpcodeHandlers[0x3D] = &CPUZ80::indexBitOpcodeHandler0x3D;
+    indexBitOpcodeHandlers[0x3E] = &CPUZ80::indexBitOpcodeHandler0x3E;
+    indexBitOpcodeHandlers[0x3F] = &CPUZ80::indexBitOpcodeHandler0x3F;
+    indexBitOpcodeHandlers[0x40] = &CPUZ80::indexBitOpcodeHandler0x40;
+    indexBitOpcodeHandlers[0x41] = &CPUZ80::indexBitOpcodeHandler0x41;
+    indexBitOpcodeHandlers[0x42] = &CPUZ80::indexBitOpcodeHandler0x42;
+    indexBitOpcodeHandlers[0x43] = &CPUZ80::indexBitOpcodeHandler0x43;
+    indexBitOpcodeHandlers[0x44] = &CPUZ80::indexBitOpcodeHandler0x44;
+    indexBitOpcodeHandlers[0x45] = &CPUZ80::indexBitOpcodeHandler0x45;
+    indexBitOpcodeHandlers[0x46] = &CPUZ80::indexBitOpcodeHandler0x46;
+    indexBitOpcodeHandlers[0x47] = &CPUZ80::indexBitOpcodeHandler0x47;
+    indexBitOpcodeHandlers[0x48] = &CPUZ80::indexBitOpcodeHandler0x48;
+    indexBitOpcodeHandlers[0x49] = &CPUZ80::indexBitOpcodeHandler0x49;
+    indexBitOpcodeHandlers[0x4A] = &CPUZ80::indexBitOpcodeHandler0x4A;
+    indexBitOpcodeHandlers[0x4B] = &CPUZ80::indexBitOpcodeHandler0x4B;
+    indexBitOpcodeHandlers[0x4C] = &CPUZ80::indexBitOpcodeHandler0x4C;
+    indexBitOpcodeHandlers[0x4D] = &CPUZ80::indexBitOpcodeHandler0x4D;
+    indexBitOpcodeHandlers[0x4E] = &CPUZ80::indexBitOpcodeHandler0x4E;
+    indexBitOpcodeHandlers[0x4F] = &CPUZ80::indexBitOpcodeHandler0x4F;
+    indexBitOpcodeHandlers[0x50] = &CPUZ80::indexBitOpcodeHandler0x50;
+    indexBitOpcodeHandlers[0x51] = &CPUZ80::indexBitOpcodeHandler0x51;
+    indexBitOpcodeHandlers[0x52] = &CPUZ80::indexBitOpcodeHandler0x52;
+    indexBitOpcodeHandlers[0x53] = &CPUZ80::indexBitOpcodeHandler0x53;
+    indexBitOpcodeHandlers[0x54] = &CPUZ80::indexBitOpcodeHandler0x54;
+    indexBitOpcodeHandlers[0x55] = &CPUZ80::indexBitOpcodeHandler0x55;
+    indexBitOpcodeHandlers[0x56] = &CPUZ80::indexBitOpcodeHandler0x56;
+    indexBitOpcodeHandlers[0x57] = &CPUZ80::indexBitOpcodeHandler0x57;
+    indexBitOpcodeHandlers[0x58] = &CPUZ80::indexBitOpcodeHandler0x58;
+    indexBitOpcodeHandlers[0x59] = &CPUZ80::indexBitOpcodeHandler0x59;
+    indexBitOpcodeHandlers[0x5A] = &CPUZ80::indexBitOpcodeHandler0x5A;
+    indexBitOpcodeHandlers[0x5B] = &CPUZ80::indexBitOpcodeHandler0x5B;
+    indexBitOpcodeHandlers[0x5C] = &CPUZ80::indexBitOpcodeHandler0x5C;
+    indexBitOpcodeHandlers[0x5D] = &CPUZ80::indexBitOpcodeHandler0x5D;
+    indexBitOpcodeHandlers[0x5E] = &CPUZ80::indexBitOpcodeHandler0x5E;
+    indexBitOpcodeHandlers[0x5F] = &CPUZ80::indexBitOpcodeHandler0x5F;
+    indexBitOpcodeHandlers[0x60] = &CPUZ80::indexBitOpcodeHandler0x60;
+    indexBitOpcodeHandlers[0x61] = &CPUZ80::indexBitOpcodeHandler0x61;
+    indexBitOpcodeHandlers[0x62] = &CPUZ80::indexBitOpcodeHandler0x62;
+    indexBitOpcodeHandlers[0x63] = &CPUZ80::indexBitOpcodeHandler0x63;
+    indexBitOpcodeHandlers[0x64] = &CPUZ80::indexBitOpcodeHandler0x64;
+    indexBitOpcodeHandlers[0x65] = &CPUZ80::indexBitOpcodeHandler0x65;
+    indexBitOpcodeHandlers[0x66] = &CPUZ80::indexBitOpcodeHandler0x66;
+    indexBitOpcodeHandlers[0x67] = &CPUZ80::indexBitOpcodeHandler0x67;
+    indexBitOpcodeHandlers[0x68] = &CPUZ80::indexBitOpcodeHandler0x68;
+    indexBitOpcodeHandlers[0x69] = &CPUZ80::indexBitOpcodeHandler0x69;
+    indexBitOpcodeHandlers[0x6A] = &CPUZ80::indexBitOpcodeHandler0x6A;
+    indexBitOpcodeHandlers[0x6B] = &CPUZ80::indexBitOpcodeHandler0x6B;
+    indexBitOpcodeHandlers[0x6C] = &CPUZ80::indexBitOpcodeHandler0x6C;
+    indexBitOpcodeHandlers[0x6D] = &CPUZ80::indexBitOpcodeHandler0x6D;
+    indexBitOpcodeHandlers[0x6E] = &CPUZ80::indexBitOpcodeHandler0x6E;
+    indexBitOpcodeHandlers[0x6F] = &CPUZ80::indexBitOpcodeHandler0x6F;
+    indexBitOpcodeHandlers[0x70] = &CPUZ80::indexBitOpcodeHandler0x70;
+    indexBitOpcodeHandlers[0x71] = &CPUZ80::indexBitOpcodeHandler0x71;
+    indexBitOpcodeHandlers[0x72] = &CPUZ80::indexBitOpcodeHandler0x72;
+    indexBitOpcodeHandlers[0x73] = &CPUZ80::indexBitOpcodeHandler0x73;
+    indexBitOpcodeHandlers[0x74] = &CPUZ80::indexBitOpcodeHandler0x74;
+    indexBitOpcodeHandlers[0x75] = &CPUZ80::indexBitOpcodeHandler0x75;
+    indexBitOpcodeHandlers[0x76] = &CPUZ80::indexBitOpcodeHandler0x76;
+    indexBitOpcodeHandlers[0x77] = &CPUZ80::indexBitOpcodeHandler0x77;
+    indexBitOpcodeHandlers[0x78] = &CPUZ80::indexBitOpcodeHandler0x78;
+    indexBitOpcodeHandlers[0x79] = &CPUZ80::indexBitOpcodeHandler0x79;
+    indexBitOpcodeHandlers[0x7A] = &CPUZ80::indexBitOpcodeHandler0x7A;
+    indexBitOpcodeHandlers[0x7B] = &CPUZ80::indexBitOpcodeHandler0x7B;
+    indexBitOpcodeHandlers[0x7C] = &CPUZ80::indexBitOpcodeHandler0x7C;
+    indexBitOpcodeHandlers[0x7D] = &CPUZ80::indexBitOpcodeHandler0x7D;
+    indexBitOpcodeHandlers[0x7E] = &CPUZ80::indexBitOpcodeHandler0x7E;
+    indexBitOpcodeHandlers[0x7F] = &CPUZ80::indexBitOpcodeHandler0x7F;
+    indexBitOpcodeHandlers[0x80] = &CPUZ80::indexBitOpcodeHandler0x80;
+    indexBitOpcodeHandlers[0x81] = &CPUZ80::indexBitOpcodeHandler0x81;
+    indexBitOpcodeHandlers[0x82] = &CPUZ80::indexBitOpcodeHandler0x82;
+    indexBitOpcodeHandlers[0x83] = &CPUZ80::indexBitOpcodeHandler0x83;
+    indexBitOpcodeHandlers[0x84] = &CPUZ80::indexBitOpcodeHandler0x84;
+    indexBitOpcodeHandlers[0x85] = &CPUZ80::indexBitOpcodeHandler0x85;
+    indexBitOpcodeHandlers[0x86] = &CPUZ80::indexBitOpcodeHandler0x86;
+    indexBitOpcodeHandlers[0x87] = &CPUZ80::indexBitOpcodeHandler0x87;
+    indexBitOpcodeHandlers[0x88] = &CPUZ80::indexBitOpcodeHandler0x88;
+    indexBitOpcodeHandlers[0x89] = &CPUZ80::indexBitOpcodeHandler0x89;
+    indexBitOpcodeHandlers[0x8A] = &CPUZ80::indexBitOpcodeHandler0x8A;
+    indexBitOpcodeHandlers[0x8B] = &CPUZ80::indexBitOpcodeHandler0x8B;
+    indexBitOpcodeHandlers[0x8C] = &CPUZ80::indexBitOpcodeHandler0x8C;
+    indexBitOpcodeHandlers[0x8D] = &CPUZ80::indexBitOpcodeHandler0x8D;
+    indexBitOpcodeHandlers[0x8E] = &CPUZ80::indexBitOpcodeHandler0x8E;
+    indexBitOpcodeHandlers[0x8F] = &CPUZ80::indexBitOpcodeHandler0x8F;
+    indexBitOpcodeHandlers[0x90] = &CPUZ80::indexBitOpcodeHandler0x90;
+    indexBitOpcodeHandlers[0x91] = &CPUZ80::indexBitOpcodeHandler0x91;
+    indexBitOpcodeHandlers[0x92] = &CPUZ80::indexBitOpcodeHandler0x92;
+    indexBitOpcodeHandlers[0x93] = &CPUZ80::indexBitOpcodeHandler0x93;
+    indexBitOpcodeHandlers[0x94] = &CPUZ80::indexBitOpcodeHandler0x94;
+    indexBitOpcodeHandlers[0x95] = &CPUZ80::indexBitOpcodeHandler0x95;
+    indexBitOpcodeHandlers[0x96] = &CPUZ80::indexBitOpcodeHandler0x96;
+    indexBitOpcodeHandlers[0x97] = &CPUZ80::indexBitOpcodeHandler0x97;
+    indexBitOpcodeHandlers[0x98] = &CPUZ80::indexBitOpcodeHandler0x98;
+    indexBitOpcodeHandlers[0x99] = &CPUZ80::indexBitOpcodeHandler0x99;
+    indexBitOpcodeHandlers[0x9A] = &CPUZ80::indexBitOpcodeHandler0x9A;
+    indexBitOpcodeHandlers[0x9B] = &CPUZ80::indexBitOpcodeHandler0x9B;
+    indexBitOpcodeHandlers[0x9C] = &CPUZ80::indexBitOpcodeHandler0x9C;
+    indexBitOpcodeHandlers[0x9D] = &CPUZ80::indexBitOpcodeHandler0x9D;
+    indexBitOpcodeHandlers[0x9E] = &CPUZ80::indexBitOpcodeHandler0x9E;
+    indexBitOpcodeHandlers[0x9F] = &CPUZ80::indexBitOpcodeHandler0x9F;
+    indexBitOpcodeHandlers[0xA0] = &CPUZ80::indexBitOpcodeHandler0xA0;
+    indexBitOpcodeHandlers[0xA1] = &CPUZ80::indexBitOpcodeHandler0xA1;
+    indexBitOpcodeHandlers[0xA2] = &CPUZ80::indexBitOpcodeHandler0xA2;
+    indexBitOpcodeHandlers[0xA3] = &CPUZ80::indexBitOpcodeHandler0xA3;
+    indexBitOpcodeHandlers[0xA4] = &CPUZ80::indexBitOpcodeHandler0xA4;
+    indexBitOpcodeHandlers[0xA5] = &CPUZ80::indexBitOpcodeHandler0xA5;
+    indexBitOpcodeHandlers[0xA6] = &CPUZ80::indexBitOpcodeHandler0xA6;
+    indexBitOpcodeHandlers[0xA7] = &CPUZ80::indexBitOpcodeHandler0xA7;
+    indexBitOpcodeHandlers[0xA8] = &CPUZ80::indexBitOpcodeHandler0xA8;
+    indexBitOpcodeHandlers[0xA9] = &CPUZ80::indexBitOpcodeHandler0xA9;
+    indexBitOpcodeHandlers[0xAA] = &CPUZ80::indexBitOpcodeHandler0xAA;
+    indexBitOpcodeHandlers[0xAB] = &CPUZ80::indexBitOpcodeHandler0xAB;
+    indexBitOpcodeHandlers[0xAC] = &CPUZ80::indexBitOpcodeHandler0xAC;
+    indexBitOpcodeHandlers[0xAD] = &CPUZ80::indexBitOpcodeHandler0xAD;
+    indexBitOpcodeHandlers[0xAE] = &CPUZ80::indexBitOpcodeHandler0xAE;
+    indexBitOpcodeHandlers[0xAF] = &CPUZ80::indexBitOpcodeHandler0xAF;
+    indexBitOpcodeHandlers[0xB0] = &CPUZ80::indexBitOpcodeHandler0xB0;
+    indexBitOpcodeHandlers[0xB1] = &CPUZ80::indexBitOpcodeHandler0xB1;
+    indexBitOpcodeHandlers[0xB2] = &CPUZ80::indexBitOpcodeHandler0xB2;
+    indexBitOpcodeHandlers[0xB3] = &CPUZ80::indexBitOpcodeHandler0xB3;
+    indexBitOpcodeHandlers[0xB4] = &CPUZ80::indexBitOpcodeHandler0xB4;
+    indexBitOpcodeHandlers[0xB5] = &CPUZ80::indexBitOpcodeHandler0xB5;
+    indexBitOpcodeHandlers[0xB6] = &CPUZ80::indexBitOpcodeHandler0xB6;
+    indexBitOpcodeHandlers[0xB7] = &CPUZ80::indexBitOpcodeHandler0xB7;
+    indexBitOpcodeHandlers[0xB8] = &CPUZ80::indexBitOpcodeHandler0xB8;
+    indexBitOpcodeHandlers[0xB9] = &CPUZ80::indexBitOpcodeHandler0xB9;
+    indexBitOpcodeHandlers[0xBA] = &CPUZ80::indexBitOpcodeHandler0xBA;
+    indexBitOpcodeHandlers[0xBB] = &CPUZ80::indexBitOpcodeHandler0xBB;
+    indexBitOpcodeHandlers[0xBC] = &CPUZ80::indexBitOpcodeHandler0xBC;
+    indexBitOpcodeHandlers[0xBD] = &CPUZ80::indexBitOpcodeHandler0xBD;
+    indexBitOpcodeHandlers[0xBE] = &CPUZ80::indexBitOpcodeHandler0xBE;
+    indexBitOpcodeHandlers[0xBF] = &CPUZ80::indexBitOpcodeHandler0xBF;
+    indexBitOpcodeHandlers[0xC0] = &CPUZ80::indexBitOpcodeHandler0xC0;
+    indexBitOpcodeHandlers[0xC1] = &CPUZ80::indexBitOpcodeHandler0xC1;
+    indexBitOpcodeHandlers[0xC2] = &CPUZ80::indexBitOpcodeHandler0xC2;
+    indexBitOpcodeHandlers[0xC3] = &CPUZ80::indexBitOpcodeHandler0xC3;
+    indexBitOpcodeHandlers[0xC4] = &CPUZ80::indexBitOpcodeHandler0xC4;
+    indexBitOpcodeHandlers[0xC5] = &CPUZ80::indexBitOpcodeHandler0xC5;
+    indexBitOpcodeHandlers[0xC6] = &CPUZ80::indexBitOpcodeHandler0xC6;
+    indexBitOpcodeHandlers[0xC7] = &CPUZ80::indexBitOpcodeHandler0xC7;
+    indexBitOpcodeHandlers[0xC8] = &CPUZ80::indexBitOpcodeHandler0xC8;
+    indexBitOpcodeHandlers[0xC9] = &CPUZ80::indexBitOpcodeHandler0xC9;
+    indexBitOpcodeHandlers[0xCA] = &CPUZ80::indexBitOpcodeHandler0xCA;
+    indexBitOpcodeHandlers[0xCB] = &CPUZ80::indexBitOpcodeHandler0xCB;
+    indexBitOpcodeHandlers[0xCC] = &CPUZ80::indexBitOpcodeHandler0xCC;
+    indexBitOpcodeHandlers[0xCD] = &CPUZ80::indexBitOpcodeHandler0xCD;
+    indexBitOpcodeHandlers[0xCE] = &CPUZ80::indexBitOpcodeHandler0xCE;
+    indexBitOpcodeHandlers[0xCF] = &CPUZ80::indexBitOpcodeHandler0xCF;
+    indexBitOpcodeHandlers[0xD0] = &CPUZ80::indexBitOpcodeHandler0xD0;
+    indexBitOpcodeHandlers[0xD1] = &CPUZ80::indexBitOpcodeHandler0xD1;
+    indexBitOpcodeHandlers[0xD2] = &CPUZ80::indexBitOpcodeHandler0xD2;
+    indexBitOpcodeHandlers[0xD3] = &CPUZ80::indexBitOpcodeHandler0xD3;
+    indexBitOpcodeHandlers[0xD4] = &CPUZ80::indexBitOpcodeHandler0xD4;
+    indexBitOpcodeHandlers[0xD5] = &CPUZ80::indexBitOpcodeHandler0xD5;
+    indexBitOpcodeHandlers[0xD6] = &CPUZ80::indexBitOpcodeHandler0xD6;
+    indexBitOpcodeHandlers[0xD7] = &CPUZ80::indexBitOpcodeHandler0xD7;
+    indexBitOpcodeHandlers[0xD8] = &CPUZ80::indexBitOpcodeHandler0xD8;
+    indexBitOpcodeHandlers[0xD9] = &CPUZ80::indexBitOpcodeHandler0xD9;
+    indexBitOpcodeHandlers[0xDA] = &CPUZ80::indexBitOpcodeHandler0xDA;
+    indexBitOpcodeHandlers[0xDB] = &CPUZ80::indexBitOpcodeHandler0xDB;
+    indexBitOpcodeHandlers[0xDC] = &CPUZ80::indexBitOpcodeHandler0xDC;
+    indexBitOpcodeHandlers[0xDD] = &CPUZ80::indexBitOpcodeHandler0xDD;
+    indexBitOpcodeHandlers[0xDE] = &CPUZ80::indexBitOpcodeHandler0xDE;
+    indexBitOpcodeHandlers[0xDF] = &CPUZ80::indexBitOpcodeHandler0xDF;
+    indexBitOpcodeHandlers[0xE0] = &CPUZ80::indexBitOpcodeHandler0xE0;
+    indexBitOpcodeHandlers[0xE1] = &CPUZ80::indexBitOpcodeHandler0xE1;
+    indexBitOpcodeHandlers[0xE2] = &CPUZ80::indexBitOpcodeHandler0xE2;
+    indexBitOpcodeHandlers[0xE3] = &CPUZ80::indexBitOpcodeHandler0xE3;
+    indexBitOpcodeHandlers[0xE4] = &CPUZ80::indexBitOpcodeHandler0xE4;
+    indexBitOpcodeHandlers[0xE5] = &CPUZ80::indexBitOpcodeHandler0xE5;
+    indexBitOpcodeHandlers[0xE6] = &CPUZ80::indexBitOpcodeHandler0xE6;
+    indexBitOpcodeHandlers[0xE7] = &CPUZ80::indexBitOpcodeHandler0xE7;
+    indexBitOpcodeHandlers[0xE8] = &CPUZ80::indexBitOpcodeHandler0xE8;
+    indexBitOpcodeHandlers[0xE9] = &CPUZ80::indexBitOpcodeHandler0xE9;
+    indexBitOpcodeHandlers[0xEA] = &CPUZ80::indexBitOpcodeHandler0xEA;
+    indexBitOpcodeHandlers[0xEB] = &CPUZ80::indexBitOpcodeHandler0xEB;
+    indexBitOpcodeHandlers[0xEC] = &CPUZ80::indexBitOpcodeHandler0xEC;
+    indexBitOpcodeHandlers[0xED] = &CPUZ80::indexBitOpcodeHandler0xED;
+    indexBitOpcodeHandlers[0xEE] = &CPUZ80::indexBitOpcodeHandler0xEE;
+    indexBitOpcodeHandlers[0xEF] = &CPUZ80::indexBitOpcodeHandler0xEF;
+    indexBitOpcodeHandlers[0xF0] = &CPUZ80::indexBitOpcodeHandler0xF0;
+    indexBitOpcodeHandlers[0xF1] = &CPUZ80::indexBitOpcodeHandler0xF1;
+    indexBitOpcodeHandlers[0xF2] = &CPUZ80::indexBitOpcodeHandler0xF2;
+    indexBitOpcodeHandlers[0xF3] = &CPUZ80::indexBitOpcodeHandler0xF3;
+    indexBitOpcodeHandlers[0xF4] = &CPUZ80::indexBitOpcodeHandler0xF4;
+    indexBitOpcodeHandlers[0xF5] = &CPUZ80::indexBitOpcodeHandler0xF5;
+    indexBitOpcodeHandlers[0xF6] = &CPUZ80::indexBitOpcodeHandler0xF6;
+    indexBitOpcodeHandlers[0xF7] = &CPUZ80::indexBitOpcodeHandler0xF7;
+    indexBitOpcodeHandlers[0xF8] = &CPUZ80::indexBitOpcodeHandler0xF8;
+    indexBitOpcodeHandlers[0xF9] = &CPUZ80::indexBitOpcodeHandler0xF9;
+    indexBitOpcodeHandlers[0xFA] = &CPUZ80::indexBitOpcodeHandler0xFA;
+    indexBitOpcodeHandlers[0xFB] = &CPUZ80::indexBitOpcodeHandler0xFB;
+    indexBitOpcodeHandlers[0xFC] = &CPUZ80::indexBitOpcodeHandler0xFC;
+    indexBitOpcodeHandlers[0xFD] = &CPUZ80::indexBitOpcodeHandler0xFD;
+    indexBitOpcodeHandlers[0xFE] = &CPUZ80::indexBitOpcodeHandler0xFE;
+    indexBitOpcodeHandlers[0xFF] = &CPUZ80::indexBitOpcodeHandler0xFF;
 }

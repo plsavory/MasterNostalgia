@@ -8,7 +8,7 @@ set(EXECUTABLE_NAME "Mastalgia")
 #    set(CMAKE_BUILD_TYPE Release)
 #endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -O3")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -O2")
 #set(CMAKE_CXX_FLAGS_DEBUG "-g")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -47,8 +47,13 @@ add_executable(${EXECUTABLE_NAME}
         src/VDPDisplayMode.cpp
         src/include/VDP.h
         src/Cartridge.cpp
-        src/CPUInstructionHandlers.cpp
+        src/CPUInstructionHelpers.cpp
         src/CPUZ80.cpp
+        src/CPUZ80StandardOpcodeHandlers.cpp
+        src/CPUZ80ExtendedOpcodeHandlers.cpp
+        src/CPUZ80BitOpcodeHandlers.cpp
+        src/CPUZ80IndexOpcodeHandlers.cpp
+        src/CPUZ80IndexBitOpcodeHandlers.cpp
         src/EntryPoint.cpp
         src/MasterSystem.cpp
         src/Memory.cpp

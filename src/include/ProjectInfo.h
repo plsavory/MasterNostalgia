@@ -18,6 +18,8 @@ Mastalgia - a (soon to be) Sega Master System emulator.
 #elif __aarch64__
 #define PROJECT_ARCH "-arm64"
 #define ARM_VERSION MAKE_STRING(__ARM_ARCH)
+#elif __riscv
+#define PROJECT_ARCH "-risc-v"
 #else
 #define PROJECT_ARCH "unknown-arch"
 #endif

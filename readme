@@ -1,11 +1,6 @@
 This project is being developed as an educational exercise to learn how to emulate the Sega Master System and how the internals
 of the console work.
 
-The emulator is not yet capable of running games as the emulator is still incomplete and needs work, but some ROMs do
-display an image on screen. I am currently using the following program to test and debug the emulator:
-
-https://github.com/maxim-zhao/zexall-sms
-
 Throughout this project I am using the following sources throughout development:
 
 - Z80 Instruction Set & flag behaviour

@@ -1,7 +1,3 @@
-/*
-Mastalgia - a (soon to be) Sega Master System emulator.
- */
-
 #define PROJECT_NAME "Mastalgia"
 #define PROJECT_VERSION "1.1.0"
 

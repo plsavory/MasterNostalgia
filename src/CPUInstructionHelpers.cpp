@@ -1,9 +1,3 @@
-/*
-Mastalgia - a (soon to be) Sega Master System emulator.
-Licensed under the GPLv3 license.
-@author: Peter Savory
- */
-
 #include <iostream>
 #include "Cartridge.h"
 #include "Memory.h"
@@ -689,7 +683,7 @@ void CPUZ80::da(unsigned char &dest) {
         setFlag(CPUFlag::halfCarry, false);
     } else {
         if (subtract && getFlag(CPUFlag::halfCarry)) {
-            setFlag(CPUFlag::halfCarry, (dest & 0x6) < 6);
+            setFlag(CPUFlag::halfCarry, (dest & 0xF) < 6);
         } else {
             setFlag(CPUFlag::halfCarry, (dest & 0xF) >= 0xA);
         }

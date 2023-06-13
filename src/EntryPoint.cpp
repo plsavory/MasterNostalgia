@@ -1,5 +1,5 @@
 /*
-Mastalgia - a (soon to be) Sega Master System emulator.
+Mastalgia - a Sega Master System emulator.
 Licensed under the GPLv3 license.
 @author: Peter Savory
  */
@@ -19,16 +19,19 @@ int main(int argc, char *argv[]) {
     try {
         Emulator *emulator = new Emulator();
 
-        std::string romFile;
+        std::string romFileName;
 
-        if (argc == 1) {
-            romFile = "roms/zexdoc.sms";
-        } else {
-            romFile = argv[1];
+        if (argc > 1) {
+            romFileName = argv[1];
         }
 
-        emulator->init(romFile);
-        emulator->run(); // Main loop
+        if (romFileName.empty()) {
+            std::cout<<"No ROM file name has been provided."<<std::endl;
+            return 0;
+        }
+
+        emulator->init(romFileName);
+        emulator->run();
     } catch (GeneralException &e) {
         std::cout<<e.what()<<std::endl;
     } catch (std::exception &e) {

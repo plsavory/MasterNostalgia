@@ -1,3 +1,11 @@
+Mastalgia 1.1.0 - 2023-06-12
+
+Fixed issues which prevented the emulator from running on GNU/Linux systems
+Many emulation bug fixes and improvements
+Added support for 4Mb ROMs
+Extensive CPU emulation code refactoring
+Change rendering scale automatically when the video mode changes
+
 Mastalgia 1.0.0 - 2023-04-21
 
 First release which is capable of running some games correctly.

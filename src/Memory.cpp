@@ -1,10 +1,4 @@
 /*
-Mastalgia - a (soon to be) Sega Master System emulator.
-Licensed under the GPLv3 license.
-@author: Peter Savory
- */
-
-/*
 Master System memory map:
 0x0000-0x3FFF : Rom Slot 1
 0x4000-0x7FFF : Rom Slot 2

@@ -257,7 +257,7 @@ private:
 
     void popStackExchange(unsigned short &destinationRegister);
 
-    void da(unsigned char &dest);
+    void daa(unsigned char &dest);
 
     // To make flag handling easier and to prevent repetitive typing
     void setFlag(CPUFlag flag, bool value);
@@ -298,6 +298,10 @@ private:
     void neg();
 
     void bit(unsigned char bitNumber, unsigned char value);
+
+    void indexedBit(unsigned char bitNumber, unsigned char value);
+
+    bool bitLogic(unsigned char bitNumber, unsigned char value);
 
     unsigned char res(unsigned char bitNumber, unsigned char value);
 

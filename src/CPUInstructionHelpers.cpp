@@ -305,6 +305,7 @@ unsigned char CPUZ80::getInc8BitValue(unsigned char initialValue) {
 void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
     unsigned char aValue = gpRegisters[cpuReg::AF].hi;
     subSbc8Bit(aValue, valueToSubtract, false);
+    handleUndocumentedFlags(valueToSubtract);
     #ifdef DEBUG_VALUES
     readValue = valueToSubtract;
     #endif
@@ -343,15 +344,16 @@ void CPUZ80::cpi(bool increment) {
     unsigned char carryBits = (originalRegisterValue ^ value ^ result);
     unsigned char finalResult = result;
 
+    setFlag(CPUFlag::sign, Utils::testBit(7, result));
+    setFlag(CPUFlag::zero, result == 0);
+    setFlag(CPUFlag::halfCarry, carryBits & 0x10);
+
     if (getFlag(CPUFlag::halfCarry)) {
         finalResult -= 1;
     }
 
-    setFlag(CPUFlag::sign, Utils::testBit(7, result));
-    setFlag(CPUFlag::zero, result == 0);
-    setFlag(CPUFlag::halfCarry, carryBits & 0x10);
-    setFlag(CPUFlag::xf, finalResult & 0x2);
-    setFlag(CPUFlag::yf, finalResult & 0x8);
+    setFlag(CPUFlag::xf, Utils::testBit(3, finalResult));
+    setFlag(CPUFlag::yf, Utils::testBit(1, finalResult));
 
     --gpRegisters[cpuReg::BC].whole;
     setFlag(CPUFlag::overflowParity, gpRegisters[cpuReg::BC].whole != 0);
@@ -417,10 +419,7 @@ void CPUZ80::outi(bool increment) {
         gpRegisters[cpuReg::HL].whole -= 1;
     }
 
-    // TODO should the DEC function do the exact same behaviour as below with the flags? if so just move this logic in there and call that.
     --gpRegisters[cpuReg::BC].hi;
-
-    // TODO set the undocumented flags appropriately, sources say they should be set to bit 5 and 3 of B but the emulator I am comparing against doesn't do that so disable for now to make comparisons easier.
     setFlag(CPUFlag::yf, false);
     setFlag(CPUFlag::xf, false);
     setFlag(CPUFlag::sign, Utils::testBit(7, gpRegisters[cpuReg::BC].hi));
@@ -665,7 +664,8 @@ void CPUZ80::popStackExchange(unsigned short &destinationRegister) {
     pushStack(originalRegisterValue);
 }
 
-void CPUZ80::da(unsigned char &dest) {
+void CPUZ80::daa(unsigned char &dest) {
+
     bool subtract = getFlag(CPUFlag::subtractNegative);
 
     unsigned char diff = 0;
@@ -705,6 +705,7 @@ void CPUZ80::cpl(unsigned char &dest) {
     dest = ~dest;
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::subtractNegative, true);
+    handleUndocumentedFlags(dest);
 }
 
 void CPUZ80::exStack(unsigned short &dest) {
@@ -746,7 +747,6 @@ void CPUZ80::rrd(unsigned char &dest) {
      * Moves the lower four bits of A (0-3) into the upper four bits of (HL) (4-7); moves the upper four bits of (HL) (4-7)
      * into the lower four bits of (HL) (0-3); moves the lower four bits of (HL) (0-3) into the lower four bits of A (0-3).
      */
-    // TODO test/debug this, there is a lot going on here
     unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].whole);
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + (memoryCurrentValue & 0x0F);
@@ -756,6 +756,7 @@ void CPUZ80::rrd(unsigned char &dest) {
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    handleUndocumentedFlags(dest);
     cyclesTaken = 18;
 }
 
@@ -764,7 +765,6 @@ void CPUZ80::rld(unsigned char &dest) {
      * Moves the lower four bits of HL (0-3) into the upper four bits of (HL) (4-7); moves the upper four bits of (HL) (4-7)
      * into the lower four bits of A (0-3); moves the lower four bits of A (0-3) into the lower four bits of (HL) (0-3).
      */
-    // TODO test/debug this, there is a lot going on here
     unsigned char memoryCurrentValue = memory->read(gpRegisters[cpuReg::HL].whole);
     unsigned char previousRegisterLowerNibble = dest & 0x0F;
     dest = (gpRegisters[cpuReg::AF].hi & 0xF0) + ((memoryCurrentValue & 0xF0) >> 4);
@@ -774,19 +774,30 @@ void CPUZ80::rld(unsigned char &dest) {
     setFlag(CPUFlag::halfCarry, false);
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
+    handleUndocumentedFlags(dest);
     cyclesTaken = 18;
 }
 
-void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
+inline bool CPUZ80::bitLogic(unsigned char bitNumber, unsigned char value) {
     bool bitIsSet = Utils::testBit(bitNumber, value);
-    // TODO flag behaviour can change with index register based BIT instructions to account for this
     setFlag(CPUFlag::sign, bitNumber == 7 && bitIsSet);
     setFlag(CPUFlag::zero, !bitIsSet);
-    setFlag(CPUFlag::yf, Utils::testBit(5, value));
     setFlag(CPUFlag::halfCarry, true);
-    setFlag(CPUFlag::xf, Utils::testBit(3, value));
     setFlag(CPUFlag::overflowParity, !bitIsSet);
     setFlag(CPUFlag::subtractNegative, false);
+}
+
+void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
+    bool bitIsSet = bitLogic(bitNumber, value);
+    setFlag(CPUFlag::yf, bitNumber == 5 && bitIsSet);
+    setFlag(CPUFlag::xf, bitNumber == 3 && bitIsSet);
+}
+
+void CPUZ80::indexedBit(unsigned char bitNumber, unsigned char value) {
+    bitLogic(bitNumber, value);
+    unsigned char indexedAddressHi = indexedAddressForCurrentOpcode >> 8;
+    setFlag(CPUFlag::yf, Utils::testBit(5, indexedAddressHi));
+    setFlag(CPUFlag::xf, Utils::testBit(3, indexedAddressHi));
 }
 
 unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {
@@ -857,8 +868,9 @@ void CPUZ80::ccf() {
     setFlag(CPUFlag::halfCarry, getFlag(CPUFlag::carry));
     setFlag(CPUFlag::carry, !getFlag(CPUFlag::carry));
     setFlag(CPUFlag::subtractNegative, false);
-    // TODO documentation says x/y should be set from A, but the emulator I am comparing results against seems to use F, change this when done with debugging if need be.
-    handleUndocumentedFlags(gpRegisters[cpuReg::AF].lo);
+
+    // Set XF/YF flags accordingly
+    gpRegisters[cpuReg::AF].lo |= gpRegisters[cpuReg::AF].hi & 0x28;
 }
 
 void CPUZ80::neg() {

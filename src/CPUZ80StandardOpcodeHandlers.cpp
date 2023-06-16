@@ -252,7 +252,7 @@ void CPUZ80::standardOpcodeHandler0x26() {
 
 void CPUZ80::standardOpcodeHandler0x27() {
     // daa
-    da(gpRegisters[cpuReg::AF].hi);
+    daa(gpRegisters[cpuReg::AF].hi);
     cyclesTaken = 4;
 }
 
@@ -349,6 +349,10 @@ void CPUZ80::standardOpcodeHandler0x37() {
     setFlag(CPUFlag::carry, true);
     setFlag(CPUFlag::subtractNegative, false);
     setFlag(CPUFlag::halfCarry, false);
+
+    // Set XF/YF flags accordingly
+    gpRegisters[cpuReg::AF].lo |= gpRegisters[cpuReg::AF].hi & 0x28;
+
     cyclesTaken = 4;
 }
 

@@ -395,385 +395,385 @@ void CPUZ80::indexBitOpcodeHandler0x3F() {
 
 void CPUZ80::indexBitOpcodeHandler0x40() {
     // bit 0, b
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x41() {
     // bit 0, c
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x42() {
     // bit 0, d
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x43() {
     // bit 0, e
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x44() {
     // bit 0, h
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x45() {
     // bit 0, l
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x46() {
     // bit 0, (hl);
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x47() {
     // bit 0, a
-    bit(0, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(0, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x48() {
     // bit 1, b
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x49() {
     // bit 1, c
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4A() {
     // bit 1, d
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4B() {
     // bit 1, e
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4C() {
     // bit 1, h
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4D() {
     // bit 1, l
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4E() {
     // bit 1, (hl);
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x4F() {
     // bit 1, a
-    bit(1, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(1, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x50() {
     // bit 2, b
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x51() {
     // bit 2, c
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x52() {
     // bit 2, d
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x53() {
     // bit 2, e
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x54() {
     // bit 2, h
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x55() {
     // bit 2, l
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x56() {
     // bit 2, (hl);
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x57() {
     // bit 2, a
-    bit(2, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(2, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x58() {
     // bit 3, b
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x59() {
     // bit 3, c
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5A() {
     // bit 3, d
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5B() {
     // bit 3, e
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5C() {
     // bit 3, h
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5D() {
     // bit 3, l
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5E() {
     // bit 3, (hl);
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x5F() {
     // bit 3, a
-    bit(3, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(3, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x60() {
     // bit 4, b
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x61() {
     // bit 4, c
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x62() {
     // bit 4, d
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x63() {
     // bit 4, e
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x64() {
     // bit 4, h
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x65() {
     // bit 4, l
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x66() {
     // bit 4, (hl);
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x67() {
     // bit 4, a
-    bit(4, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(4, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x68() {
     // bit 5, b
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x69() {
     // bit 5, c
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6A() {
     // bit 5, d
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6B() {
     // bit 5, e
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6C() {
     // bit 5, h
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6D() {
     // bit 5, l
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6E() {
     // bit 5, (hl);
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x6F() {
     // bit 5, a
-    bit(5, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(5, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x70() {
     // bit 6, b
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x71() {
     // bit 6, c
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x72() {
     // bit 6, d
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x73() {
     // bit 6, e
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x74() {
     // bit 6, h
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x75() {
     // bit 6, l
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x76() {
     // bit 6, (hl);
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x77() {
     // bit 6, a
-    bit(6, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(6, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x78() {
     // bit 7, b
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x79() {
     // bit 7, c
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7A() {
     // bit 7, d
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7B() {
     // bit 7, e
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7C() {
     // bit 7, h
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7D() {
     // bit 7, l
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7E() {
     // bit 7, (hl);
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 
 void CPUZ80::indexBitOpcodeHandler0x7F() {
     // bit 7, a
-    bit(7, readMemory(indexedAddressForCurrentOpcode));
+    indexedBit(7, readMemory(indexedAddressForCurrentOpcode));
     cyclesTaken = 20;
 }
 

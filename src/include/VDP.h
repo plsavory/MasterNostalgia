@@ -5,7 +5,17 @@
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
 
-// VDP Control Registers 3 and 4 are yf.
+struct Mode2Colour {
+    Mode2Colour(unsigned char r, unsigned char g, unsigned char b) {
+        this->r = r;
+        this->g = g;
+        this->b = b;
+    }
+
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+};
 
 class VDP {
 public:
@@ -137,6 +147,7 @@ private:
     static unsigned int getPixelBitmapIndex(unsigned char x, unsigned char y);
     //endregion
 
+    std::vector<Mode2Colour> mode2Colours;
 };
 #endif
 

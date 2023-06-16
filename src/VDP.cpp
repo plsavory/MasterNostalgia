@@ -17,13 +17,24 @@ VDP::VDP() {
         controlRegister = 0x0;
     }
 
-//    registers[0x0] = 0x36;
-//    registers[0x1] = 0x80;
-//    registers[0x2] = 0xFF;
-//    registers[0x3] = 0xFF;
-//    registers[0x4] = 0xFF;
-//    registers[0x5] = 0xFF;
-//    registers[0x6] = 0xFB;
+    mode2Colours = {
+            {0, 0, 0},
+            {0, 0, 0},
+            {33, 200, 66},
+            {94, 220, 120},
+            {84, 85, 237},
+            {125, 118, 252},
+            {212, 82, 77},
+            {66, 235, 245},
+            {252, 85, 84},
+            {255, 121, 120},
+            {212, 193, 84},
+            {230, 206, 128},
+            {33, 176, 59},
+            {201, 91, 186},
+            {204, 204, 204},
+            {255, 255, 255}
+    };
 
     statusRegister = 0x0;
     controlWord = 0x0;
@@ -302,6 +313,112 @@ unsigned short VDP::getSpriteAllocationTableBaseAddress() {
 }
 
 void VDP::renderSpritesMode2() {
+    unsigned char spriteSize = Utils::testBit(1, registers[0x1]) ? 16 : 8;
+    bool zoomSprites = Utils::testBit(0, registers[0x1]);
+
+    unsigned char spriteSizeToDraw = spriteSize;
+
+    if (zoomSprites) {
+        spriteSizeToDraw *= 2;
+    }
+
+    unsigned short baseAddress = getSpriteAllocationTableBaseAddress();
+
+    int spriteCount = 0;
+
+    for (int i = 0; i < 32; i++) {
+
+        unsigned short spriteAddress = baseAddress + (i*4);
+
+        int y = vRAM[spriteAddress];
+
+        if (y == 0xD0) {
+            break;
+        }
+
+        if (y > 0xD0) {
+            y -= 0x100;
+        }
+
+        y += 1;
+
+        if (vCounter < y) {
+            continue;
+        }
+
+        if (vCounter >= y + spriteSize) {
+            continue;
+        }
+
+        // Sprite is on this scanline
+        if (spriteCount == 4) {
+            // Set sprite overflow flag
+            Utils::setBit(6, true, statusRegister);
+            break;
+        }
+
+        spriteCount++;
+
+        int x = vRAM[spriteAddress + 1];
+
+        unsigned short patternId = vRAM[spriteAddress + 2];
+        unsigned char colour = vRAM[spriteAddress + 3] & 0xF;
+
+        if (vRAM[spriteAddress + 3] & 0x80) {
+            x -= 32;
+        }
+
+        unsigned short patternAddress = (registers[0x4] & 0x7) << 11;
+
+        if (spriteSize == 8) {
+            patternAddress += (patternId * 8);
+        } else {
+            patternAddress += (patternId & 252) * 8;
+        }
+
+        patternAddress += (vCounter - y);
+
+        unsigned short pattern;
+
+        if (spriteSize == 8) {
+            pattern = vRAM[patternAddress];
+        } else {
+            pattern = (vRAM[patternAddress] << 8) + (vRAM[patternAddress + 16]);
+        }
+
+        // Render each pixel of the sprite
+        int currentDataPixel = 0;
+
+        for (unsigned char xPixel = 0; xPixel < spriteSizeToDraw; xPixel++) {
+
+            if (x + xPixel > 255) {
+                // Don't try to draw off screen
+                break;
+            }
+
+            unsigned int pixelIndex = getPixelBitmapIndex(x + xPixel, vCounter);
+
+            // TODO test if below logic is correct for zoomed sprites, when I find something that uses them.
+            unsigned char dataPixelIncrement = ((!zoomSprites || xPixel % 2 == 1)) ? 1 : 0;
+
+            if (!(pattern & (1 << ((spriteSizeToDraw - 1) - currentDataPixel)))) {
+                currentDataPixel += dataPixelIncrement;
+                continue;
+            }
+
+            if (isPixelUsed(pixelIndex)) {
+                // Flag a sprite collision
+                Utils::setBit(5, true, statusRegister);
+                currentDataPixel += dataPixelIncrement;
+                continue;
+            }
+
+            putPixel(pixelIndex, mode2Colours[colour].r, mode2Colours[colour].g, mode2Colours[colour].b);
+            currentDataPixel += dataPixelIncrement;
+
+        }
+
+    }
 
 }
 
@@ -393,12 +510,6 @@ void VDP::renderSpritesMode4() {
 
             unsigned int pixelIndex = getPixelBitmapIndex(x + xPixel, vCounter);
 
-            if (isPixelUsed(pixelIndex)) {
-                // Flag a sprite collision
-                Utils::setBit(5, true, statusRegister);
-                continue;
-            }
-
             if (x + xPixel > 255) {
                 // Don't try to draw off screen
                 break;
@@ -412,6 +523,12 @@ void VDP::renderSpritesMode4() {
                                       (Utils::testBit(pixelDataIndex, pattern1));
 
             if (paletteId == 0) {
+                continue;
+            }
+
+            if (isPixelUsed(pixelIndex)) {
+                // Flag a sprite collision
+                Utils::setBit(5, true, statusRegister);
                 continue;
             }
 

@@ -785,6 +785,7 @@ inline bool CPUZ80::bitLogic(unsigned char bitNumber, unsigned char value) {
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::overflowParity, !bitIsSet);
     setFlag(CPUFlag::subtractNegative, false);
+    return bitIsSet;
 }
 
 void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {

@@ -148,6 +148,8 @@ private:
     //endregion
 
     std::vector<Mode2Colour> mode2Colours;
+
+    unsigned short getMode2PatternTableOffset(unsigned char row);
 };
 #endif
 

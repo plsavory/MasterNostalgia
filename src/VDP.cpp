@@ -313,6 +313,11 @@ unsigned short VDP::getSpriteAllocationTableBaseAddress() {
 }
 
 void VDP::renderSpritesMode2() {
+
+    if (!Utils::testBit(6, registers[0x1])) {
+        return;
+    }
+
     unsigned char spriteSize = Utils::testBit(1, registers[0x1]) ? 16 : 8;
     bool zoomSprites = Utils::testBit(0, registers[0x1]);
 
@@ -424,9 +429,59 @@ void VDP::renderSpritesMode2() {
 
 void VDP::renderBackgroundMode2() {
 
+    if (!Utils::testBit(6, registers[0x1])) {
+        return;
+    }
+
+    unsigned short nameTableBaseAddress = getNameTableBaseAddress();
+
+    unsigned char row = vCounter / 8;
+    unsigned char line = vCounter % 8;
+
+    unsigned short patternTableOffset = getMode2PatternTableOffset(row);
+
+    unsigned short patternTableBaseAddress = (Utils::testBit(2, registers[0x4]) ? 0x2000 : 0) + patternTableOffset;
+    unsigned short colourTableBaseAddress = (Utils::testBit(7, registers[0x3]) ? 0x2000 : 0) + patternTableOffset;
+
+    for (int column = 0; column < 32; column++) {
+        unsigned char patternId = vRAM[nameTableBaseAddress + (row * 32) + column];
+
+        unsigned short addressOffset = (patternId * 8) + line;
+        unsigned short patternTableAddress = patternTableBaseAddress + addressOffset;
+        unsigned char pattern = vRAM[patternTableAddress];
+
+        unsigned short colourTableAddress = colourTableBaseAddress + addressOffset;
+        unsigned char colours = vRAM[colourTableAddress];
+        Mode2Colour offColour = mode2Colours[colours & 0xF];
+        Mode2Colour onColour = mode2Colours[colours >> 4];
+
+        unsigned int bitmapIndex = getPixelBitmapIndex(column * 8, vCounter);
+
+        for (int pixel = 0; pixel < 8; pixel++) {
+
+            if (isPixelUsed(bitmapIndex)) {
+                bitmapIndex += 4;
+                continue;
+            }
+
+            bool pixelValue = (pattern & (1 << (7 - pixel)));
+
+            unsigned char r = pixelValue ? onColour.r : offColour.r;
+            unsigned char g = pixelValue ? onColour.g : offColour.g;
+            unsigned char b = pixelValue ? onColour.b : offColour.b;
+
+            putPixel(bitmapIndex, r, g, b);
+            bitmapIndex += 4;
+        }
+
+    }
 }
 
 void VDP::renderSpritesMode4() {
+
+    if (!Utils::testBit(6, registers[0x1])) {
+        return;
+    }
 
     bool zoomSprites = Utils::testBit(0, registers[0x1]);
     bool spriteSize8x16 = Utils::testBit(1, registers[0x1]);
@@ -787,4 +842,17 @@ void VDP::printDebugInfo() {
 
 VDPDisplayMode VDP::getDisplayMode() {
     return displayMode;
+}
+
+unsigned short VDP::getMode2PatternTableOffset(unsigned char row) {
+
+    if (row > 15 && Utils::testBit(1, registers[0x4])) {
+        return 0x200 * 8;
+    }
+
+    if (row > 7 && Utils::testBit(0, registers[0x4])) {
+        return 0x100 * 8;
+    }
+
+    return 0;
 }

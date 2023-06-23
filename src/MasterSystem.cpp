@@ -1,12 +1,12 @@
 #include <iostream>
 #include "MasterSystem.h"
 
-MasterSystem::MasterSystem() {
+MasterSystem::MasterSystem(InputInterface *inputInterface) {
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
     smsVdp = new VDP();
     smsPSG = new PSG();
-    smsInput = new MasterSystemInput();
+    smsInput = new MasterSystemInput(inputInterface);
     z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory, smsInput);
     smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;

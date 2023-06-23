@@ -3,13 +3,14 @@
 #include "CPUZ80.h"
 #include "VDP.h"
 #include "PSG.h"
+#include "InputInterface.h"
 #include "Console.h"
 #include "MasterSystemInput.h"
 #include "MasterSystemZ80IO.h"
 
 class MasterSystem final : public Console {
 public:
-    MasterSystem();
+    MasterSystem(InputInterface *inputInterface);
 
     ~MasterSystem();
 

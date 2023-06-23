@@ -7,6 +7,7 @@
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
+#include "Config.h"
 
 class Console {
 public:

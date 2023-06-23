@@ -33,9 +33,12 @@ if (NOT ${GIT_BRANCH} STREQUAL "master")
     add_definitions("-DDISPLAY_BRANCH_IN_VERSION")
 endif()
 
-include_directories(src/include)
+add_definitions("-DJSON_CONFIG_FILE")
+
+include_directories(src/include lib)
 
 add_executable(${EXECUTABLE_NAME}
+        src/include/SFMLKeyboardStringMapper.h
         src/include/Cartridge.h
         src/include/CPUZ80.h
         src/include/MasterSystem.h
@@ -72,7 +75,11 @@ add_executable(${EXECUTABLE_NAME}
         src/include/MasterSystemController.h
         src/MasterSystemController.cpp
         src/include/MasterSystemInput.h
-        src/MasterSystemInput.cpp)
+        src/MasterSystemInput.cpp
+        src/Config.cpp
+        src/PlayerControlConfig.cpp
+        src/InputInterface.cpp
+        src/SFMLKeyboardStringMapper.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

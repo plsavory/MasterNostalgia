@@ -2,11 +2,13 @@
 #define MASTALGIA_EMULATOR_H
 
 #include <iostream>
+#include "Config.h"
 #include "Utils.h"
 #include "MasterSystem.h"
 #include "Exceptions.h"
 #include "SFML/System.hpp"
 #include "SFML/Graphics.hpp"
+#include "InputInterface.h"
 
 /**
  * A class for handling loading/running different systems. Right now only the Master System is supported.
@@ -26,6 +28,8 @@ private:
 
     sf::RenderWindow *window;
 
+    Config *config;
+
     void setVideoMode(unsigned int width, unsigned int height);
 
     void setRenderingTexture();
@@ -33,12 +37,11 @@ private:
     unsigned short renderWidth;
     unsigned short renderHeight;
 
-    unsigned short windowWidth;
-    unsigned short windowHeight;
-
     sf::Texture videoOutputTexture;
 
     sf::Sprite videoOutputSprite;
+
+    InputInterface *inputInterface;
 };
 
 #endif

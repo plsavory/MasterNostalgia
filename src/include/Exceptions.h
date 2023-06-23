@@ -104,6 +104,18 @@ public:
                                                                          message) {};
 };
 
+class ConfigurationException : public GeneralException {
+public:
+    explicit ConfigurationException(const std::string &message) : GeneralException(std::string("Configuration Exception"),
+                                                                                message) {};
+};
+
+class JSONParserException : public GeneralException {
+public:
+    explicit JSONParserException(const std::string &message) : GeneralException(std::string("JSON Parser Exception"),
+                                                                         message) {};
+};
+
 #endif
 
 #endif //MASTALGIA_EXCEPTIONS_H

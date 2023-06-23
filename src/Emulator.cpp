@@ -4,12 +4,11 @@
 Emulator::Emulator() {
     system = nullptr;
     window = nullptr;
+    config = new Config();
+    inputInterface = new InputInterface(config);
 
     renderWidth = 256;
     renderHeight = 224;
-
-    windowWidth = 640;
-    windowHeight = 480;
 }
 
 Emulator::~Emulator() {
@@ -20,7 +19,7 @@ Emulator::~Emulator() {
 
 void Emulator::init(const std::string &fileName) {
     // TODO detect ROM type and support multiple consoles if we ever get master system support fully working
-    system = new MasterSystem();
+    system = new MasterSystem(inputInterface);
 
     bool romLoadResult = system->init(fileName);
 
@@ -34,7 +33,7 @@ void Emulator::init(const std::string &fileName) {
 
 void Emulator::run() {
     // Create SFML window for video output
-    setVideoMode((unsigned int)windowWidth, (unsigned int)windowHeight);
+    setVideoMode((unsigned int)config->getDisplayWidth(), (unsigned int)config->getDisplayHeight());
     setRenderingTexture();
 
 //    bool hasPrintedVdpInfo = false;
@@ -65,7 +64,7 @@ void Emulator::run() {
 //            hasPrintedVdpInfo = false;
 //        }
 
-        // TODO determine if the render mode needs to be changed, if the console has changed vindow output mode and change accordingly
+        // TODO determine if the render mode needs to be changed, if the console has changed window output mode and change accordingly
         unsigned short consoleDisplayWidth = system->getCurrentDisplayWidth();
         unsigned short consoleDisplayHeight = system->getCurrentDisplayHeight();
 
@@ -85,16 +84,20 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
         delete(window);
     }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), sf::Style::Default);
+    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), config->isFullScreenMode() ? sf::Style::Fullscreen : sf::Style::Default);
     window->setFramerateLimit(60);
     window->setVerticalSyncEnabled(true);
 }
 
 void Emulator::setRenderingTexture() {
     // TODO add a way to keep the aspect ratio of the console's display, to prevent scaling artifacts.
+    float widthScale = (float)config->getDisplayWidth()/(float)renderWidth;
+    float heightScale = (float)config->getDisplayHeight()/(float)renderHeight;
+
+
     videoOutputTexture.create((int)renderWidth, (int)renderHeight);
     videoOutputSprite.setTexture(videoOutputTexture);
     videoOutputSprite.setPosition(0.f, 0.f);
-    videoOutputSprite.setScale((float)windowWidth/(float)renderWidth, (float)windowHeight/(float)renderHeight);
+    videoOutputSprite.setScale(widthScale, heightScale);
 }
 

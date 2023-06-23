@@ -5,8 +5,8 @@
 #include "MasterSystemInput.h"
 #include "SFML/Window.hpp"
 
-MasterSystemInput::MasterSystemInput() {
-
+MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
+    this->inputInterface = inputInterface;
 }
 
 void MasterSystemInput::setState() {
@@ -15,22 +15,22 @@ void MasterSystemInput::setState() {
     pauseButton = sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
 
     controllers[0].setState(
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Up),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Down),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Left),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Right),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::A),
-            sf::Keyboard::isKeyPressed(sf::Keyboard::S)
+            inputInterface->isDPadUpPressed(0),
+            inputInterface->isDPadDownPressed(0),
+            inputInterface->isDPadLeftPressed(0),
+            inputInterface->isDPadRightPressed(0),
+            inputInterface->isButtonAPressed(0),
+            inputInterface->isButtonBPressed(0)
             );
 
     // TODO support the second controller
     controllers[1].setState(
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
+            inputInterface->isDPadUpPressed(1),
+            inputInterface->isDPadDownPressed(1),
+            inputInterface->isDPadLeftPressed(1),
+            inputInterface->isDPadRightPressed(1),
+            inputInterface->isButtonAPressed(1),
+            inputInterface->isButtonBPressed(1)
             );
 }
 

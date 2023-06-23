@@ -6,11 +6,12 @@
 #define MASTALGIA_MASTERSYSTEMINPUT_H
 
 #include "MasterSystemController.h"
+#include "InputInterface.h"
 
 class MasterSystemInput {
 public:
 
-    MasterSystemInput();
+    MasterSystemInput(InputInterface *inputInterface);
 
     void setState();
 
@@ -19,6 +20,7 @@ public:
     unsigned char readPortDD();
 
 private:
+    InputInterface *inputInterface;
     MasterSystemController controllers[2];
     unsigned char resetButton;
     unsigned char pauseButton;

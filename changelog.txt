@@ -1,6 +1,7 @@
 Mastalgia 1.2.0 -
 
 Added support for running SG-1000 roms and SMS roms which use VDP mode 2
+Display settings and player controls are now editable through a configuration file
 
 Mastalgia 1.1.0 - 2023-06-12
 

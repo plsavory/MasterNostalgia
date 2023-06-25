@@ -22,6 +22,8 @@ public:
 
     bool isFullScreenMode();
 
+    bool getPreserveAspectRatio();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -32,6 +34,8 @@ private:
     int displayHeight;
 
     bool fullScreenMode;
+
+    bool preserveAspectRatio;
 
     PlayerControlConfig *player1Controls;
 

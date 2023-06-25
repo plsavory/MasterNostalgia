@@ -11,6 +11,7 @@ Config::Config() {
     displayWidth = 640;
     displayHeight = 480;
     fullScreenMode = false;
+    preserveAspectRatio = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -46,6 +47,10 @@ int Config::getDisplayHeight() {
     }
 
     return displayHeight;
+}
+
+bool Config::getPreserveAspectRatio() {
+    return preserveAspectRatio;
 }
 
 bool Config::isFullScreenMode() {
@@ -100,6 +105,10 @@ void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
         displayHeight = JsonHandler::getInteger(displayConfigurationJson, "displayHeight");
     }
 
+    if (JsonHandler::keyExists(displayConfigurationJson, "preserveAspectRatio")) {
+        preserveAspectRatio = JsonHandler::getBoolean(displayConfigurationJson, "preserveAspectRatio");
+    }
+
 }
 
 void Config::writeConfigFile(const std::string& fileName) {
@@ -143,6 +152,7 @@ json Config::getDisplayConfigurationJson() {
     output["displayWidth"] = displayWidth;
     output["displayHeight"] = displayHeight;
     output["fullScreenMode"] = fullScreenMode;
+    output["preserveAspectRatio"] = preserveAspectRatio;
 
     return output;
 }

@@ -90,14 +90,35 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
 }
 
 void Emulator::setRenderingTexture() {
-    // TODO add a way to keep the aspect ratio of the console's display, to prevent scaling artifacts.
-    float widthScale = (float)config->getDisplayWidth()/(float)renderWidth;
-    float heightScale = (float)config->getDisplayHeight()/(float)renderHeight;
 
+    float displayWidth = (float)config->getDisplayWidth();
+    float displayHeight = (float)config->getDisplayHeight();
+
+    float widthScale;
+    float heightScale;
 
     videoOutputTexture.create((int)renderWidth, (int)renderHeight);
     videoOutputSprite.setTexture(videoOutputTexture);
-    videoOutputSprite.setPosition(0.f, 0.f);
+
+    float xPosition = 0.f;
+    float yPosition = 0.f;
+
+    if (config->getPreserveAspectRatio()) {
+        // Preserving original aspect ratio - determine the largest scale that we can fit inside the window
+        widthScale = heightScale = std::min(displayWidth / (float)renderWidth, displayHeight / (float)renderHeight);
+
+        // Position the display so that it appears in the middle of the screen
+        xPosition += std::abs(((float)renderWidth * widthScale) - displayWidth)/2;
+        yPosition += std::abs(((float)renderHeight * heightScale) - displayHeight)/2;
+
+    } else {
+        // Not preserving the original aspect ratio - stretch the image to the full size of the screen/window.
+        widthScale = displayWidth/(float)renderWidth;
+        heightScale = displayHeight/(float)renderHeight;
+    }
+
+
     videoOutputSprite.setScale(widthScale, heightScale);
+    videoOutputSprite.setPosition(xPosition, yPosition);
 }
 

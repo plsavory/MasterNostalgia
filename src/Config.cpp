@@ -16,6 +16,8 @@ Config::Config() {
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
 
+    generalControls = new GeneralControlConfig();
+
 #ifdef JSON_CONFIG_FILE
 
     std::string configFileName = "config.json"; // TODO allow this to be overridden with a command line parameter
@@ -23,6 +25,8 @@ Config::Config() {
     if (Utils::fileExists(configFileName)) {
         readConfigFile(configFileName);
     } else {
+        // Populate defaults for optional fields that do not need to be configured
+        generalControls->setDefaults();
         writeConfigFile(configFileName);
     }
 
@@ -65,6 +69,10 @@ PlayerControlConfig *Config::getPlayer2ControlConfig() {
     return nullptr; // TODO implement support for player 2
 }
 
+GeneralControlConfig *Config::getGeneralControlConfig() {
+    return generalControls;
+}
+
 #ifdef JSON_CONFIG_FILE
 
 void Config::readConfigFile(const std::string& fileName) {
@@ -86,6 +94,10 @@ void Config::readConfigFile(const std::string& fileName) {
     } else {
         // No control scheme found - set defaults
         player1Controls->setDefaults();
+    }
+
+    if (JsonHandler::keyExists(configFileJson, "generalControls")) {
+        generalControls->setFromConfig(configFileJson["generalControls"]);
     }
 
     // TODO read the player 2 control config. Don't bother populating it if it doesn't exist in the config file.
@@ -133,6 +145,12 @@ void Config::writeConfigFile(const std::string& fileName) {
     }
 
     // TODO save player 2 control config.
+
+    json generalControlsConfigurationJson = generalControls->getJson();
+
+    if (!generalControlsConfigurationJson.empty()) {
+        output["generalControls"] = generalControlsConfigurationJson;
+    }
 
     // Write the file, overwriting it if it already exists
     std::ofstream fileOut(fileName, std::ios::trunc);

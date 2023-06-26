@@ -82,3 +82,7 @@ unsigned short MasterSystem::getCurrentDisplayHeight() {
 unsigned char MasterSystem::getCurrentFrameRate() {
     return 60; // TODO return 50 if in PAL mode
 }
+
+void MasterSystem::sendPauseInterrupt() {
+    smsCPU->raisePauseInterrupt();
+}

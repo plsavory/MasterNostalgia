@@ -10,11 +10,11 @@ CPUZ80::CPUZ80(Memory *smsMemory, Z80IO *z80Io) {
     memory = smsMemory;
     this->z80Io = z80Io;
 
+    pauseInterruptWaiting = false;
+
     initialiseOpcodeHandlerPointers();
 
     cyclesTaken = 0;
-
-    resetRequest = ResetRequest::none;
 
     // Reset the CPU to its initial state
     reset();
@@ -26,7 +26,7 @@ CPUZ80::~CPUZ80() {
 
 void CPUZ80::reset() {
 
-    resetRequest = ResetRequest::none;
+    pauseInterruptWaiting = false;
     originalProgramCounterValue = programCounter = 0x0;
     stackPointer = 0xDFF0;
     iff1 = iff2 = true;
@@ -79,10 +79,9 @@ int CPUZ80::executeOpcode() {
         enableInterrupts = false;
     }
 
-    if (resetRequest == ResetRequest::pending) {
-        resetRequest = ResetRequest::processing;
+    if (pauseInterruptWaiting) {
+        pauseInterruptWaiting = false;
         pushStack(programCounter);
-        iff1 = false;
         state = CPUState::Running;
         programCounter = 0x66;
     }
@@ -296,6 +295,10 @@ void CPUZ80::indexBitOpcodes(cpuReg indexRegister) {
     displayOpcode = opcode;
 
     (this->*indexBitOpcodeHandlers[opcode])();
+}
+
+void CPUZ80::raisePauseInterrupt() {
+    pauseInterruptWaiting = true;
 }
 
 void CPUZ80::initialiseOpcodeHandlerPointers() {

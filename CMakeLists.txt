@@ -79,7 +79,8 @@ add_executable(${EXECUTABLE_NAME}
         src/Config.cpp
         src/PlayerControlConfig.cpp
         src/InputInterface.cpp
-        src/SFMLKeyboardStringMapper.cpp)
+        src/SFMLKeyboardStringMapper.cpp
+        src/GeneralControlConfig.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

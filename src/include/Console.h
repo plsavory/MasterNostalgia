@@ -39,6 +39,8 @@ public:
 
     virtual unsigned char getCurrentFrameRate() = 0;
 
+    virtual void sendPauseInterrupt() = 0;
+
 protected:
 
     virtual double getMachineClicksPerFrame() = 0;

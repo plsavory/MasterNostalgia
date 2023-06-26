@@ -36,15 +36,28 @@ void Emulator::run() {
     setVideoMode((unsigned int)config->getDisplayWidth(), (unsigned int)config->getDisplayHeight());
     setRenderingTexture();
 
+    sf::Keyboard::Key pauseKey = sf::Keyboard::Unknown;
+    sf::Keyboard::Key exitKey = sf::Keyboard::Unknown;
+
+    if (config->getGeneralControlConfig() && config->getGeneralControlConfig()->getKeyboardConfig()) {
+        exitKey = config->getGeneralControlConfig()->getKeyboardConfig()->getExitKey();
+        pauseKey = config->getGeneralControlConfig()->getKeyboardConfig()->getPauseKey();
+    }
+
 //    bool hasPrintedVdpInfo = false;
 
     while (window->isOpen()) {
 
         sf::Event event;
         while (window->pollEvent(event)) {
-            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)) {
+
+            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && exitKey != sf::Keyboard::Unknown && event.key.code == exitKey)) {
                 window->close();
                 return;
+            }
+
+            if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
+                system->sendPauseInterrupt();
             }
         }
         system->emulateFrame();
@@ -64,7 +77,6 @@ void Emulator::run() {
 //            hasPrintedVdpInfo = false;
 //        }
 
-        // TODO determine if the render mode needs to be changed, if the console has changed window output mode and change accordingly
         unsigned short consoleDisplayWidth = system->getCurrentDisplayWidth();
         unsigned short consoleDisplayHeight = system->getCurrentDisplayHeight();
 

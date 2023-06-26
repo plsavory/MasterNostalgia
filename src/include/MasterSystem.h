@@ -32,6 +32,8 @@ public:
 
     unsigned char getCurrentFrameRate() final;
 
+    void sendPauseInterrupt() final;
+
 private:
     CPUZ80 *smsCPU;
     Memory *smsMemory;

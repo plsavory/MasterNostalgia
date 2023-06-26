@@ -46,12 +46,6 @@ enum ShiftBitToCopy {
     copyOne
 };
 
-enum class ResetRequest : unsigned char {
-    none = 0,
-    pending = 1,
-    processing = 2
-};
-
 // Force these variables to use the same memory space - a handy way of emulating the CPU registers.
 union CPURegister {
     unsigned short whole;
@@ -76,6 +70,8 @@ public:
         return this->state;
     }
 
+    void raisePauseInterrupt();
+
 private:
     typedef void (CPUZ80::*OpcodeHandler) ();
 
@@ -91,6 +87,9 @@ private:
     unsigned short programCounter{};
     unsigned short originalProgramCounterValue{};
     unsigned short stackPointer{};
+
+    bool pauseInterruptWaiting;
+
     CPURegister gpRegisters[10]{};
     CPURegister originalRegisterValues[10]{};
     unsigned short originalStackPointerValue{};
@@ -106,8 +105,6 @@ private:
     unsigned char ioPortAddress{};
 
     unsigned short memoryAddress{};
-
-    ResetRequest resetRequest;
 
     Z80IO *z80Io;
 

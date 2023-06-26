@@ -10,6 +10,7 @@
 #endif
 
 #include "PlayerControlConfig.h"
+#include "GeneralControlConfig.h"
 
 class Config {
 public:
@@ -28,6 +29,8 @@ public:
 
     PlayerControlConfig* getPlayer2ControlConfig();
 
+    GeneralControlConfig* getGeneralControlConfig();
+
 private:
     int displayWidth;
 
@@ -38,6 +41,8 @@ private:
     bool preserveAspectRatio;
 
     PlayerControlConfig *player1Controls;
+
+    GeneralControlConfig *generalControls;
 
 #ifdef JSON_CONFIG_FILE
 

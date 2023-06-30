@@ -34,6 +34,8 @@ void CPUZ80::standardOpcodeHandler0x01() {
 void CPUZ80::standardOpcodeHandler0x02() {
     // ld (bc), a
     writeMemory(gpRegisters[cpuReg::BC].whole, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].hi = gpRegisters[cpuReg::AF].hi;
+    gpRegisters[cpuReg::WZ].lo = (gpRegisters[cpuReg::BC].whole + 1) & 0xFF;
     cyclesTaken = 7;
 }
 
@@ -82,6 +84,7 @@ void CPUZ80::standardOpcodeHandler0x09() {
 void CPUZ80::standardOpcodeHandler0x0A() {
     // ld a, (bc)
     ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::BC].whole));
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::BC].whole + 1;
     cyclesTaken = 7;
 }
 
@@ -129,6 +132,8 @@ void CPUZ80::standardOpcodeHandler0x11() {
 void CPUZ80::standardOpcodeHandler0x12() {
     // ld (de), a
     writeMemory(gpRegisters[cpuReg::DE].whole, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].hi = gpRegisters[cpuReg::AF].hi;
+    gpRegisters[cpuReg::WZ].lo = (gpRegisters[cpuReg::DE].whole + 1) & 0xFF;
     cyclesTaken = 7;
 }
 
@@ -176,6 +181,7 @@ void CPUZ80::standardOpcodeHandler0x19() {
 void CPUZ80::standardOpcodeHandler0x1A() {
     // ld a, (de)
     ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(gpRegisters[cpuReg::DE].whole));
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::DE].whole + 1;
     cyclesTaken = 7;
 }
 
@@ -222,7 +228,9 @@ void CPUZ80::standardOpcodeHandler0x21() {
 
 void CPUZ80::standardOpcodeHandler0x22() {
     // ld (nn), hl
-    store(build16BitNumber(), gpRegisters[cpuReg::HL].hi, gpRegisters[cpuReg::HL].lo);
+    unsigned short address = build16BitNumber();
+    writeMemory(address, gpRegisters[cpuReg::HL].whole);
+    gpRegisters[cpuReg::WZ].whole = address + 1;
     cyclesTaken = 16;
 }
 
@@ -269,7 +277,9 @@ void CPUZ80::standardOpcodeHandler0x29() {
 
 void CPUZ80::standardOpcodeHandler0x2A() {
     // ld hl, (nn)
-    ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(build16BitNumber()), false);
+    unsigned short address = build16BitNumber();
+    ldReg16(gpRegisters[cpuReg::HL].whole, readMemory16Bit(address), false);
+    gpRegisters[cpuReg::WZ].whole = address + 1;
     cyclesTaken = 16;
 }
 
@@ -316,7 +326,10 @@ void CPUZ80::standardOpcodeHandler0x31() {
 
 void CPUZ80::standardOpcodeHandler0x32() {
     // ld (nn), a
-    writeMemory(build16BitNumber(), gpRegisters[cpuReg::AF].hi);
+    unsigned short address = build16BitNumber();
+    writeMemory(address, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].hi = gpRegisters[cpuReg::AF].hi;
+    gpRegisters[cpuReg::WZ].lo = (address + 1) & 0xFF;
     cyclesTaken = 13;
 }
 
@@ -369,7 +382,9 @@ void CPUZ80::standardOpcodeHandler0x39() {
 
 void CPUZ80::standardOpcodeHandler0x3A() {
     // ld a, (nn)
-    ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(build16BitNumber()));
+    unsigned short address = build16BitNumber();
+    ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address + 1;
     cyclesTaken = 13;
 }
 
@@ -736,6 +751,8 @@ void CPUZ80::standardOpcodeHandler0x76() {
 void CPUZ80::standardOpcodeHandler0x77() {
     // ld (hl), a
     writeMemory(gpRegisters[cpuReg::HL].whole, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].lo = (gpRegisters[cpuReg::HL].whole + 1) & 0xFF;
+    gpRegisters[cpuReg::WZ].hi = gpRegisters[cpuReg::AF].hi;
     cyclesTaken = 7;
 }
 
@@ -1222,6 +1239,7 @@ void CPUZ80::standardOpcodeHandler0xC8() {
 void CPUZ80::standardOpcodeHandler0xC9() {
     // ret
     programCounter = popStack16();
+    gpRegisters[cpuReg::WZ].whole = programCounter;
     cyclesTaken = 10;
 }
 
@@ -1274,7 +1292,10 @@ void CPUZ80::standardOpcodeHandler0xD2() {
 
 void CPUZ80::standardOpcodeHandler0xD3() {
     // out (n) a
-    portOut(NB(), gpRegisters[cpuReg::AF].hi);
+    unsigned char port = NB();
+    portOut(port, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].hi = gpRegisters[cpuReg::AF].hi;
+    gpRegisters[cpuReg::WZ].lo = (port + 1) & 0xFF;
     cyclesTaken = 11;
 }
 
@@ -1320,7 +1341,9 @@ void CPUZ80::standardOpcodeHandler0xDA() {
 
 void CPUZ80::standardOpcodeHandler0xDB() {
     // in a, (n)
-    readPortToRegister(gpRegisters[cpuReg::AF].hi, NB());
+    unsigned char port = NB();
+    gpRegisters[cpuReg::WZ].whole = (gpRegisters[cpuReg::AF].hi << 8) + port + 1;
+    readPortToRegister(gpRegisters[cpuReg::AF].hi, port);
     cyclesTaken = 11;
 }
 
@@ -1364,6 +1387,7 @@ void CPUZ80::standardOpcodeHandler0xE2() {
 void CPUZ80::standardOpcodeHandler0xE3() {
     // ex (sp), hl
     exStack(gpRegisters[cpuReg::HL].whole);
+    cyclesTaken = 19;
 }
 
 void CPUZ80::standardOpcodeHandler0xE4() {

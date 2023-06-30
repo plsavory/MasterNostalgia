@@ -10,7 +10,7 @@ enum CPUState {
 
 // For a nice way to address the CPU registers in the code...
 enum cpuReg {
-    AF, BC, DE, HL, AFS, BCS, DES, HLS, IX, IY
+    AF, BC, DE, HL, AFS, BCS, DES, HLS, IX, IY, WZ
 };
 
 // Used for conditional jump operations (Following info from: http://www.z80.info/z80code.htm)
@@ -90,8 +90,8 @@ private:
 
     bool pauseInterruptWaiting;
 
-    CPURegister gpRegisters[10]{};
-    CPURegister originalRegisterValues[10]{};
+    CPURegister gpRegisters[11]{};
+    CPURegister originalRegisterValues[11]{};
     unsigned short originalStackPointerValue{};
     CPUState state;
     unsigned char registerI{};
@@ -252,8 +252,6 @@ private:
 
     void exchange16Bit(unsigned short &register1, unsigned short &register2);
 
-    void popStackExchange(unsigned short &destinationRegister);
-
     void daa(unsigned char &dest);
 
     // To make flag handling easier and to prevent repetitive typing
@@ -298,7 +296,9 @@ private:
 
     void indexedBit(unsigned char bitNumber, unsigned char value);
 
-    bool bitLogic(unsigned char bitNumber, unsigned char value);
+    void hlBit(unsigned char bitNumber);
+
+    void bitLogic(unsigned char bitNumber, unsigned char value);
 
     unsigned char res(unsigned char bitNumber, unsigned char value);
 
@@ -943,7 +943,6 @@ private:
     void bitOpcodeHandler0xFE();
     void bitOpcodeHandler0xFF();
 
-    // TODO should indexRegister be a property which is set before calling these? refactor later if that is cleaner as this won't always be used.
     void invalidIndexOpcodeHandler();
     void indexOpcodeHandler0x04();
     void indexOpcodeHandler0x05();

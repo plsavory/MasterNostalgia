@@ -48,6 +48,7 @@ void CPUZ80::reset() {
     gpRegisters[cpuReg::AF].whole = 0xAB40;
     gpRegisters[cpuReg::IX].whole = 0x7A67;
     gpRegisters[cpuReg::IY].whole = 0x7E3C;
+    gpRegisters[cpuReg::WZ].whole = 0x0;
 }
 
 int CPUZ80::execute() {
@@ -84,12 +85,14 @@ int CPUZ80::executeOpcode() {
         pushStack(programCounter);
         state = CPUState::Running;
         programCounter = 0x66;
+        gpRegisters[cpuReg::WZ].whole = programCounter;
     }
 
     if (z80Io->isVDPRequestingInterrupt() && iff1 && interruptMode == 1) {
         state = CPUState::Running;
         pushStack(programCounter);
         programCounter = 0x38;
+        gpRegisters[cpuReg::WZ].whole = programCounter;
         iff1 = iff2 = false;
     }
 
@@ -291,6 +294,7 @@ void CPUZ80::bitOpcodes() {
 void CPUZ80::indexBitOpcodes(cpuReg indexRegister) {
     // Opcode format is offset, opcode
     indexedAddressForCurrentOpcode = gpRegisters[indexRegister].whole + signedNB();
+    gpRegisters[cpuReg::WZ].whole = indexedAddressForCurrentOpcode;
     unsigned char opcode = NBHideFromTrace();
     displayOpcode = opcode;
 

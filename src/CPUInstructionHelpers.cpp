@@ -104,6 +104,7 @@ void CPUZ80::addAdc16Bit(unsigned short &dest, unsigned short value, bool withCa
     }
 
     handleUndocumentedFlags((unsigned char)(dest >> 8));
+    gpRegisters[cpuReg::WZ].whole = originalValue + 1;
 }
 
 void CPUZ80::add16Bit(unsigned short &dest, unsigned short value) {
@@ -147,6 +148,7 @@ void CPUZ80::subSbc16Bit(unsigned short &dest, unsigned short value, bool withCa
     setFlag(CPUFlag::sign, Utils::testBit(15, dest));
     setFlag(CPUFlag::overflowParity, ((originalValue & 0x8000) != (value & 0x8000)) && ((dest & 0x8000) == (value & 0x8000)));
     handleUndocumentedFlags(highResult);
+    gpRegisters[cpuReg::WZ].whole = originalValue + 1;
 }
 
 /**
@@ -217,6 +219,7 @@ void CPUZ80::setInterruptMode(unsigned char mode) {
 void CPUZ80::jpCondition(JPCondition condition) {
 
     unsigned short jumpLocation = build16BitNumber();
+    gpRegisters[cpuReg::WZ].whole = jumpLocation;
     cyclesTaken = 10; // TODO: Ensure that this is the same for all conditional jump instructions
 
     if (!hasMetJumpCondition(condition)) {
@@ -229,13 +232,15 @@ void CPUZ80::jpCondition(JPCondition condition) {
 void CPUZ80::jrCondition(JPCondition condition) {
 
     signed char offset = signedNB();
+    unsigned short address = programCounter + offset;
+    gpRegisters[cpuReg::WZ].whole = address;
 
     if (!hasMetJumpCondition(condition)) {
         cyclesTaken = 7;
         return;
     }
 
-    programCounter += offset;
+    programCounter = address;
     cyclesTaken = 12;
     #ifdef DEBUG_VALUES
     readValue = (unsigned char)offset;
@@ -250,10 +255,12 @@ void CPUZ80::retCondition(JPCondition condition) {
 
     cyclesTaken = 11;
     programCounter = popStack16();
+    gpRegisters[cpuReg::WZ].whole = programCounter;
 }
 
 void CPUZ80::jr() {
     programCounter += signedNB();
+    gpRegisters[cpuReg::WZ].whole = programCounter;
     cyclesTaken = 12;
 }
 
@@ -262,6 +269,7 @@ void CPUZ80::jr() {
  */
 void CPUZ80::jpImm() {
     programCounter = build16BitNumber();
+    gpRegisters[cpuReg::WZ].whole = programCounter;
     #ifdef DEBUG_VALUES
     readValue = programCounter;
     #endif
@@ -312,7 +320,6 @@ void CPUZ80::compare8Bit(unsigned char valueToSubtract) {
 }
 
 void CPUZ80::ini(bool increment) {
-    // TODO do flags need to be set when incrementing/decrementing the registers like in the dec/inc instructions?
     memory->write(gpRegisters[cpuReg::HL].whole, z80Io->read(gpRegisters[cpuReg::BC].lo));
 
     gpRegisters[cpuReg::HL].whole += increment ? 1 : -1;
@@ -321,6 +328,7 @@ void CPUZ80::ini(bool increment) {
     setFlag(CPUFlag::zero, true);
 
     cyclesTaken = 16;
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::BC].whole + (increment ? 1 : -1);
     --gpRegisters[cpuReg::BC].hi;
 }
 
@@ -361,6 +369,7 @@ void CPUZ80::cpi(bool increment) {
     cyclesTaken = 16;
 
     gpRegisters[cpuReg::HL].whole += (increment ? 1 : -1);
+    gpRegisters[cpuReg::WZ].whole += (increment ? 1 : -1);
 }
 
 void CPUZ80::cpir(bool increment) {
@@ -376,6 +385,7 @@ void CPUZ80::cpir(bool increment) {
 
     cyclesTaken = 21;
     programCounter -= 2;
+    gpRegisters[cpuReg::WZ].whole = programCounter + 1;
 }
 
 void CPUZ80::ldi(bool increment) {
@@ -406,6 +416,7 @@ void CPUZ80::ldir(bool increment) {
     }
 
     programCounter -= 2;
+    gpRegisters[cpuReg::WZ].whole = programCounter + 1;
     cyclesTaken = 21;
 }
 
@@ -424,6 +435,8 @@ void CPUZ80::outi(bool increment) {
     setFlag(CPUFlag::xf, false);
     setFlag(CPUFlag::sign, Utils::testBit(7, gpRegisters[cpuReg::BC].hi));
     setFlag(CPUFlag::zero, gpRegisters[cpuReg::BC].hi == 0);
+
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::BC].whole + (increment ? 1 : -1);
 
     unsigned short k = valueToWrite + gpRegisters[cpuReg::HL].lo;
     setFlag(CPUFlag::subtractNegative, Utils::testBit(7, valueToWrite));
@@ -452,6 +465,8 @@ void CPUZ80::call(unsigned short location, bool conditionMet) {
     readValue = location;
     #endif
 
+    gpRegisters[cpuReg::WZ].whole = location;
+
     if (!conditionMet) {
         cyclesTaken = 10;
         return;
@@ -473,6 +488,7 @@ void CPUZ80::callCondition(JPCondition condition) {
 void CPUZ80::rst(unsigned short location) {
     pushStack(programCounter);
     programCounter = location;
+    gpRegisters[cpuReg::WZ].whole = programCounter;
     cyclesTaken = 11;
 
     #ifdef DEBUG_VALUES
@@ -488,6 +504,7 @@ void CPUZ80::store(unsigned short location, unsigned char hi, unsigned char lo) 
 void CPUZ80::djnz() {
 
     signed char offset = signedNB();
+    gpRegisters[cpuReg::WZ].whole = programCounter + offset;
 
     if (--gpRegisters[cpuReg::BC].hi == 0) {
         cyclesTaken = 7;
@@ -658,12 +675,6 @@ void CPUZ80::exchange16Bit(unsigned short &register1, unsigned short &register2)
 
 }
 
-void CPUZ80::popStackExchange(unsigned short &destinationRegister) {
-    unsigned short originalRegisterValue = destinationRegister;
-    destinationRegister = popStack16();
-    pushStack(originalRegisterValue);
-}
-
 void CPUZ80::daa(unsigned char &dest) {
 
     bool subtract = getFlag(CPUFlag::subtractNegative);
@@ -712,7 +723,7 @@ void CPUZ80::exStack(unsigned short &dest) {
     unsigned short originalRegisterValue = dest;
     dest = popStack16();
     pushStack(originalRegisterValue);
-    cyclesTaken = 19;
+    gpRegisters[cpuReg::WZ].whole = dest;
 }
 
 void CPUZ80::readPortToRegister(unsigned char &dest, unsigned char portAddress) {
@@ -738,7 +749,7 @@ void CPUZ80::retn() {
 
 void CPUZ80::reti() {
     programCounter = popStack16();
-    // TODO send a signal to an I/O device when I have figured out where to send it to.
+    gpRegisters[cpuReg::WZ].whole = programCounter;
     cyclesTaken = 14;
 }
 
@@ -757,6 +768,7 @@ void CPUZ80::rrd(unsigned char &dest) {
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     handleUndocumentedFlags(dest);
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::HL].whole + 1; // TODO should this be the value of HL before or after the operation? documentation doesn't say
     cyclesTaken = 18;
 }
 
@@ -775,23 +787,22 @@ void CPUZ80::rld(unsigned char &dest) {
     setFlag(CPUFlag::zero, dest == 0);
     setFlag(CPUFlag::sign, Utils::testBit(7, dest));
     handleUndocumentedFlags(dest);
+    gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::HL].whole + 1;
     cyclesTaken = 18;
 }
 
-inline bool CPUZ80::bitLogic(unsigned char bitNumber, unsigned char value) {
+inline void CPUZ80::bitLogic(unsigned char bitNumber, unsigned char value) {
     bool bitIsSet = Utils::testBit(bitNumber, value);
     setFlag(CPUFlag::sign, bitNumber == 7 && bitIsSet);
     setFlag(CPUFlag::zero, !bitIsSet);
     setFlag(CPUFlag::halfCarry, true);
     setFlag(CPUFlag::overflowParity, !bitIsSet);
     setFlag(CPUFlag::subtractNegative, false);
-    return bitIsSet;
 }
 
 void CPUZ80::bit(unsigned char bitNumber, unsigned char value) {
-    bool bitIsSet = bitLogic(bitNumber, value);
-    setFlag(CPUFlag::yf, bitNumber == 5 && bitIsSet);
-    setFlag(CPUFlag::xf, bitNumber == 3 && bitIsSet);
+    bitLogic(bitNumber, value);
+    handleUndocumentedFlags(value);
 }
 
 void CPUZ80::indexedBit(unsigned char bitNumber, unsigned char value) {
@@ -799,6 +810,11 @@ void CPUZ80::indexedBit(unsigned char bitNumber, unsigned char value) {
     unsigned char indexedAddressHi = indexedAddressForCurrentOpcode >> 8;
     setFlag(CPUFlag::yf, Utils::testBit(5, indexedAddressHi));
     setFlag(CPUFlag::xf, Utils::testBit(3, indexedAddressHi));
+}
+
+void CPUZ80::hlBit(unsigned char bitNumber) {
+    bitLogic(bitNumber, readMemory(gpRegisters[cpuReg::HL].whole));
+    handleUndocumentedFlags(gpRegisters[cpuReg::WZ].hi);
 }
 
 unsigned char CPUZ80::res(unsigned char bitNumber, unsigned char value) {

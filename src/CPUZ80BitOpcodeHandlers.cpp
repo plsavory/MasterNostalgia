@@ -431,7 +431,7 @@ void CPUZ80::bitOpcodeHandler0x45() {
 
 void CPUZ80::bitOpcodeHandler0x46() {
     // bit 0, (hl);
-    bit(0, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(0);
     cyclesTaken = 12;
 }
 
@@ -479,7 +479,7 @@ void CPUZ80::bitOpcodeHandler0x4D() {
 
 void CPUZ80::bitOpcodeHandler0x4E() {
     // bit 1, (hl);
-    bit(1, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(1);
     cyclesTaken = 12;
 }
 
@@ -527,7 +527,7 @@ void CPUZ80::bitOpcodeHandler0x55() {
 
 void CPUZ80::bitOpcodeHandler0x56() {
     // bit 2, (hl);
-    bit(2, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(2);
     cyclesTaken = 12;
 }
 
@@ -575,7 +575,7 @@ void CPUZ80::bitOpcodeHandler0x5D() {
 
 void CPUZ80::bitOpcodeHandler0x5E() {
     // bit 3, (hl);
-    bit(3, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(3);
     cyclesTaken = 12;
 }
 
@@ -623,7 +623,7 @@ void CPUZ80::bitOpcodeHandler0x65() {
 
 void CPUZ80::bitOpcodeHandler0x66() {
     // bit 4, (hl);
-    bit(4, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(4);
     cyclesTaken = 12;
 }
 
@@ -671,7 +671,7 @@ void CPUZ80::bitOpcodeHandler0x6D() {
 
 void CPUZ80::bitOpcodeHandler0x6E() {
     // bit 5, (hl);
-    bit(5, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(5);
     cyclesTaken = 12;
 }
 
@@ -719,7 +719,7 @@ void CPUZ80::bitOpcodeHandler0x75() {
 
 void CPUZ80::bitOpcodeHandler0x76() {
     // bit 6, (hl);
-    bit(6, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(6);
     cyclesTaken = 12;
 }
 
@@ -767,7 +767,7 @@ void CPUZ80::bitOpcodeHandler0x7D() {
 
 void CPUZ80::bitOpcodeHandler0x7E() {
     // bit 7, (hl);
-    bit(7, readMemory(gpRegisters[cpuReg::HL].whole));
+    hlBit(7);
     cyclesTaken = 12;
 }
 

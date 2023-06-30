@@ -107,7 +107,9 @@ void CPUZ80::indexOpcodeHandler0x21() {
 
 void CPUZ80::indexOpcodeHandler0x22() {
     // ld (nn), ix
-    writeMemory(build16BitNumber(), gpRegisters[indexRegisterForCurrentOpcode].whole);
+    unsigned short address = build16BitNumber();
+    writeMemory(address, gpRegisters[indexRegisterForCurrentOpcode].whole);
+    gpRegisters[cpuReg::WZ].whole = address + 1;
     cyclesTaken = 20;
 }
 
@@ -143,7 +145,9 @@ void CPUZ80::indexOpcodeHandler0x29() {
 
 void CPUZ80::indexOpcodeHandler0x2A() {
     // ld ix, (nn)
-    ldReg16(gpRegisters[indexRegisterForCurrentOpcode].whole, readMemory16Bit(build16BitNumber()));
+    unsigned short address = build16BitNumber();
+    ldReg16(gpRegisters[indexRegisterForCurrentOpcode].whole, readMemory16Bit(address));
+    gpRegisters[cpuReg::WZ].whole = address + 1;
     cyclesTaken = 20;
 }
 
@@ -175,6 +179,7 @@ void CPUZ80::indexOpcodeHandler0x34() {
     // inc (ix+d)
     unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
     writeMemory(address, getInc8BitValue(readMemory(address)));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 23;
 }
 
@@ -182,12 +187,15 @@ void CPUZ80::indexOpcodeHandler0x35() {
     // dec (ix+d)
     unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
     writeMemory(address, getDec8BitValue(readMemory(address)));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 23;
 }
 
 void CPUZ80::indexOpcodeHandler0x36() {
     // ld (ix+d), n
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), NB());
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, NB());
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -253,7 +261,9 @@ void CPUZ80::indexOpcodeHandler0x45() {
 
 void CPUZ80::indexOpcodeHandler0x46() {
     // ld b, (ix+d)
-    ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::BC].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -349,7 +359,9 @@ void CPUZ80::indexOpcodeHandler0x55() {
 
 void CPUZ80::indexOpcodeHandler0x56() {
     // ld d, (ix+d)
-    ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::DE].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -397,7 +409,9 @@ void CPUZ80::indexOpcodeHandler0x5D() {
 
 void CPUZ80::indexOpcodeHandler0x5E() {
     // ld e, (ix+d)
-    ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::DE].lo, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -445,7 +459,9 @@ void CPUZ80::indexOpcodeHandler0x65() {
 
 void CPUZ80::indexOpcodeHandler0x66() {
     // ld h, (ix+d)
-    ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::HL].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -493,7 +509,9 @@ void CPUZ80::indexOpcodeHandler0x6D() {
 
 void CPUZ80::indexOpcodeHandler0x6E() {
     // ld l, (ix+d)
-    ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::HL].lo, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -505,43 +523,57 @@ void CPUZ80::indexOpcodeHandler0x6F() {
 
 void CPUZ80::indexOpcodeHandler0x70() {
     // ld (ix+d), b
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::BC].hi);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::BC].hi);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x71() {
     // ld (ix+d), c
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::BC].lo);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::BC].lo);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x72() {
     // ld (ix+d), d
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::DE].hi);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::DE].hi);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x73() {
     // ld (ix+d), e
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::DE].lo);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::DE].lo);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x74() {
     // ld (ix+d), h
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::HL].hi);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::HL].hi);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x75() {
     // ld (ix+d), l
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::HL].lo);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::HL].lo);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
 void CPUZ80::indexOpcodeHandler0x77() {
     // ld (ix+d), a
-    writeMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole), gpRegisters[cpuReg::AF].hi);
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    writeMemory(address, gpRegisters[cpuReg::AF].hi);
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -583,7 +615,9 @@ void CPUZ80::indexOpcodeHandler0x7D() {
 
 void CPUZ80::indexOpcodeHandler0x7E() {
     // ld a, (ix+d)
-    ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    ldReg8(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -631,7 +665,9 @@ void CPUZ80::indexOpcodeHandler0x85() {
 
 void CPUZ80::indexOpcodeHandler0x86() {
     // add a, (ix+d)
-    add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    add8Bit(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -727,7 +763,9 @@ void CPUZ80::indexOpcodeHandler0x95() {
 
 void CPUZ80::indexOpcodeHandler0x96() {
     // sub a, (ix+d)
-    sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    sub8Bit(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -775,7 +813,9 @@ void CPUZ80::indexOpcodeHandler0x9D() {
 
 void CPUZ80::indexOpcodeHandler0x9E() {
     // sbc a, (ix+d)
-    sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    sbc8Bit(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -823,7 +863,9 @@ void CPUZ80::indexOpcodeHandler0xA5() {
 
 void CPUZ80::indexOpcodeHandler0xA6() {
     // and a, (ix+d)
-    and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    and8Bit(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -871,7 +913,9 @@ void CPUZ80::indexOpcodeHandler0xAD() {
 
 void CPUZ80::indexOpcodeHandler0xAE() {
     // xor a, (ix+d)
-    exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    exclusiveOr(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -919,7 +963,9 @@ void CPUZ80::indexOpcodeHandler0xB5() {
 
 void CPUZ80::indexOpcodeHandler0xB6() {
     // or a, (ix+d)
-    or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    or8Bit(gpRegisters[cpuReg::AF].hi, readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -967,7 +1013,9 @@ void CPUZ80::indexOpcodeHandler0xBD() {
 
 void CPUZ80::indexOpcodeHandler0xBE() {
     // cp a, (ix+d)
-    compare8Bit(readMemory(getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole)));
+    unsigned short address = getIndexedOffsetAddress(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    compare8Bit(readMemory(address));
+    gpRegisters[cpuReg::WZ].whole = address;
     cyclesTaken = 19;
 }
 
@@ -989,7 +1037,7 @@ void CPUZ80::indexOpcodeHandler0xE1() {
 
 void CPUZ80::indexOpcodeHandler0xE3() {
     // ex (sp), ix
-    popStackExchange(gpRegisters[indexRegisterForCurrentOpcode].whole);
+    exStack(gpRegisters[indexRegisterForCurrentOpcode].whole);
     cyclesTaken = 23;
 }
 

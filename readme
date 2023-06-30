@@ -1,12 +1,47 @@
 This project is being developed as an educational exercise to learn how to emulate the Sega Master System and how the internals
 of the console work.
 
-Throughout this project I am using the following sources throughout development:
+Usage:
+
+Provide a path to a ROM File name as a command line parameter when launching on the command line.
+(e.g './Mastalgia "roms/zexall.sms"', or drag a ROM file onto the emulator's executable using your operating system's file manager)
+
+Default controls:
+
+Control pad 1 button 1: A
+Control pad 1 button 2: S
+Control pad 1 d-pad: Arrow keys
+Pause: P
+Quit: ESC
+
+The default controls and video display settings can be customised/configured in the config.json file in the same directory
+as the emulator's executable, the emulator will create one with the default values if one does not exist.
+
+Compiling/building:
+
+Requires the SFML 2.5.1 library to be installed on your system compiled for your C++ compiler (https://www.sfml-dev.org/), SFML
+has pre-built binaries for some compiler versions, you can also choose to compile it yourself or install it through your
+Linux distribution's package manager (or Homebrew on macOS). Please see their website for more details.
+
+Also requires CMake (https://cmake.org/), this can usually be installed through your operating system's package manager.
+
+Once your system has the above packages installed, the following terminal commands should build the project:
+
+cd (directory where Mastalgia was cloned into)
+mkdir build
+cd build
+cmake ..
+make
+
+(Replace "make" with mingw32-make if using MinGW to build on Windows.)
+
+Throughout this project I am using the following information sources throughout development:
 
 - Z80 Instruction Set & flag behaviour
 https://clrhome.org/table/
 http://z80-heaven.wikidot.com/instructions-set
 http://www.z80.info/zip/z80-documented.pdf
+https://gist.github.com/drhelius/8497817
 
 - Emulator development information and code examples (Parts of the project, mostly memory/mapping code and the current
 VDP implementation are heavily influenced by this):

@@ -16,7 +16,7 @@ public:
 
     bool init(std::string romFilename) final;
 
-    unsigned int tick();
+    double tick();
 
     bool isRunning() final;
 

@@ -15,8 +15,8 @@ public:
 
     void emulateFrame() {
         storeUserInput(); // TODO should this happen more often than once per frame?
-        double machineClicksPerFrame = getMachineClicksPerFrame();
-        unsigned int currentClicks = 0;
+        double machineClicksPerFrame = getMachineClicksPerFrame() * 2; // TODO determine why the machine runs way too slow without this multiplication - might need to revamp how timing works
+        double currentClicks = 0;
 
         while (currentClicks < machineClicksPerFrame) {
             currentClicks += tick();
@@ -25,7 +25,7 @@ public:
 
     virtual bool isRunning() = 0;
 
-    virtual unsigned int tick() = 0;
+    virtual double tick() = 0;
 
     virtual sf::Uint8* getVideoOutput() = 0;
 

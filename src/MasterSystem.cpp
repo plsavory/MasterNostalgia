@@ -34,19 +34,16 @@ bool MasterSystem::init(std::string romFilename) {
     return true;
 }
 
-unsigned int MasterSystem::tick() {
+double MasterSystem::tick() {
 
+    // TODO - the way that timing works needs to be revamped here, it doesn't seem quite right.
     int z80ClockCycles = smsCPU->execute();
 
-    float machineClicks = (float)z80ClockCycles * 3;
+    double machineClicks = z80ClockCycles * 3;
 
-    float vdpCycles = machineClicks / 2;
+    smsVdp->execute(machineClicks / 2);
 
-    int soundCycles = z80ClockCycles;
-
-    smsVdp->execute(vdpCycles);
-
-    smsPSG->execute(soundCycles);
+    smsPSG->execute(z80ClockCycles);
 
     return machineClicks;
 }

@@ -19,7 +19,7 @@ Emulator::~Emulator() {
 
 void Emulator::init(const std::string &fileName) {
     // TODO detect ROM type and support multiple consoles if we ever get master system support fully working
-    system = new MasterSystem(inputInterface);
+    system = new MasterSystem(inputInterface, config);
 
     bool romLoadResult = system->init(fileName);
 

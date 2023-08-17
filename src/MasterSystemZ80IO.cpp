@@ -31,7 +31,8 @@ void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
     }
 
     if (address <= 0x7F) {
-        // TODO - write to SN76489 PSG
+        // Write to SN76489 PSG
+        psg->write(value);
         return;
     }
 

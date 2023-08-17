@@ -11,6 +11,7 @@
 
 #include "PlayerControlConfig.h"
 #include "GeneralControlConfig.h"
+#include "SoundConfig.h"
 
 class Config {
 public:
@@ -31,6 +32,8 @@ public:
 
     GeneralControlConfig* getGeneralControlConfig();
 
+    SoundConfig* getSoundConfig();
+
 private:
     int displayWidth;
 
@@ -43,6 +46,8 @@ private:
     PlayerControlConfig *player1Controls;
 
     GeneralControlConfig *generalControls;
+
+    SoundConfig *soundConfig;
 
 #ifdef JSON_CONFIG_FILE
 

@@ -44,6 +44,7 @@ add_executable(${EXECUTABLE_NAME}
         src/include/MasterSystem.h
         src/include/Memory.h
         src/include/ProjectInfo.h
+        src/include/PSGChannel.h
         src/include/PSG.h
         src/include/Utils.h
         src/include/VDPDisplayMode.h
@@ -60,6 +61,7 @@ add_executable(${EXECUTABLE_NAME}
         src/EntryPoint.cpp
         src/MasterSystem.cpp
         src/Memory.cpp
+        src/PSGChannel.cpp
         src/PSG.cpp
         src/Utils.cpp
         src/VDP.cpp
@@ -80,7 +82,8 @@ add_executable(${EXECUTABLE_NAME}
         src/PlayerControlConfig.cpp
         src/InputInterface.cpp
         src/SFMLKeyboardStringMapper.cpp
-        src/GeneralControlConfig.cpp)
+        src/GeneralControlConfig.cpp
+        src/SoundConfig.cpp)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

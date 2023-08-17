@@ -18,6 +18,8 @@ Config::Config() {
 
     generalControls = new GeneralControlConfig();
 
+    soundConfig = new SoundConfig();
+
 #ifdef JSON_CONFIG_FILE
 
     std::string configFileName = "config.json"; // TODO allow this to be overridden with a command line parameter
@@ -73,6 +75,10 @@ GeneralControlConfig *Config::getGeneralControlConfig() {
     return generalControls;
 }
 
+SoundConfig *Config::getSoundConfig() {
+    return soundConfig;
+}
+
 #ifdef JSON_CONFIG_FILE
 
 void Config::readConfigFile(const std::string& fileName) {
@@ -98,6 +104,10 @@ void Config::readConfigFile(const std::string& fileName) {
 
     if (JsonHandler::keyExists(configFileJson, "generalControls")) {
         generalControls->setFromConfig(configFileJson["generalControls"]);
+    }
+
+    if (JsonHandler::keyExists(configFileJson, "sound")) {
+        soundConfig->setFromConfig(configFileJson["sound"]);
     }
 
     // TODO read the player 2 control config. Don't bother populating it if it doesn't exist in the config file.
@@ -150,6 +160,12 @@ void Config::writeConfigFile(const std::string& fileName) {
 
     if (!generalControlsConfigurationJson.empty()) {
         output["generalControls"] = generalControlsConfigurationJson;
+    }
+
+    json soundConfiguration = soundConfig->getSoundConfigurationJson();
+
+    if (!soundConfiguration.empty()) {
+        output["sound"] = soundConfiguration;
     }
 
     // Write the file, overwriting it if it already exists

@@ -10,7 +10,7 @@
 
 class MasterSystem final : public Console {
 public:
-    MasterSystem(InputInterface *inputInterface);
+    MasterSystem(InputInterface *inputInterface, Config *config);
 
     ~MasterSystem();
 
@@ -42,6 +42,7 @@ private:
     PSG *smsPSG;
     MasterSystemInput *smsInput;
     MasterSystemZ80IO *z80Io;
+    Config *config;
     bool running;
 protected:
 

@@ -1,9 +1,14 @@
-Mastalgia 1.2.0 -
+Mastalgia 1.2.0 - 2023-09-12
 
 Added support for running SG-1000 roms and SMS roms which use VDP mode 2
-Display settings and player controls are now editable through a configuration file
-Added a configuration option to preserve the original aspect ratio rather than stretching the display, using the "preserveAspectRatio" key in the general object of the config.json file.
-Implemented and fixed "Undocumented" Z80 CPU behaviour, now passes all zexall tests.
+A config.json file is now created by the emulator when it does not already exist
+Display settings and player controls are now editable through the configuration file
+Added a configuration option to preserve the original aspect ratio rather than stretching the display, using the "preserveAspectRatio" key in the general object of the config.json file
+Z80 emulation fixes (DAA instruction and undocumented flag behaviour), now passes all zexall tests
+Increased emulation speed to more closely match the real system
+Added partial/experimental sound emulation
+No longer responds to user input when the window is not in focus
+Added a configuration option to pause emulation when the window is not in focus (enabled by default)
 
 Mastalgia 1.1.0 - 2023-06-12
 

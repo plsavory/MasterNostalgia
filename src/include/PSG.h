@@ -8,10 +8,10 @@
 // TODO should this be 223720 ((machine clock/3)/16)? Do a comparison and determine which sounds more correct.
 #define PSG_CLOCK_SPEED 220000
 
-// 223720
 #include "PSGChannel.h"
 #include "SoundConfig.h"
 #include <SFML/Audio.hpp>
+#include <bitset>
 
 enum PSGChannelIndex {
     Tone0 = 0,

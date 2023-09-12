@@ -105,7 +105,7 @@ void PSG::write(unsigned char data) {
         if (hasSelectedVolumeRegister) {
             channels[selectedRegister]->setVolume(data);
         } else {
-            channels[selectedRegister]->setFrequencyHigher(data & 0x3F);
+            channels[selectedRegister]->setFrequencyHigher(data);
         }
 
 

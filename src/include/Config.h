@@ -26,6 +26,8 @@ public:
 
     bool getPreserveAspectRatio();
 
+    bool getPauseEmulationWhenNotInFocus();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -42,6 +44,8 @@ private:
     bool fullScreenMode;
 
     bool preserveAspectRatio;
+
+    bool pauseEmulationWhenNotInFocus;
 
     PlayerControlConfig *player1Controls;
 
@@ -60,6 +64,8 @@ private:
     json getGeneralConfigurationJson();
 
     void writeConfigFile(const std::string& fileName);
+
+    void readGeneralConfigurationJson(json generalConfigurationJson);
 
 #endif
 

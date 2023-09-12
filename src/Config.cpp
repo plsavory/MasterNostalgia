@@ -12,6 +12,7 @@ Config::Config() {
     displayHeight = 480;
     fullScreenMode = false;
     preserveAspectRatio = false;
+    pauseEmulationWhenNotInFocus = true;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -63,6 +64,10 @@ bool Config::isFullScreenMode() {
     return fullScreenMode;
 }
 
+bool Config::getPauseEmulationWhenNotInFocus() {
+    return pauseEmulationWhenNotInFocus;
+}
+
 PlayerControlConfig *Config::getPlayer1ControlConfig() {
     return player1Controls;
 }
@@ -93,7 +98,9 @@ void Config::readConfigFile(const std::string& fileName) {
         readDisplayConfigurationJson(configFileJson["display"]);
     }
 
-    // TODO read "general" configuration when it is needed. (e.g display frame rate options, etc)
+    if (JsonHandler::keyExists(configFileJson, "general")) {
+        readGeneralConfigurationJson(configFileJson["general"]);
+    }
 
     if (JsonHandler::keyExists(configFileJson, "player1Controls")) {
         player1Controls->setFromConfig(configFileJson["player1Controls"]);
@@ -129,6 +136,14 @@ void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
 
     if (JsonHandler::keyExists(displayConfigurationJson, "preserveAspectRatio")) {
         preserveAspectRatio = JsonHandler::getBoolean(displayConfigurationJson, "preserveAspectRatio");
+    }
+
+}
+
+void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJson) {
+
+    if (JsonHandler::keyExists(generalConfigurationJson, "pauseEmulationWhenNotInFocus")) {
+        pauseEmulationWhenNotInFocus = JsonHandler::getBoolean(generalConfigurationJson, "pauseEmulationWhenNotInFocus");
     }
 
 }
@@ -193,7 +208,9 @@ json Config::getDisplayConfigurationJson() {
 
 json Config::getGeneralConfigurationJson() {
     json output;
-    // TODO nothing to store here right now - will be needed in future.
+
+    output["pauseEmulationWhenNotInFocus"] = pauseEmulationWhenNotInFocus;
+
     return output;
 }
 

@@ -44,7 +44,11 @@ void Emulator::run() {
         pauseKey = config->getGeneralControlConfig()->getKeyboardConfig()->getPauseKey();
     }
 
+    bool pauseEmulationWhenNotInFocus = config->getPauseEmulationWhenNotInFocus();
+
 //    bool hasPrintedVdpInfo = false;
+
+    bool hasFocus = true;
 
     while (window->isOpen()) {
 
@@ -59,10 +63,21 @@ void Emulator::run() {
             if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
                 system->sendPauseInterrupt();
             }
-        }
-        system->emulateFrame();
 
-        videoOutputTexture.update(system->getVideoOutput());
+            if (event.type == sf::Event::GainedFocus) {
+                hasFocus = true;
+            }
+
+            if (event.type == sf::Event::LostFocus) {
+                hasFocus = false;
+            }
+        }
+
+        if (hasFocus || !pauseEmulationWhenNotInFocus) {
+            system->emulateFrame(hasFocus);
+            videoOutputTexture.update(system->getVideoOutput());
+        }
+
         window->clear(sf::Color::Black);
         window->draw(videoOutputSprite);
         window->display();

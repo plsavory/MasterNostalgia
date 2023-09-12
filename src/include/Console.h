@@ -13,8 +13,12 @@ class Console {
 public:
     virtual bool init(std::string romFilename) = 0;
 
-    void emulateFrame() {
-        storeUserInput(); // TODO should this happen more often than once per frame?
+    void emulateFrame(bool hasFocus) {
+
+        if (hasFocus) {
+            storeUserInput(); // TODO should this happen more often than once per frame?
+        }
+
         double machineClicksPerFrame = getMachineClicksPerFrame() * 2; // TODO determine why the machine runs way too slow without this multiplication - might need to revamp how timing works
         double currentClicks = 0;
 

@@ -51,6 +51,7 @@ VDP::VDP() {
     outputBuffer = new sf::Uint8[256 * 224 * 4];
     vScroll = 0;
     lineInterruptCounter = 0;
+    PALMode = false;
     clearScreen();
     fillVideoOutput();
 }
@@ -128,17 +129,30 @@ void VDP::handleScanlineChange() {
         vScroll = registers[0x9];
 
         // Allow the screen resolution to change
-        // TODO handle PAL modes
-        switch (getMode()) {
-            case 11:
-                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCMedium);
-                break;
-            case 14:
-                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCLarge);
-                break;
-            default:
-                displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall);
-                break;
+        if (!PALMode) {
+            switch (getMode()) {
+                case 11:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCMedium);
+                    break;
+                case 14:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCLarge);
+                    break;
+                default:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall);
+                    break;
+            }
+        } else {
+            switch (getMode()) {
+                case 11:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::PALMedium);
+                    break;
+                case 14:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::PALLarge);
+                    break;
+                default:
+                    displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::PALSmall);
+                    break;
+            }
         }
     }
 
@@ -855,4 +869,8 @@ unsigned short VDP::getMode2PatternTableOffset(unsigned char row) {
     }
 
     return 0;
+}
+
+void VDP::setPALMode(bool mode) {
+    PALMode = mode;
 }

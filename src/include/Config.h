@@ -30,6 +30,8 @@ public:
 
     bool getHideMouseCursor();
 
+    bool getPALOutputMode();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -51,6 +53,8 @@ private:
 
     bool hideMouseCursor;
 
+    bool PALOutputMode;
+
     PlayerControlConfig *player1Controls;
 
     GeneralControlConfig *generalControls;
@@ -67,9 +71,13 @@ private:
 
     json getGeneralConfigurationJson();
 
+    json getSystemConfigurationJson();
+
     void writeConfigFile(const std::string& fileName);
 
     void readGeneralConfigurationJson(json generalConfigurationJson);
+
+    void readSystemConfigurationJson(json systemConfigurationJson);
 
 #endif
 

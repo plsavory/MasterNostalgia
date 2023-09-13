@@ -45,6 +45,8 @@ public:
 
     unsigned char readVCounter();
 
+    void setPALMode(bool mode);
+
     sf::Uint8* getVideoOutput();
 
     bool isRequestingInterrupt();
@@ -107,6 +109,8 @@ private:
     bool vRefresh;
 
     bool isVBlanking;
+
+    bool PALMode;
 
     unsigned char vScroll;
 

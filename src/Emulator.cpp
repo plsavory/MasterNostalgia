@@ -116,7 +116,7 @@ void Emulator::setVideoMode(unsigned int width, unsigned int height) {
     }
 
     window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), config->isFullScreenMode() ? sf::Style::Fullscreen : sf::Style::Default);
-    window->setFramerateLimit(60);
+    window->setFramerateLimit(config->getPALOutputMode() ? 50 : 60);
     window->setVerticalSyncEnabled(true);
 }
 

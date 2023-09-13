@@ -5,6 +5,7 @@
 #include <iostream>
 #include "Config.h"
 #include "Exceptions.h"
+#include "Utils.h"
 
 Config::Config() {
     // Set some default values
@@ -14,6 +15,7 @@ Config::Config() {
     preserveAspectRatio = false;
     pauseEmulationWhenNotInFocus = true;
     hideMouseCursor = false;
+    PALOutputMode = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -73,6 +75,10 @@ bool Config::getHideMouseCursor() {
     return hideMouseCursor;
 }
 
+bool Config::getPALOutputMode() {
+    return PALOutputMode;
+}
+
 PlayerControlConfig *Config::getPlayer1ControlConfig() {
     return player1Controls;
 }
@@ -123,6 +129,10 @@ void Config::readConfigFile(const std::string& fileName) {
     }
 
     // TODO read the player 2 control config. Don't bother populating it if it doesn't exist in the config file.
+
+    if (JsonHandler::keyExists(configFileJson, "system")) {
+        readSystemConfigurationJson(configFileJson["system"]);
+    }
 }
 
 void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
@@ -155,6 +165,20 @@ void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJso
         pauseEmulationWhenNotInFocus = JsonHandler::getBoolean(generalConfigurationJson, "pauseEmulationWhenNotInFocus");
     }
 
+}
+
+void Config::readSystemConfigurationJson(nlohmann::json systemConfigurationJson) {
+
+    if (JsonHandler::keyExists(systemConfigurationJson, "mode")) {
+        std::string modeString = Utils::strToLower(JsonHandler::getString(systemConfigurationJson, "mode"));
+
+        if (modeString == "ntsc" || modeString == "pal") {
+            PALOutputMode = modeString == "pal";
+        } else {
+            throw ConfigurationException(Utils::implodeString({"Unknown system mode '", modeString, "'. Should be 'NTSC' or 'PAL"}));
+        }
+
+    }
 }
 
 void Config::writeConfigFile(const std::string& fileName) {
@@ -192,6 +216,12 @@ void Config::writeConfigFile(const std::string& fileName) {
         output["sound"] = soundConfiguration;
     }
 
+    json systemConfiguration = getSystemConfigurationJson();
+
+    if (!systemConfiguration.empty()) {
+        output["system"] = systemConfiguration;
+    }
+
     // Write the file, overwriting it if it already exists
     std::ofstream fileOut(fileName, std::ios::trunc);
     fileOut << output;
@@ -220,6 +250,14 @@ json Config::getGeneralConfigurationJson() {
     json output;
 
     output["pauseEmulationWhenNotInFocus"] = pauseEmulationWhenNotInFocus;
+
+    return output;
+}
+
+json Config::getSystemConfigurationJson() {
+    json output;
+
+    output["mode"] = PALOutputMode ? "PAL" : "NTSC";
 
     return output;
 }

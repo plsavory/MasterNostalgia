@@ -102,7 +102,7 @@ void VDP::handleScanlineChange() {
         Utils::setBit(7, true, statusRegister);
     }
 
-    if (vCounter <= displayMode.getActiveDisplayEnd()) {
+    if (vCounterJumpCount == 0 && vCounter <= displayMode.getActiveDisplayEnd()) {
 
         if (vCounter != displayMode.getActiveDisplayEnd()) {
             // Active display - render this scanline

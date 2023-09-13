@@ -46,6 +46,10 @@ void Emulator::run() {
 
     bool pauseEmulationWhenNotInFocus = config->getPauseEmulationWhenNotInFocus();
 
+    if (config->getHideMouseCursor()) {
+        window->setMouseCursorVisible(false);
+    }
+
 //    bool hasPrintedVdpInfo = false;
 
     bool hasFocus = true;

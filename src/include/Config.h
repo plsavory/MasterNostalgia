@@ -28,6 +28,8 @@ public:
 
     bool getPauseEmulationWhenNotInFocus();
 
+    bool getHideMouseCursor();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -46,6 +48,8 @@ private:
     bool preserveAspectRatio;
 
     bool pauseEmulationWhenNotInFocus;
+
+    bool hideMouseCursor;
 
     PlayerControlConfig *player1Controls;
 

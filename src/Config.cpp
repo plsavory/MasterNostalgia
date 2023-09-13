@@ -13,6 +13,7 @@ Config::Config() {
     fullScreenMode = false;
     preserveAspectRatio = false;
     pauseEmulationWhenNotInFocus = true;
+    hideMouseCursor = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -66,6 +67,10 @@ bool Config::isFullScreenMode() {
 
 bool Config::getPauseEmulationWhenNotInFocus() {
     return pauseEmulationWhenNotInFocus;
+}
+
+bool Config::getHideMouseCursor() {
+    return hideMouseCursor;
 }
 
 PlayerControlConfig *Config::getPlayer1ControlConfig() {
@@ -138,6 +143,10 @@ void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
         preserveAspectRatio = JsonHandler::getBoolean(displayConfigurationJson, "preserveAspectRatio");
     }
 
+    if (JsonHandler::keyExists(displayConfigurationJson, "hideMouseCursor")) {
+        hideMouseCursor = JsonHandler::getInteger(displayConfigurationJson, "hideMouseCursor");
+    }
+
 }
 
 void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJson) {
@@ -202,6 +211,7 @@ json Config::getDisplayConfigurationJson() {
     output["displayHeight"] = displayHeight;
     output["fullScreenMode"] = fullScreenMode;
     output["preserveAspectRatio"] = preserveAspectRatio;
+    output["hideMouseCursor"] = hideMouseCursor;
 
     return output;
 }

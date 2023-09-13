@@ -32,6 +32,8 @@ bool MasterSystem::init(std::string romFilename) {
         return false;
     }
 
+    smsVdp->setPALMode(config->getPALOutputMode());
+
     return true;
 }
 
@@ -54,7 +56,7 @@ bool MasterSystem::isRunning() {
 }
 
 double MasterSystem::getMachineClicksPerFrame() {
-    return (float)10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
+    return (float)10738580 / (float)(config->getPALOutputMode() ? 50 : 60);
 }
 
 sf::Uint8* MasterSystem::getVideoOutput() {

@@ -26,7 +26,16 @@ int main(int argc, char *argv[]) {
         }
 
         if (romFileName.empty()) {
-            std::cout<<"No ROM file name has been provided."<<std::endl;
+            std::cout<<"Usage:"<<
+            std::endl<<
+            std::endl<<
+            "To run a ROM file: ./Mastalgia \"(path to ROM file)\""<<
+            std::endl<<
+            std::endl<<
+            "Other parameters:"<<
+            std::endl<<
+            std::endl<<
+            "Display version information and exit: -v";
             return 0;
         }
 

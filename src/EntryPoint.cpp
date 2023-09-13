@@ -35,7 +35,8 @@ int main(int argc, char *argv[]) {
             "Other parameters:"<<
             std::endl<<
             std::endl<<
-            "Display version information and exit: -v";
+            "Display version information and exit: -v"<<std::endl;
+
             return 0;
         }
 

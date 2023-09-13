@@ -10,9 +10,7 @@ MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
 }
 
 void MasterSystemInput::setState() {
-    // TODO allow customisable controls
     resetButton = 0x0;
-    pauseButton = sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
 
     controllers[0].setState(
             inputInterface->isDPadUpPressed(0),

@@ -23,7 +23,6 @@ private:
     InputInterface *inputInterface;
     MasterSystemController controllers[2];
     unsigned char resetButton;
-    unsigned char pauseButton;
 };
 
 #endif //MasterNostalgia_MASTERSYSTEMINPUT_H

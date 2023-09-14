@@ -32,6 +32,12 @@ public:
 
     bool getPALOutputMode();
 
+    bool getPersistCRAM();
+
+    std::string getCRAMSaveLocation();
+
+    bool getAutoSaveCRAM();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -54,6 +60,12 @@ private:
     bool hideMouseCursor;
 
     bool PALOutputMode;
+
+    bool persistCRAM;
+
+    bool autoSaveCRAM;
+
+    std::string CRAMSaveLocation;
 
     PlayerControlConfig *player1Controls;
 

@@ -42,6 +42,8 @@ private:
     sf::Sprite videoOutputSprite;
 
     InputInterface *inputInterface;
+
+    void shutdown();
 };
 
 #endif

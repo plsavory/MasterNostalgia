@@ -1,5 +1,6 @@
 MasterNostalgia 1.3.0 -
 
+Game save data (CRAM) is now saved into files, and loaded on startup when the same ROM is run again.
 Added a configuration option to run the emulator in PAL/50hz mode
 Added a configuration option to hide the mouse cursor when it is over the emulator's display
 

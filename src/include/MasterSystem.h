@@ -34,6 +34,8 @@ public:
 
     void sendPauseInterrupt() final;
 
+    void shutdown() final;
+
 private:
     CPUZ80 *smsCPU;
     Memory *smsMemory;
@@ -47,4 +49,6 @@ private:
 protected:
 
     double getMachineClicksPerFrame() final;
+
+    void handleSaveStorage() final;
 };

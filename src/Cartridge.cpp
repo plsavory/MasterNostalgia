@@ -8,6 +8,7 @@
 #include <vector>
 #include <iterator>
 #include "Cartridge.h"
+#include <regex>
 
 Cartridge::Cartridge() {
     clearCartridge();
@@ -25,6 +26,8 @@ bool Cartridge::load(std::string fileName) {
 #ifdef VERBOSE_MODE
     std::cout<<"Loading ROM: "<<fileName<<std::endl;
 #endif
+
+    romFilePath = fileName;
 
     // Determine the size of the ROM file
     struct stat fileStat{};
@@ -170,6 +173,9 @@ void Cartridge::determineCartridgeSize(size_t ROMSize) {
  * [cartridge::clearCartridge Clear cartridge data so that nothing remains upon reload]
  */
 void Cartridge::clearCartridge() {
+
+    romFilePath = "";
+
     for (unsigned char & i : cartridgeData) {
         i = 0x0;
     }
@@ -195,4 +201,28 @@ unsigned char Cartridge::read(unsigned long location) {
 
 unsigned char Cartridge::getBankMask() {
     return bankMask;
+}
+
+std::string Cartridge::getROMFilePath() {
+    // Returns the path (excluding file name) of the rom file
+    std::regex filePathRegex("(.*\\/)(.*)");
+    std::smatch matches;
+
+    if (!std::regex_search(romFilePath, matches, filePathRegex)) {
+        return ""; // Probably the same directory as the emulator's executable
+    }
+
+    return matches[1];
+}
+
+std::string Cartridge::getROMFileName() {
+    // Returns the path (excluding file name) of the rom file
+    std::regex filePathRegex("(.*\\/)(.*)");
+    std::smatch matches;
+
+    if (!std::regex_search(romFilePath, matches, filePathRegex) || matches[2] == "") {
+        return romFilePath;
+    }
+
+    return matches[2];
 }

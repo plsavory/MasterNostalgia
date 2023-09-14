@@ -21,6 +21,10 @@ public:
 
     unsigned char getBankMask();
 
+    std::string getROMFilePath();
+
+    std::string getROMFileName();
+
 private:
 
     bool isCodemastersCart;
@@ -34,6 +38,8 @@ private:
     void determineCartridgeSize(size_t ROMSize);
 
     unsigned char bankMask;
+
+    std::string romFilePath;
 };
 
 #endif

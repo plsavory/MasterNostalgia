@@ -3,7 +3,7 @@
 
 MasterSystem::MasterSystem(InputInterface *inputInterface, Config *config) {
     smsCartridge = new Cartridge();
-    smsMemory = new Memory(smsCartridge);
+    smsMemory = new Memory(smsCartridge, config);
     smsVdp = new VDP();
     smsPSG = new PSG(config->getSoundConfig());
     smsInput = new MasterSystemInput(inputInterface);
@@ -34,6 +34,7 @@ bool MasterSystem::init(std::string romFilename) {
 
     smsVdp->setPALMode(config->getPALOutputMode());
 
+    smsMemory->init();
     return true;
 }
 
@@ -80,9 +81,17 @@ unsigned short MasterSystem::getCurrentDisplayHeight() {
 }
 
 unsigned char MasterSystem::getCurrentFrameRate() {
-    return 60; // TODO return 50 if in PAL mode
+    return config->getPALOutputMode() ? 50 : 60;
 }
 
 void MasterSystem::sendPauseInterrupt() {
     smsCPU->raisePauseInterrupt();
+}
+
+void MasterSystem::shutdown() {
+    smsMemory->shutdown();
+}
+
+void MasterSystem::handleSaveStorage() {
+    smsMemory->handleCRAMWriting();
 }

@@ -61,7 +61,7 @@ void Emulator::run() {
 
             if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && exitKey != sf::Keyboard::Unknown && event.key.code == exitKey)) {
                 window->close();
-                return;
+                break;
             }
 
             if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
@@ -105,6 +105,9 @@ void Emulator::run() {
             setRenderingTexture();
         }
     }
+
+    shutdown();
+
     delete(window);
     window = nullptr;
 }
@@ -153,3 +156,6 @@ void Emulator::setRenderingTexture() {
     videoOutputSprite.setPosition(xPosition, yPosition);
 }
 
+void Emulator::shutdown() {
+    system->shutdown();
+}

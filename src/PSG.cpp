@@ -63,6 +63,7 @@ void PSG::execute(float soundCycles) {
 
     float floor = floorf(cycles);
     currentBufferUpdates += floor ;
+
     clockInfo += floor;
 
     cycles -= floor;

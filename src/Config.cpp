@@ -9,13 +9,20 @@
 
 Config::Config() {
     // Set some default values
+
+    // Display
     displayWidth = 640;
     displayHeight = 480;
     fullScreenMode = false;
     preserveAspectRatio = false;
-    pauseEmulationWhenNotInFocus = true;
     hideMouseCursor = false;
     PALOutputMode = false;
+
+    // General
+    pauseEmulationWhenNotInFocus = true;
+    persistCRAM = true;
+    CRAMSaveLocation = "";
+    autoSaveCRAM = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -77,6 +84,18 @@ bool Config::getHideMouseCursor() {
 
 bool Config::getPALOutputMode() {
     return PALOutputMode;
+}
+
+bool Config::getPersistCRAM() {
+    return persistCRAM;
+}
+
+std::string Config::getCRAMSaveLocation() {
+    return CRAMSaveLocation;
+}
+
+bool Config::getAutoSaveCRAM() {
+    return autoSaveCRAM;
 }
 
 PlayerControlConfig *Config::getPlayer1ControlConfig() {
@@ -165,6 +184,17 @@ void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJso
         pauseEmulationWhenNotInFocus = JsonHandler::getBoolean(generalConfigurationJson, "pauseEmulationWhenNotInFocus");
     }
 
+    if (JsonHandler::keyExists(generalConfigurationJson, "persistCRAM")) {
+        persistCRAM = JsonHandler::getBoolean(generalConfigurationJson, "persistCRAM");
+    }
+
+    if (JsonHandler::keyExists(generalConfigurationJson, "CRAMSaveLocation")) {
+        CRAMSaveLocation = JsonHandler::getString(generalConfigurationJson, "CRAMSaveLocation");
+    }
+
+    if (JsonHandler::keyExists(generalConfigurationJson, "autoSaveCRAM")) {
+        autoSaveCRAM = JsonHandler::getBoolean(generalConfigurationJson, "autoSaveCRAM");
+    }
 }
 
 void Config::readSystemConfigurationJson(nlohmann::json systemConfigurationJson) {
@@ -250,6 +280,9 @@ json Config::getGeneralConfigurationJson() {
     json output;
 
     output["pauseEmulationWhenNotInFocus"] = pauseEmulationWhenNotInFocus;
+    output["persistCRAM"] = persistCRAM;
+    output["CRAMSaveLocation"] = CRAMSaveLocation;
+    output["autoSaveCRAM"] = autoSaveCRAM;
 
     return output;
 }

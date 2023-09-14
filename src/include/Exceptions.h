@@ -5,15 +5,6 @@
 #ifndef MasterNostalgia_EXCEPTIONS_H
 #define MasterNostalgia_EXCEPTIONS_H
 
-/* A general exception class.
- * Should be extended by other TaleScripter exceptions or thrown as a general error.
- * Put as much functionality for error handling in this class as possible, as we should
- * use this class to write error logs and to display information to the user in future.
- */
-
-#ifndef GENERAL_EXCEPTION_INCLUDED
-#define GENERAL_EXCEPTION_INCLUDED
-
 #include <fstream>
 #include <exception>
 #include <stdexcept>
@@ -116,6 +107,10 @@ public:
                                                                          message) {};
 };
 
-#endif
+class IOException : public GeneralException {
+public:
+    explicit IOException(const std::string &message) : GeneralException(std::string("IO Exception"),
+                                                                                message) {};
+};
 
 #endif //MasterNostalgia_EXCEPTIONS_H

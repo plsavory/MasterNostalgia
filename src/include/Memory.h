@@ -1,6 +1,8 @@
 #ifndef MEMORY_INCLUDED
 #define MEMORY_INCLUDED
 
+#include "Config.h"
+
 enum MemoryControlRegisterFlags : int{
     unknown0 = 0,
     unknown1 = 1,
@@ -14,7 +16,7 @@ enum MemoryControlRegisterFlags : int{
 
 class Memory {
 public:
-    Memory(Cartridge *cart);
+    Memory(Cartridge *cart, Config *config);
 
     ~Memory();
 
@@ -28,10 +30,19 @@ public:
 
     void writeMediaControlRegister(unsigned char value);
 
+    void handleCRAMWriting();
+
+    void init();
+
+    void shutdown();
+
 private:
+
     Cartridge *smsCartridge;
+    Config *config;
+
     unsigned char ram[0x10000]{};
-    bool ramBanked; // Does cartridge include additional RAM?
+
     void handleMemoryPaging(unsigned short location, unsigned char value);
 
     unsigned char ramBank[2][0x4000]{};
@@ -41,6 +52,21 @@ private:
     unsigned char controlRegister;
 
     unsigned char readMedia(unsigned long location);
+
+    void writeCRAM();
+
+    void readCRAM();
+
+    static std::vector<unsigned char> getCRAMDumpFileHeader();
+
+    bool CRAMChangedSinceLastWrite;
+
+    unsigned short framesSinceLastCRAMWrite;
+
+    bool doesCRAMContainData();
+
+    std::string getCRAMSaveFilePath();
+
 };
 
 #endif

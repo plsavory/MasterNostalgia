@@ -305,6 +305,40 @@ void CPUZ80::raisePauseInterrupt() {
     pauseInterruptWaiting = true;
 }
 
+Z80SaveStateData* CPUZ80::getSaveStateData() {
+    auto *result = new Z80SaveStateData();
+
+    for (int i = 0; i < 11; i++) {
+        result->registers[i] = gpRegisters[i].whole;
+    }
+
+    result->registerI = registerI;
+    result->registerR = registerR;
+    result->programCounter = programCounter;
+    result->stackPointer = stackPointer;
+    result->iff1 = iff1;
+    result->iff2 = iff2;
+    result->enableInterrupts = enableInterrupts;
+
+    return result;
+}
+
+void CPUZ80::restoreState(Z80SaveStateData *data) {
+
+    for (int i = 0; i < 11; i++) {
+        gpRegisters[i].whole = data->registers[i];
+    }
+
+    registerI = data->registerI;
+    registerR = data->registerR;
+    programCounter = data->programCounter;
+    stackPointer = data->stackPointer;
+    iff1 = data->iff1;
+    iff2 = data->iff2;
+    enableInterrupts = data->enableInterrupts;
+
+}
+
 void CPUZ80::initialiseOpcodeHandlerPointers() {
     standardOpcodeHandlers[0x00] = &CPUZ80::standardOpcodeHandler0x00;
     standardOpcodeHandlers[0x01] = &CPUZ80::standardOpcodeHandler0x01;

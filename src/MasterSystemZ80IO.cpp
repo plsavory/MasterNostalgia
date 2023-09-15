@@ -56,9 +56,7 @@ void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
 unsigned char MasterSystemZ80IO::read(unsigned char address) {
     // TODO disable I/O if the memory media control register has i/o set to disabled (For FM audio support)
     if (address <= 0x3F) {
-        // Return the last byte of the instruction which read the port
-        // TODO or 0xFF if emulating Master System 2
-        return address;
+        return 0xFF;
     }
 
     if (address <= 0x7F) {

@@ -12,6 +12,7 @@
 #include "SoundConfig.h"
 #include <SFML/Audio.hpp>
 #include <bitset>
+#include "SMSSaveStateStructs.h"
 
 enum PSGChannelIndex {
     Tone0 = 0,
@@ -29,6 +30,10 @@ public:
     void execute(float soundCycles);
 
     void write(unsigned char data);
+
+    PSGSaveStateData* getSaveStateData();
+
+    void restoreState(PSGSaveStateData *data);
 
 private:
     PSGChannel *channels[4];

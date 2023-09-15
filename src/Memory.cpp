@@ -395,3 +395,34 @@ std::string Memory::getCRAMSaveFilePath() {
 
     return directoryPath;
 }
+
+MemorySaveStateData* Memory::getSaveStateData() {
+
+    // TODO should I also store CRAM as part of the save state? determine later.
+    MemorySaveStateData* result = new MemorySaveStateData();
+
+    for (int i = 0; i < 3; i++) {
+        result->memoryPages[i] = memoryPages[i];
+    }
+
+    result->controlRegister = controlRegister;
+
+    for (int i = 0; i < 0x10000; i++) {
+        result->ram[i] = ram[i];
+    }
+
+    return result;
+}
+
+void Memory::restoreState(MemorySaveStateData *data) {
+
+    for (int i = 0; i < 0x10000; i++) {
+        ram[i] = data->ram[i];
+    }
+
+    for (int i = 0; i < 3; i++) {
+        memoryPages[i] = data->memoryPages[i];
+    }
+
+    controlRegister = data->controlRegister;
+}

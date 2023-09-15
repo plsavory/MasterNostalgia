@@ -38,6 +38,8 @@ public:
 
     bool getAutoSaveCRAM();
 
+    std::string getSaveStateLocation();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -45,6 +47,10 @@ public:
     GeneralControlConfig* getGeneralControlConfig();
 
     SoundConfig* getSoundConfig();
+
+    void save();
+
+    std::string configFileName;
 
 private:
     int displayWidth;
@@ -66,6 +72,8 @@ private:
     bool autoSaveCRAM;
 
     std::string CRAMSaveLocation;
+
+    std::string saveStateLocation;
 
     PlayerControlConfig *player1Controls;
 

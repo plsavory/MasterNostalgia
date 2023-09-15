@@ -83,7 +83,10 @@ add_executable(${EXECUTABLE_NAME}
         src/InputInterface.cpp
         src/SFMLKeyboardStringMapper.cpp
         src/GeneralControlConfig.cpp
-        src/SoundConfig.cpp)
+        src/SoundConfig.cpp
+        src/include/SMSSaveState.h
+        src/SMSSaveState.cpp
+        src/include/SMSSaveStateStructs.h)
 
 find_package(SFML 2.5.1 REQUIRED audio graphics window system )
 

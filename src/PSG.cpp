@@ -143,3 +143,26 @@ unsigned short PSG::emulateTone(float floor, int channelNumber) {
 
     return volumeTable[channel->getVolume()] * channel->polarity;
 }
+
+PSGSaveStateData* PSG::getSaveStateData() {
+    auto *result = new PSGSaveStateData();
+    result->selectedRegister = selectedRegister;
+    result->hasSelectedVolumeRegister = hasSelectedVolumeRegister;
+
+    for(int i = 0; i < 4; i++) {
+        result->channelFrequencies[i] = channels[i]->getFrequency();
+        result->channelVolumes[i] = channels[i]->getVolume();
+    }
+    return result;
+}
+
+void PSG::restoreState(PSGSaveStateData *data) {
+
+    selectedRegister = data->selectedRegister;
+    hasSelectedVolumeRegister = data->hasSelectedVolumeRegister;
+
+    for (int i = 0; i < 4; i++) {
+        channels[i]->setFrequencyWhole(data->channelFrequencies[i]);
+        channels[i]->setVolume(data->channelVolumes[i]);
+    }
+}

@@ -23,6 +23,7 @@ Config::Config() {
     persistCRAM = true;
     CRAMSaveLocation = "";
     autoSaveCRAM = false;
+    saveStateLocation = "";
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -31,9 +32,9 @@ Config::Config() {
 
     soundConfig = new SoundConfig();
 
-#ifdef JSON_CONFIG_FILE
+    configFileName = "config.json"; // TODO allow this to be overridden with a command line parameter
 
-    std::string configFileName = "config.json"; // TODO allow this to be overridden with a command line parameter
+#ifdef JSON_CONFIG_FILE
 
     if (Utils::fileExists(configFileName)) {
         readConfigFile(configFileName);
@@ -92,6 +93,10 @@ bool Config::getPersistCRAM() {
 
 std::string Config::getCRAMSaveLocation() {
     return CRAMSaveLocation;
+}
+
+std::string Config::getSaveStateLocation() {
+    return saveStateLocation;
 }
 
 bool Config::getAutoSaveCRAM() {
@@ -195,6 +200,10 @@ void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJso
     if (JsonHandler::keyExists(generalConfigurationJson, "autoSaveCRAM")) {
         autoSaveCRAM = JsonHandler::getBoolean(generalConfigurationJson, "autoSaveCRAM");
     }
+
+    if (JsonHandler::keyExists(generalConfigurationJson, "saveStateLocation")) {
+        saveStateLocation = JsonHandler::getString(generalConfigurationJson, "saveStateLocation");
+    }
 }
 
 void Config::readSystemConfigurationJson(nlohmann::json systemConfigurationJson) {
@@ -254,7 +263,7 @@ void Config::writeConfigFile(const std::string& fileName) {
 
     // Write the file, overwriting it if it already exists
     std::ofstream fileOut(fileName, std::ios::trunc);
-    fileOut << output;
+    fileOut << output.dump(4);
     fileOut.close();
 
     if (fileOut.bad()) {
@@ -283,6 +292,7 @@ json Config::getGeneralConfigurationJson() {
     output["persistCRAM"] = persistCRAM;
     output["CRAMSaveLocation"] = CRAMSaveLocation;
     output["autoSaveCRAM"] = autoSaveCRAM;
+    output["saveStateLocation"] = saveStateLocation;
 
     return output;
 }
@@ -293,6 +303,12 @@ json Config::getSystemConfigurationJson() {
     output["mode"] = PALOutputMode ? "PAL" : "NTSC";
 
     return output;
+}
+
+void Config::save() {
+#ifdef JSON_CONFIG_FILE
+    writeConfigFile(configFileName);
+#endif
 }
 
 #endif

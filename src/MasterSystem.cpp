@@ -11,6 +11,12 @@ MasterSystem::MasterSystem(InputInterface *inputInterface, Config *config) {
     smsCPU = new CPUZ80(smsMemory, z80Io);
     running = false;
     this->config = config;
+    saveStateKeyPressed = false;
+    loadStateKeyPressed = false;
+
+    for (auto & saveState : saveStates) {
+        saveState = nullptr;
+    }
 }
 
 MasterSystem::~MasterSystem() {
@@ -35,6 +41,18 @@ bool MasterSystem::init(std::string romFilename) {
     smsVdp->setPALMode(config->getPALOutputMode());
 
     smsMemory->init();
+
+    // Load any save state files which have been found
+    for (int i = 0; i < 10; i++) {
+        saveStates[i] = new SMSSaveState(i, config, smsCartridge);
+
+        if (saveStates[i]->getIsLoaded()) {
+            continue;
+        }
+
+        delete(saveStates[i]);
+        saveStates[i] = nullptr;
+    }
     return true;
 }
 
@@ -94,4 +112,85 @@ void MasterSystem::shutdown() {
 
 void MasterSystem::handleSaveStorage() {
     smsMemory->handleCRAMWriting();
+    handleSaveStateSaving();
+    handleSaveStateLoading();
+}
+
+void MasterSystem::handleSaveStateSaving() {
+
+    // TODO make the key combinations for saving/loading states optional
+    // TODO allow save states to persisted in a file
+    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
+        saveStateKeyPressed = false;
+        return;
+    }
+
+    int saveStateId = getSaveStateIdFromKeyPress();
+
+    if (saveStateId == -1) {
+        saveStateKeyPressed = false;
+        return;
+    }
+
+    if (saveStateKeyPressed) {
+        return;
+    }
+
+    saveStateKeyPressed = true;
+
+    if (saveStates[saveStateId] != nullptr) {
+        delete(saveStates[saveStateId]);
+    }
+
+    saveStates[saveStateId] = new SMSSaveState(saveStateId,
+                                     smsMemory->getSaveStateData(),
+                                     smsCPU->getSaveStateData(),
+                                     smsVdp->getSaveStateData(),
+                                     smsPSG->getSaveStateData(),
+                                     config,
+                                     smsCartridge);
+}
+
+void MasterSystem::handleSaveStateLoading() {
+
+    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+        loadStateKeyPressed = false;
+        return;
+    }
+
+    int saveStateId = getSaveStateIdFromKeyPress();
+
+    if (saveStateId == -1) {
+        loadStateKeyPressed = false;
+        return;
+    }
+
+    if (loadStateKeyPressed) {
+        return;
+    }
+
+    loadStateKeyPressed = true;
+
+    if (!saveStates[saveStateId]) {
+        return;
+    }
+
+    smsMemory->restoreState(saveStates[saveStateId]->getMemoryData());
+    smsCPU->restoreState(saveStates[saveStateId]->getZ80SaveStateData());
+    smsVdp->restoreState(saveStates[saveStateId]->getVdpSaveStateData());
+    smsPSG->restoreState(saveStates[saveStateId]->getPsgSaveStateData());
+}
+
+int MasterSystem::getSaveStateIdFromKeyPress() {
+
+    for (auto & datum : SaveStateKeyPairing::getKeyPairings()) {
+
+        if (!sf::Keyboard::isKeyPressed(datum.getKey())) {
+            continue;
+        }
+
+        return datum.getId();
+    }
+
+    return -1;
 }

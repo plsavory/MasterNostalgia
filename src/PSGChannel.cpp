@@ -44,3 +44,7 @@ void PSGChannel::setFrequencyHigher(unsigned char value) {
     frequency = ((value & 0x3F) << 4) + (frequency & 0xF);
 
 }
+
+void PSGChannel::setFrequencyWhole(unsigned short value) {
+    frequency = value;
+}

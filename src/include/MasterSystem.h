@@ -7,6 +7,7 @@
 #include "Console.h"
 #include "MasterSystemInput.h"
 #include "MasterSystemZ80IO.h"
+#include "SMSSaveState.h"
 
 class MasterSystem final : public Console {
 public:
@@ -36,6 +37,12 @@ public:
 
     void shutdown() final;
 
+    void handleSaveStateSaving();
+
+    void handleSaveStateLoading();
+
+    static int getSaveStateIdFromKeyPress();
+
 private:
     CPUZ80 *smsCPU;
     Memory *smsMemory;
@@ -46,9 +53,13 @@ private:
     MasterSystemZ80IO *z80Io;
     Config *config;
     bool running;
+    bool saveStateKeyPressed;
+    bool loadStateKeyPressed;
 protected:
 
     double getMachineClicksPerFrame() final;
 
     void handleSaveStorage() final;
+
+    SMSSaveState* saveStates[10];
 };

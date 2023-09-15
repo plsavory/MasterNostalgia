@@ -2,6 +2,7 @@
 #define MEMORY_INCLUDED
 
 #include "Config.h"
+#include "SMSSaveStateStructs.h"
 
 enum MemoryControlRegisterFlags : int{
     unknown0 = 0,
@@ -35,6 +36,10 @@ public:
     void init();
 
     void shutdown();
+
+    MemorySaveStateData* getSaveStateData();
+
+    void restoreState(MemorySaveStateData *data);
 
 private:
 

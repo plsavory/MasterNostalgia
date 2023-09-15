@@ -21,6 +21,8 @@ public:
 
     void setFrequencyLower(unsigned char value);
 
+    void setFrequencyWhole(unsigned short value);
+
     int counter{};
 
     int polarity;

@@ -4,6 +4,7 @@
 #include "VDPDisplayMode.h"
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
+#include "SMSSaveStateStructs.h"
 
 struct Mode2Colour {
     Mode2Colour(unsigned char r, unsigned char g, unsigned char b) {
@@ -55,6 +56,10 @@ public:
 
     VDPDisplayMode getDisplayMode();
 
+    VDPSaveStateData* getSaveStateData();
+
+    void restoreState(VDPSaveStateData *data);
+
 private:
 
     /**
@@ -66,7 +71,7 @@ private:
      */
     unsigned char vRAM[0x4000];
 
-    unsigned char cRAM[0x20];
+    unsigned char cRAM[0x40];
 
     unsigned char statusRegister;
 

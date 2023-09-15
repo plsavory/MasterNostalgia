@@ -1,6 +1,7 @@
 #include <bitset>
 #include "Z80IO.h"
 #include "Utils.h"
+#include "SMSSaveStateStructs.h"
 
 #define DEBUG_VALUES
 
@@ -71,6 +72,10 @@ public:
     }
 
     void raisePauseInterrupt();
+
+    Z80SaveStateData* getSaveStateData();
+
+    void restoreState(Z80SaveStateData *data);
 
 private:
     typedef void (CPUZ80::*OpcodeHandler) ();

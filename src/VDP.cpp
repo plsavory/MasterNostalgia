@@ -874,3 +874,58 @@ unsigned short VDP::getMode2PatternTableOffset(unsigned char row) {
 void VDP::setPALMode(bool mode) {
     PALMode = mode;
 }
+
+VDPSaveStateData* VDP::getSaveStateData() {
+    auto *result = new VDPSaveStateData();
+
+    for (int i = 0; i < 0x4000; i++) {
+        result->vRAM[i] = vRAM[i];
+    }
+
+    for (int i = 0; i < 0x40; i++) {
+        result->cRAM[i] = cRAM[i];
+    }
+
+    result->statusRegister = statusRegister;
+
+    for (int i = 0; i < 11; i++) {
+        result->registers[i] = registers[i];
+    }
+
+    result->controlWord = controlWord;
+    result->readBuffer = readBuffer;
+    result->requestInterrupt = requestInterrupt;
+    result->isSecondControlWrite = isSecondControlWrite;
+    result->vScroll = vScroll;
+    result->vCounter = vCounter;
+    result->lineInterruptCounter = lineInterruptCounter;
+    result->vCounterJumpCount = vCounterJumpCount;
+
+    return result;
+}
+
+void VDP::restoreState(VDPSaveStateData *data) {
+
+    for (int i = 0; i < 0x4000; i++) {
+        vRAM[i] = data->vRAM[i];
+    }
+
+    for (int i = 0; i < 0x20; i++) {
+        cRAM[i] = data->cRAM[i];
+    }
+
+    statusRegister = data->statusRegister;
+
+    for (int i = 0; i < 11; i++) {
+        registers[i] = data->registers[i];
+    }
+
+    controlWord = data->controlWord;
+    readBuffer = data->readBuffer;
+    requestInterrupt = data->requestInterrupt;
+    isSecondControlWrite = data->isSecondControlWrite;
+    vScroll = data->vScroll;
+    vCounter = data->vCounter;
+    lineInterruptCounter = data->lineInterruptCounter;
+    vCounterJumpCount = data->vCounterJumpCount;
+}

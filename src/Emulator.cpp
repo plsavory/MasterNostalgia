@@ -158,4 +158,5 @@ void Emulator::setRenderingTexture() {
 
 void Emulator::shutdown() {
     system->shutdown();
+    config->save();
 }

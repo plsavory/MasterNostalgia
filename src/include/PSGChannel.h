@@ -2,8 +2,8 @@
 // Created by Peter Savory on 03/07/2023.
 //
 
-#ifndef MASTALGIA_PSGCHANNEL_H
-#define MASTALGIA_PSGCHANNEL_H
+#ifndef MasterNostalgia_PSGCHANNEL_H
+#define MasterNostalgia_PSGCHANNEL_H
 
 #include <SFML/System.hpp>
 
@@ -32,4 +32,4 @@ private:
     bool isNoiseChannel;
 };
 
-#endif //MASTALGIA_PSGCHANNEL_H
+#endif //MasterNostalgia_PSGCHANNEL_H

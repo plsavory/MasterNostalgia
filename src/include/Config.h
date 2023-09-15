@@ -2,8 +2,8 @@
 // Created by Peter Savory on 23/06/2023.
 //
 
-#ifndef MASTALGIA_CONFIG_H
-#define MASTALGIA_CONFIG_H
+#ifndef MasterNostalgia_CONFIG_H
+#define MasterNostalgia_CONFIG_H
 
 #ifdef JSON_CONFIG_FILE
 #include "JsonHandler.hpp"
@@ -71,4 +71,4 @@ private:
 
 };
 
-#endif //MASTALGIA_CONFIG_H
+#endif //MasterNostalgia_CONFIG_H

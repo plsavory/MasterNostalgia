@@ -1,5 +1,5 @@
-#ifndef MASTALGIA_SOUNDCONFIG_H
-#define MASTALGIA_SOUNDCONFIG_H
+#ifndef MasterNostalgia_SOUNDCONFIG_H
+#define MasterNostalgia_SOUNDCONFIG_H
 
 #include "JsonHandler.hpp"
 
@@ -24,4 +24,4 @@ private:
     int volume;
 };
 
-#endif //MASTALGIA_SOUNDCONFIG_H
+#endif //MasterNostalgia_SOUNDCONFIG_H

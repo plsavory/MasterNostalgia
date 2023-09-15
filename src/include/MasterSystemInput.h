@@ -2,8 +2,8 @@
 // Created by Peter Savory on 08/04/2023.
 //
 
-#ifndef MASTALGIA_MASTERSYSTEMINPUT_H
-#define MASTALGIA_MASTERSYSTEMINPUT_H
+#ifndef MasterNostalgia_MASTERSYSTEMINPUT_H
+#define MasterNostalgia_MASTERSYSTEMINPUT_H
 
 #include "MasterSystemController.h"
 #include "InputInterface.h"
@@ -26,4 +26,4 @@ private:
     unsigned char pauseButton;
 };
 
-#endif //MASTALGIA_MASTERSYSTEMINPUT_H
+#endif //MasterNostalgia_MASTERSYSTEMINPUT_H

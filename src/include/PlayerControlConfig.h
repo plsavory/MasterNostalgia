@@ -2,8 +2,8 @@
 // Created by Peter Savory on 23/06/2023.
 //
 
-#ifndef MASTALGIA_PLAYERCONTROLCONFIG_H
-#define MASTALGIA_PLAYERCONTROLCONFIG_H
+#ifndef MasterNostalgia_PLAYERCONTROLCONFIG_H
+#define MasterNostalgia_PLAYERCONTROLCONFIG_H
 
 // TODO should anything SFML related be moved out of this class into an extra layer? Do this later if we need portability between APIs (e.g an SDL version).
 #include <SFML/Window.hpp>
@@ -69,4 +69,4 @@ private:
 
 };
 
-#endif //MASTALGIA_PLAYERCONTROLCONFIG_H
+#endif //MasterNostalgia_PLAYERCONTROLCONFIG_H

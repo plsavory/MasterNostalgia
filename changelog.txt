@@ -1,3 +1,7 @@
+MasterNostalgia 1.2.1 - 2023-09-16
+
+Rename the project, as the previous name was extremely unfortunate.
+
 Mastalgia 1.2.0 - 2023-09-12
 
 Added support for running SG-1000 roms and SMS roms which use VDP mode 2

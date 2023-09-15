@@ -2,8 +2,8 @@
 // Created by Peter Savory on 23/06/2023.
 //
 
-#ifndef MASTALGIA_INPUTINTERFACE_H
-#define MASTALGIA_INPUTINTERFACE_H
+#ifndef MasterNostalgia_INPUTINTERFACE_H
+#define MasterNostalgia_INPUTINTERFACE_H
 
 #include "Config.h"
 
@@ -36,4 +36,4 @@ private:
 
 };
 
-#endif //MASTALGIA_CONTROLINTERFACE_H
+#endif //MasterNostalgia_CONTROLINTERFACE_H

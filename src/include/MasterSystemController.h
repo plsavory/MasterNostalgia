@@ -2,8 +2,8 @@
 // Created by Peter Savory on 08/04/2023.
 //
 
-#ifndef MASTALGIA_MASTERSYSTEMCONTROLLER_H
-#define MASTALGIA_MASTERSYSTEMCONTROLLER_H
+#ifndef MasterNostalgia_MASTERSYSTEMCONTROLLER_H
+#define MasterNostalgia_MASTERSYSTEMCONTROLLER_H
 
 enum MasterSystemControllerButton: int {
     dPadUp = 0,
@@ -30,4 +30,4 @@ private:
     void setButton(MasterSystemControllerButton button, bool value);
 };
 
-#endif //MASTALGIA_MASTERSYSTEMCONTROLLER_H
+#endif //MasterNostalgia_MASTERSYSTEMCONTROLLER_H

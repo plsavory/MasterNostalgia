@@ -2,8 +2,8 @@
 // Created by Peter Savory on 06/10/2022.
 //
 
-#ifndef MASTALGIA_Z80INSTRUCTIONNAMES_CPP
-#define MASTALGIA_Z80INSTRUCTIONNAMES_CPP
+#ifndef MasterNostalgia_Z80INSTRUCTIONNAMES_CPP
+#define MasterNostalgia_Z80INSTRUCTIONNAMES_CPP
 
 #include <iostream>
 #include "Cartridge.h"
@@ -184,4 +184,4 @@ std::string CPUZ80::getInstructionName(unsigned short opcode, unsigned short mid
     return getStandardInstructionNames()[opcode];
 }
 
-#endif //MASTALGIA_Z80INSTRUCTIONNAMES_CPP
+#endif //MasterNostalgia_Z80INSTRUCTIONNAMES_CPP

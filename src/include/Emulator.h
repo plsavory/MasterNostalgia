@@ -1,5 +1,5 @@
-#ifndef MASTALGIA_EMULATOR_H
-#define MASTALGIA_EMULATOR_H
+#ifndef MasterNostalgia_EMULATOR_H
+#define MasterNostalgia_EMULATOR_H
 
 #include <iostream>
 #include "Config.h"

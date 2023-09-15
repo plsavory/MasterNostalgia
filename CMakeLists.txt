@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
-project(Mastalgia)
+project(MasterNostalgia)
 
 set(CMAKE_CXX_STANDARD 14)
-set(EXECUTABLE_NAME "Mastalgia")
+set(EXECUTABLE_NAME "MasterNostalgia")
 
 #if(NOT CMAKE_BUILD_TYPE)
 #    set(CMAKE_BUILD_TYPE Release)

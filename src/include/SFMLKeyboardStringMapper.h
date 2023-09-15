@@ -2,8 +2,8 @@
 // Created by Peter Savory on 23/06/2023.
 //
 
-#ifndef MASTALGIA_SFMLKEYBOARDSTRINGMAPPER_H
-#define MASTALGIA_SFMLKEYBOARDSTRINGMAPPER_H
+#ifndef MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H
+#define MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H
 
 #include <iostream>
 #include <SFML/Window.hpp>
@@ -35,4 +35,4 @@ private:
     std::vector<SFMLKeyboardStringMap> map;
 };
 
-#endif //MASTALGIA_SFMLKEYBOARDSTRINGMAPPER_H
+#endif //MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H

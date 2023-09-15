@@ -2,8 +2,8 @@
 // Created by Peter Savory on 27/10/2022.
 //
 
-#ifndef MASTALGIA_CONSOLE_H
-#define MASTALGIA_CONSOLE_H
+#ifndef MasterNostalgia_CONSOLE_H
+#define MasterNostalgia_CONSOLE_H
 
 #include <SFML/System.hpp>
 #include <SFML/Graphics.hpp>
@@ -50,4 +50,4 @@ protected:
     virtual double getMachineClicksPerFrame() = 0;
 };
 
-#endif //MASTALGIA_CONSOLE_H
+#endif //MasterNostalgia_CONSOLE_H

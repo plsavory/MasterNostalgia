@@ -2,8 +2,8 @@
 // Created by Peter Savory on 27/10/2022.
 //
 
-#ifndef MASTALGIA_Z80IO_H
-#define MASTALGIA_Z80IO_H
+#ifndef MasterNostalgia_Z80IO_H
+#define MasterNostalgia_Z80IO_H
 
 class Z80IO {
 public:
@@ -17,4 +17,4 @@ public:
     virtual void printVDPDebugInfo() = 0;
 };
 
-#endif //MASTALGIA_Z80IO_H
+#endif //MasterNostalgia_Z80IO_H

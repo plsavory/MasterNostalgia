@@ -2,8 +2,8 @@
 // Created by Peter Savory on 27/10/2022.
 //
 
-#ifndef MASTALGIA_MASTERSYSTEMZ80IO_H
-#define MASTALGIA_MASTERSYSTEMZ80IO_H
+#ifndef MasterNostalgia_MASTERSYSTEMZ80IO_H
+#define MasterNostalgia_MASTERSYSTEMZ80IO_H
 
 #include "Z80IO.h"
 #include "VDP.h"
@@ -39,4 +39,4 @@ private:
     MasterSystemInput *input;
 };
 
-#endif //MASTALGIA_MASTERSYSTEMZ80IO_H
+#endif //MasterNostalgia_MASTERSYSTEMZ80IO_H

@@ -4,7 +4,7 @@ of the console work.
 Usage:
 
 Provide a path to a ROM File name as a command line parameter when launching on the command line.
-(e.g './Mastalgia "roms/zexall.sms"', or drag a ROM file onto the emulator's executable using your operating system's file manager)
+(e.g './MasterNostalgia "roms/zexall.sms"', or drag a ROM file onto the emulator's executable using your operating system's file manager)
 
 Default controls:
 
@@ -27,7 +27,7 @@ Also requires CMake (https://cmake.org/), this can usually be installed through 
 
 Once your system has the above packages installed, the following terminal commands should build the project:
 
-cd (directory where Mastalgia was cloned into)
+cd (directory where MasterNostalgia was cloned into)
 mkdir build
 cd build
 cmake ..

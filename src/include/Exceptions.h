@@ -2,8 +2,8 @@
 // Created by Peter Savory on 08/10/2022.
 //
 
-#ifndef MASTALGIA_EXCEPTIONS_H
-#define MASTALGIA_EXCEPTIONS_H
+#ifndef MasterNostalgia_EXCEPTIONS_H
+#define MasterNostalgia_EXCEPTIONS_H
 
 /* A general exception class.
  * Should be extended by other TaleScripter exceptions or thrown as a general error.
@@ -118,4 +118,4 @@ public:
 
 #endif
 
-#endif //MASTALGIA_EXCEPTIONS_H
+#endif //MasterNostalgia_EXCEPTIONS_H

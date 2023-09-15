@@ -2,8 +2,8 @@
 // Created by Peter Savory on 15/12/2022.
 //
 
-#ifndef MASTALGIA_VDPDISPLAYMODE_H
-#define MASTALGIA_VDPDISPLAYMODE_H
+#ifndef MasterNostalgia_VDPDISPLAYMODE_H
+#define MasterNostalgia_VDPDISPLAYMODE_H
 
 #include <vector>
 
@@ -85,4 +85,4 @@ private:
     std::vector<VDPDisplayModeVCounterJump> vCounterJumps;
 };
 
-#endif //MASTALGIA_VDPDISPLAYMODE_H
+#endif //MasterNostalgia_VDPDISPLAYMODE_H

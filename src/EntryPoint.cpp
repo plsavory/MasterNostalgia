@@ -1,5 +1,5 @@
 /*
-Mastalgia - a Sega Master System emulator.
+MasterNostalgia - a Sega Master System emulator.
 Licensed under the GPLv3 license.
 @author: Peter Savory
  */

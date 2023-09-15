@@ -2,8 +2,8 @@
 // Created by Peter Savory on 26/06/2023.
 //
 
-#ifndef MASTALGIA_GENERALCONTROLCONFIG_H
-#define MASTALGIA_GENERALCONTROLCONFIG_H
+#ifndef MasterNostalgia_GENERALCONTROLCONFIG_H
+#define MasterNostalgia_GENERALCONTROLCONFIG_H
 
 #include <SFML/Window.hpp>
 
@@ -61,4 +61,4 @@ private:
 
 };
 
-#endif //MASTALGIA_GENERALCONTROLCONFIG_H
+#endif //MasterNostalgia_GENERALCONTROLCONFIG_H

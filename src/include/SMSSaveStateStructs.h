@@ -1,5 +1,5 @@
-#ifndef MASTALGIA_SMSSAVESTATESTRUCTS_H
-#define MASTALGIA_SMSSAVESTATESTRUCTS_H
+#ifndef MasterNostalgia_SMSSAVESTATESTRUCTS_H
+#define MasterNostalgia_SMSSAVESTATESTRUCTS_H
 
 #include <SFML/Window.hpp>
 
@@ -102,4 +102,4 @@ private:
 
 };
 
-#endif //MASTALGIA_SMSSAVESTATESTRUCTS_H
+#endif //MasterNostalgia_SMSSAVESTATESTRUCTS_H

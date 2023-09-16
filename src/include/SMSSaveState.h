@@ -2,8 +2,8 @@
 // Created by Peter Savory on 14/09/2023.
 //
 
-#ifndef MASTALGIA_SMSSAVESTATE_H
-#define MASTALGIA_SMSSAVESTATE_H
+#ifndef MasterNostalgia_SMSSAVESTATE_H
+#define MasterNostalgia_SMSSAVESTATE_H
 
 #include <vector>
 #include "SMSSaveStateStructs.h"
@@ -59,4 +59,4 @@ private:
 
 };
 
-#endif //MASTALGIA_SMSSAVESTATE_H
+#endif //MasterNostalgia_SMSSAVESTATE_H

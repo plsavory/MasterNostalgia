@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
             std::cout<<"Usage:"<<
             std::endl<<
             std::endl<<
-            "To run a ROM file: ./Mastalgia \"(path to ROM file)\""<<
+            "To run a ROM file: ./MasterNostalgia \"(path to ROM file)\""<<
             std::endl<<
             std::endl<<
             "Other parameters:"<<

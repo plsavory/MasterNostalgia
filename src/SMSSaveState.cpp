@@ -144,7 +144,7 @@ std::string SMSSaveState::getFileName(Config *config, Cartridge *cartridge) {
     }
 
     path.append(romFileName);
-    path.append(".massstate");
+    path.append(".mnsstate");
     path.append(std::to_string(id));
 
     return path;

@@ -391,7 +391,7 @@ std::string Memory::getCRAMSaveFilePath() {
     }
 
     directoryPath.append(romFileName);
-    directoryPath.append(".mascram");
+    directoryPath.append(".mncram");
 
     return directoryPath;
 }

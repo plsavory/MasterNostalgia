@@ -35,8 +35,8 @@ Example:
 - Control pad 1 d-pad: Arrow keys
 - Pause: P
 - Quit: ESC
-- CTRL + (Number 0-9): Save game state
-- SHIFT + (Number 0-9): Load game state
+- SHIFT + (Number 0-9): Save game state
+- CTRL + (Number 0-9): Load game state
 
 ## Configuring the emulator
 

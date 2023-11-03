@@ -21,9 +21,9 @@ Config::Config() {
     // General
     pauseEmulationWhenNotInFocus = true;
     persistCRAM = true;
-    CRAMSaveLocation = "";
+    CRAMSaveLocation = "cram/";
     autoSaveCRAM = false;
-    saveStateLocation = "";
+    saveStateLocation = "sstates/";
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();

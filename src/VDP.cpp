@@ -227,7 +227,7 @@ unsigned short VDP::getAddressRegister() const {
 }
 
 void VDP::incrementAddress() {
-    if (controlWord == 0x3FFF) {
+    if (getAddressRegister() == 0x3FFF) {
         controlWord &= 0xC000; // Wrap the memory address but keep the control word unchanged
         return;
     }

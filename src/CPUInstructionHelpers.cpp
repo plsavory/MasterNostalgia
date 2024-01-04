@@ -325,11 +325,11 @@ void CPUZ80::ini(bool increment) {
     gpRegisters[cpuReg::HL].whole += increment ? 1 : -1;
 
     setFlag(CPUFlag::subtractNegative, true);
-    setFlag(CPUFlag::zero, true);
 
     cyclesTaken = 16;
     gpRegisters[cpuReg::WZ].whole = gpRegisters[cpuReg::BC].whole + (increment ? 1 : -1);
     --gpRegisters[cpuReg::BC].hi;
+    setFlag(CPUFlag::zero, gpRegisters[cpuReg::BC].hi == 0);
 }
 
 void CPUZ80::inir(bool increment) {

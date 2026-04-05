@@ -5,7 +5,7 @@ MasterSystem::MasterSystem(InputInterface *inputInterface, Config *config) {
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge, config);
     smsVdp = new VDP();
-    smsPSG = new PSG(config->getSoundConfig());
+    smsPSG = new PSG(config);
     smsInput = new MasterSystemInput(inputInterface);
     z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory, smsInput);
     smsCPU = new CPUZ80(smsMemory, z80Io);
@@ -58,14 +58,13 @@ bool MasterSystem::init(std::string romFilename) {
 
 double MasterSystem::tick() {
 
-    // TODO - the way that timing works needs to be revamped here, it doesn't seem quite right.
     int z80ClockCycles = smsCPU->execute();
 
     double machineClicks = z80ClockCycles * 3;
 
     smsVdp->execute(machineClicks / 2);
 
-    smsPSG->execute(z80ClockCycles);
+    smsPSG->execute(machineClicks / 6);
 
     return machineClicks;
 }
@@ -78,7 +77,7 @@ double MasterSystem::getMachineClicksPerFrame() {
     return (float)10738580 / (float)(config->getPALOutputMode() ? 50 : 60);
 }
 
-sf::Uint8* MasterSystem::getVideoOutput() {
+VDPFrame MasterSystem::getVideoOutput() {
     return smsVdp->getVideoOutput();
 }
 
@@ -95,7 +94,7 @@ unsigned short MasterSystem::getCurrentDisplayWidth() {
 }
 
 unsigned short MasterSystem::getCurrentDisplayHeight() {
-    return smsVdp->getDisplayMode().getActiveDisplayEnd();
+    return smsVdp->getDisplayMode()->getActiveDisplayEnd();
 }
 
 unsigned char MasterSystem::getCurrentFrameRate() {
@@ -120,7 +119,9 @@ void MasterSystem::handleSaveStateSaving() {
 
     // TODO make the key combinations for saving/loading states optional
     // TODO allow save states to persisted in a file
-    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) {
+    const bool* keyState = SDL_GetKeyboardState(nullptr);
+
+    if (!keyState[SDL_SCANCODE_RSHIFT]) {
         saveStateKeyPressed = false;
         return;
     }
@@ -153,7 +154,9 @@ void MasterSystem::handleSaveStateSaving() {
 
 void MasterSystem::handleSaveStateLoading() {
 
-    if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LControl)) {
+    const bool* keyState = SDL_GetKeyboardState(nullptr);
+
+    if (!keyState[SDL_SCANCODE_LCTRL]) {
         loadStateKeyPressed = false;
         return;
     }
@@ -183,9 +186,11 @@ void MasterSystem::handleSaveStateLoading() {
 
 int MasterSystem::getSaveStateIdFromKeyPress() {
 
+    const bool* keyState = SDL_GetKeyboardState(nullptr);
+
     for (auto & datum : SaveStateKeyPairing::getKeyPairings()) {
 
-        if (!sf::Keyboard::isKeyPressed(datum.getKey())) {
+        if (!keyState[datum.getKey()]) {
             continue;
         }
 
@@ -193,4 +198,8 @@ int MasterSystem::getSaveStateIdFromKeyPress() {
     }
 
     return -1;
+}
+
+void MasterSystem::endFrame() {
+    smsPSG->endFrame();
 }

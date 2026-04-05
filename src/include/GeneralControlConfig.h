@@ -5,7 +5,7 @@
 #ifndef MasterNostalgia_GENERALCONTROLCONFIG_H
 #define MasterNostalgia_GENERALCONTROLCONFIG_H
 
-#include <SFML/Window.hpp>
+#include <SDL3/SDL.h>
 
 #ifdef JSON_CONFIG_FILE
 #include "JsonHandler.hpp"
@@ -18,9 +18,9 @@ public:
 
     void setDefaults();
 
-    sf::Keyboard::Key getPauseKey();
+    SDL_Scancode getPauseKey();
 
-    sf::Keyboard::Key getExitKey();
+    SDL_Scancode getExitKey();
 
 #ifdef JSON_CONFIG_FILE
 
@@ -32,9 +32,9 @@ public:
 
 private:
 
-    sf::Keyboard::Key exitKey;
+    SDL_Scancode exitKey;
 
-    sf::Keyboard::Key pauseKey;
+    SDL_Scancode pauseKey;
 
 };
 

@@ -3,7 +3,6 @@
 
 Emulator::Emulator() {
     system = nullptr;
-    window = nullptr;
     config = new Config();
     inputInterface = new InputInterface(config);
 
@@ -19,6 +18,13 @@ Emulator::~Emulator() {
 
 void Emulator::init(const std::string &fileName) {
     // TODO detect ROM type and support multiple consoles if we ever get master system support fully working
+
+    // Initialise SDL
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+        SDL_Log("SDL could not initialize! SDL_Error: %s", SDL_GetError());
+        throw GeneralException();
+    }
+
     system = new MasterSystem(inputInterface, config);
 
     bool romLoadResult = system->init(fileName);
@@ -32,12 +38,24 @@ void Emulator::init(const std::string &fileName) {
 }
 
 void Emulator::run() {
-    // Create SFML window for video output
-    setVideoMode((unsigned int)config->getDisplayWidth(), (unsigned int)config->getDisplayHeight());
+
+    // Create window for video output
+    if (!SDL_CreateWindowAndRenderer(Utils::getVersionString(false).c_str(), config->getDisplayWidth(), config->getDisplayHeight(), 0, &window, &renderer)) {
+        SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
+        SDL_Quit();
+        return;
+    }
+
     setRenderingTexture();
 
-    sf::Keyboard::Key pauseKey = sf::Keyboard::Unknown;
-    sf::Keyboard::Key exitKey = sf::Keyboard::Unknown;
+    bool hideCursor = config->getHideMouseCursor();
+
+    if (hideCursor) {
+        SDL_HideCursor();
+    }
+
+    SDL_Scancode pauseKey = SDL_SCANCODE_UNKNOWN;
+    SDL_Scancode exitKey = SDL_SCANCODE_UNKNOWN;
 
     if (config->getGeneralControlConfig() && config->getGeneralControlConfig()->getKeyboardConfig()) {
         exitKey = config->getGeneralControlConfig()->getKeyboardConfig()->getExitKey();
@@ -46,114 +64,131 @@ void Emulator::run() {
 
     bool pauseEmulationWhenNotInFocus = config->getPauseEmulationWhenNotInFocus();
 
-    if (config->getHideMouseCursor()) {
-        window->setMouseCursorVisible(false);
+    bool isFullscreen = config->isFullScreenMode();
+
+    if (isFullscreen) {
+        SDL_SetWindowFullscreen(window, isFullscreen);
     }
 
-//    bool hasPrintedVdpInfo = false;
-
     bool hasFocus = true;
+    bool running = true;
 
-    while (window->isOpen()) {
+    SDL_Event event;
 
-        sf::Event event;
-        while (window->pollEvent(event)) {
+    // TODO handle PAL (50.03 Hz)
+    Uint64 targetNS = (Uint64)(1000000000.0 / (config->getPALOutputMode() ? 50.03 : 60.08));
 
-            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && exitKey != sf::Keyboard::Unknown && event.key.code == exitKey)) {
-                window->close();
-                break;
+    VDPBorderColour borderColour = VDPBorderColour{0, 0, 0};
+    while (running) {
+
+        Uint64 startNS = SDL_GetTicksNS();
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT) {
+                running = false;
             }
 
-            if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
-                system->sendPauseInterrupt();
-            }
-
-            if (event.type == sf::Event::GainedFocus) {
+            if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
                 hasFocus = true;
+                if (hideCursor) {
+                    SDL_HideCursor();
+                }
             }
 
-            if (event.type == sf::Event::LostFocus) {
+            if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
                 hasFocus = false;
+                if (hideCursor) {
+                    SDL_ShowCursor();
+                }
+            }
+
+            if (event.type == SDL_EVENT_KEY_DOWN) {
+                if (event.key.scancode == pauseKey) {
+                    system->sendPauseInterrupt();
+                }
+
+                if (event.key.scancode == exitKey) {
+                    running = false;
+                }
+
+                if (event.key.scancode == SDL_SCANCODE_F11) {
+                    isFullscreen = !isFullscreen;
+                    SDL_SetWindowFullscreen(window, isFullscreen);
+                }
             }
         }
 
-        if (hasFocus || !pauseEmulationWhenNotInFocus) {
-            system->emulateFrame(hasFocus);
-            videoOutputTexture.update(system->getVideoOutput());
-        }
+        SDL_SetRenderDrawColor(renderer, borderColour.r, borderColour.g, borderColour.b, 255);
+        SDL_RenderClear(renderer);
 
-        window->clear(sf::Color::Black);
-        window->draw(videoOutputSprite);
-        window->display();
+        int consoleDisplayWidth = system->getCurrentDisplayWidth();
+        int consoleDisplayHeight = system->getCurrentDisplayHeight();
 
-        // Lazy way to debug the VDP...
-//        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-//            system->printVDPInformation();
-//            hasPrintedVdpInfo = true;
-//        }
-//
-//        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-//            hasPrintedVdpInfo = false;
-//        }
-
-        unsigned short consoleDisplayWidth = system->getCurrentDisplayWidth();
-        unsigned short consoleDisplayHeight = system->getCurrentDisplayHeight();
-
+        // Reflect any screen size changes if needed
         if (consoleDisplayWidth != renderWidth || consoleDisplayHeight != renderHeight) {
             renderWidth = consoleDisplayWidth;
             renderHeight = consoleDisplayHeight;
             setRenderingTexture();
         }
+
+        if (hasFocus || !pauseEmulationWhenNotInFocus) {
+            system->emulateFrame(hasFocus);
+
+            VDPFrame vdpFrame = system->getVideoOutput();
+
+            if (!config->getUseStaticBackgroundColour()) {
+                borderColour = vdpFrame.borderColor;
+            }
+
+            void* pixels;
+            int pitch;
+            SDL_LockTexture(m_texture, nullptr, &pixels, &pitch);
+            uint8_t* dst = (uint8_t*)pixels;
+            uint8_t* src = (uint8_t*)vdpFrame.pixels;
+
+            for (int y = 0; y < consoleDisplayHeight; ++y) {
+                memcpy(dst + (y * pitch), src + (y * (256 * 4)), 256 * 4);
+            }
+
+            SDL_UnlockTexture(m_texture);
+            SDL_RenderTexture(renderer, m_texture, nullptr, nullptr);
+        }
+
+        // Final frame swap
+        SDL_RenderPresent(renderer);
+
+        Uint64 elapsedNS = SDL_GetTicksNS() - startNS;
+
+        if (targetNS > elapsedNS) {
+            SDL_DelayNS(targetNS - elapsedNS);
+        }
+
     }
 
-    shutdown();
-
-    delete(window);
-    window = nullptr;
-}
-
-void Emulator::setVideoMode(unsigned int width, unsigned int height) {
-    if (window) {
-        window->close();
-        delete(window);
-    }
-
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), config->isFullScreenMode() ? sf::Style::Fullscreen : sf::Style::Default);
-    window->setFramerateLimit(config->getPALOutputMode() ? 50 : 60);
-    window->setVerticalSyncEnabled(true);
+    SDL_DestroyTexture(m_texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
 
 void Emulator::setRenderingTexture() {
 
-    float displayWidth = (float)config->getDisplayWidth();
-    float displayHeight = (float)config->getDisplayHeight();
-
-    float widthScale;
-    float heightScale;
-
-    videoOutputTexture.create((int)renderWidth, (int)renderHeight);
-    videoOutputSprite.setTexture(videoOutputTexture);
-
-    float xPosition = 0.f;
-    float yPosition = 0.f;
-
-    if (config->getPreserveAspectRatio()) {
-        // Preserving original aspect ratio - determine the largest scale that we can fit inside the window
-        widthScale = heightScale = std::min(displayWidth / (float)renderWidth, displayHeight / (float)renderHeight);
-
-        // Position the display so that it appears in the middle of the screen
-        xPosition += std::abs(((float)renderWidth * widthScale) - displayWidth)/2;
-        yPosition += std::abs(((float)renderHeight * heightScale) - displayHeight)/2;
-
-    } else {
-        // Not preserving the original aspect ratio - stretch the image to the full size of the screen/window.
-        widthScale = displayWidth/(float)renderWidth;
-        heightScale = displayHeight/(float)renderHeight;
+    if (m_texture) {
+        SDL_DestroyTexture(m_texture);
     }
 
+    m_texture = SDL_CreateTexture(renderer,
+                                  SDL_PIXELFORMAT_XRGB8888,
+                                  SDL_TEXTUREACCESS_STREAMING,
+                                  renderWidth, renderHeight);
 
-    videoOutputSprite.setScale(widthScale, heightScale);
-    videoOutputSprite.setPosition(xPosition, yPosition);
+    SDL_SetTextureScaleMode(m_texture, SDL_SCALEMODE_NEAREST);
+
+    SDL_SetRenderLogicalPresentation(
+            renderer,
+            renderWidth, renderHeight,
+            config->getPreserveAspectRatio() ? SDL_LOGICAL_PRESENTATION_LETTERBOX : SDL_LOGICAL_PRESENTATION_STRETCH
+    );
 }
 
 void Emulator::shutdown() {

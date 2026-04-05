@@ -1,7 +1,7 @@
 #ifndef MasterNostalgia_SMSSAVESTATESTRUCTS_H
 #define MasterNostalgia_SMSSAVESTATESTRUCTS_H
 
-#include <SFML/Window.hpp>
+#include <SDL3/SDL.h>
 
 struct MemorySaveStateData {
 public:
@@ -68,12 +68,12 @@ public:
 
 struct SaveStateKeyPairing {
 public:
-    SaveStateKeyPairing(sf::Keyboard::Key key, int id) {
+    SaveStateKeyPairing(SDL_Scancode key, int id) {
         this->key = key;
         this->id = id;
     }
 
-    sf::Keyboard::Key getKey() {
+    SDL_Scancode getKey() {
         return key;
     }
 
@@ -83,21 +83,21 @@ public:
 
     static std::vector<SaveStateKeyPairing> getKeyPairings() {
         return {
-                SaveStateKeyPairing(sf::Keyboard::Key::Num1, 0),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num2, 1),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num3, 2),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num4, 3),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num5, 4),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num6, 5),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num7, 6),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num8, 7),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num9, 8),
-                SaveStateKeyPairing(sf::Keyboard::Key::Num0, 9)
+                SaveStateKeyPairing(SDL_SCANCODE_1, 0),
+                SaveStateKeyPairing(SDL_SCANCODE_2, 1),
+                SaveStateKeyPairing(SDL_SCANCODE_3, 2),
+                SaveStateKeyPairing(SDL_SCANCODE_4, 3),
+                SaveStateKeyPairing(SDL_SCANCODE_5, 4),
+                SaveStateKeyPairing(SDL_SCANCODE_6, 5),
+                SaveStateKeyPairing(SDL_SCANCODE_7, 6),
+                SaveStateKeyPairing(SDL_SCANCODE_8, 7),
+                SaveStateKeyPairing(SDL_SCANCODE_9, 8),
+                SaveStateKeyPairing(SDL_SCANCODE_0, 9)
         };
     }
 
 private:
-    sf::Keyboard::Key key;
+    SDL_Scancode key;
     int id;
 
 };

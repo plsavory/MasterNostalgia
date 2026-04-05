@@ -24,6 +24,7 @@ Config::Config() {
     CRAMSaveLocation = "cram/";
     autoSaveCRAM = false;
     saveStateLocation = "sstates/";
+    useStaticBackgroundColour = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -69,6 +70,10 @@ int Config::getDisplayHeight() {
 
 bool Config::getPreserveAspectRatio() {
     return preserveAspectRatio;
+}
+
+bool Config::getUseStaticBackgroundColour() {
+    return useStaticBackgroundColour;
 }
 
 bool Config::isFullScreenMode() {
@@ -181,6 +186,10 @@ void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
         hideMouseCursor = JsonHandler::getInteger(displayConfigurationJson, "hideMouseCursor");
     }
 
+    if (JsonHandler::keyExists(displayConfigurationJson, "useStaticBackgroundColour")) {
+       useStaticBackgroundColour = JsonHandler::getBoolean(displayConfigurationJson, "useStaticBackgroundColour");
+    }
+
 }
 
 void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJson) {
@@ -281,6 +290,7 @@ json Config::getDisplayConfigurationJson() {
     output["fullScreenMode"] = fullScreenMode;
     output["preserveAspectRatio"] = preserveAspectRatio;
     output["hideMouseCursor"] = hideMouseCursor;
+    output["useStaticBackgroundColour"] = useStaticBackgroundColour;
 
     return output;
 }

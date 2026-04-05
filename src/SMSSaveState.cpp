@@ -100,6 +100,10 @@ SMSSaveState::SMSSaveState(unsigned char id,
                            Config *config,
                            Cartridge *cartridge) {
     this->id = id;
+    memoryData = nullptr;
+    z80SaveStateData = nullptr;
+    vdpSaveStateData = nullptr;
+    psgSaveStateData = nullptr;
     isLoaded = loadFromFile(getFileName(config, cartridge));
 }
 

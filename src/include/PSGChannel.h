@@ -5,7 +5,7 @@
 #ifndef MasterNostalgia_PSGCHANNEL_H
 #define MasterNostalgia_PSGCHANNEL_H
 
-#include <SFML/System.hpp>
+
 
 class PSGChannel {
 public:

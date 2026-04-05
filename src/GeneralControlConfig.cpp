@@ -3,7 +3,7 @@
 //
 
 #include "GeneralControlConfig.h"
-#include "SFMLKeyboardStringMapper.h"
+#include "SDLKeyboardStringMapper.h"
 
 GeneralControlConfig::GeneralControlConfig() {
     keyboard = nullptr;
@@ -39,7 +39,7 @@ void GeneralControlConfig::setFromConfig(json generalControlConfiguration) {
 }
 
 void GeneralControlConfigKeyboard::setFromConfig(json generalControlKeyboardConfiguration) {
-    SFMLKeyboardStringMapper *mapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *mapper = new SDLKeyboardStringMapper();
 
     if (JsonHandler::keyExists(generalControlKeyboardConfiguration, "pause")) {
         pauseKey = mapper->getKey(JsonHandler::getString(generalControlKeyboardConfiguration, "pause"));
@@ -54,7 +54,7 @@ void GeneralControlConfigKeyboard::setFromConfig(json generalControlKeyboardConf
 
 json GeneralControlConfigKeyboard::getJson() {
     json output;
-    SFMLKeyboardStringMapper *mapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *mapper = new SDLKeyboardStringMapper();
 
     output["exit"] = mapper->getKeyName(exitKey);
     output["pause"] = mapper->getKeyName(pauseKey);
@@ -66,19 +66,19 @@ json GeneralControlConfigKeyboard::getJson() {
 #endif
 
 GeneralControlConfigKeyboard::GeneralControlConfigKeyboard() {
-    pauseKey = sf::Keyboard::Unknown;
-    exitKey = sf::Keyboard::Unknown;
+    pauseKey = SDL_SCANCODE_P;
+    exitKey = SDL_SCANCODE_ESCAPE;
 }
 
 void GeneralControlConfigKeyboard::setDefaults() {
-    pauseKey = sf::Keyboard::P;
-    exitKey = sf::Keyboard::Escape;
+    pauseKey = SDL_SCANCODE_P;
+    exitKey = SDL_SCANCODE_ESCAPE;
 }
 
-sf::Keyboard::Key GeneralControlConfigKeyboard::getPauseKey() {
+SDL_Scancode GeneralControlConfigKeyboard::getPauseKey() {
     return pauseKey;
 }
 
-sf::Keyboard::Key GeneralControlConfigKeyboard::getExitKey() {
+SDL_Scancode GeneralControlConfigKeyboard::getExitKey() {
     return exitKey;
 }

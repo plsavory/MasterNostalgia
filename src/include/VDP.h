@@ -1,9 +1,8 @@
 #ifndef SMS_VDP_H
 #define SMS_VDP_H
 
+#include <cstdint>
 #include "VDPDisplayMode.h"
-#include <SFML/System.hpp>
-#include <SFML/Graphics.hpp>
 #include "SMSSaveStateStructs.h"
 
 struct Mode2Colour {
@@ -16,6 +15,19 @@ struct Mode2Colour {
     unsigned char r;
     unsigned char g;
     unsigned char b;
+};
+
+struct VDPBorderColour {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
+struct VDPFrame {
+    uint8_t* pixels;           // Raw RGBA buffer
+    const VDPDisplayMode* mode; // Pointer to the mode used for this frame
+    bool modeChanged;           // Trigger for SDL_RenderSetLogicalSize
+    VDPBorderColour borderColor;       // The VDP border color register value
 };
 
 class VDP {
@@ -48,13 +60,13 @@ public:
 
     void setPALMode(bool mode);
 
-    sf::Uint8* getVideoOutput();
+    VDPFrame getVideoOutput();
 
     bool isRequestingInterrupt();
 
     void printDebugInfo();
 
-    VDPDisplayMode getDisplayMode();
+    VDPDisplayMode* getDisplayMode();
 
     VDPSaveStateData* getSaveStateData();
 
@@ -119,7 +131,7 @@ private:
 
     unsigned char vScroll;
 
-    VDPDisplayMode displayMode;
+    VDPDisplayMode* displayMode;
 
     void handleScanlineChange();
 
@@ -141,9 +153,9 @@ private:
 
     //region Display output
     // TODO these could probably do with refactoring once multiple systems are supported. Might be useful to have a separate "display" class.
-    sf::Uint8 *workingBuffer;
+    uint8_t *workingBuffer;
 
-    sf::Uint8 *outputBuffer;
+    uint8_t *outputBuffer;
 
     void clearScreen();
 
@@ -159,6 +171,8 @@ private:
     std::vector<Mode2Colour> mode2Colours;
 
     unsigned short getMode2PatternTableOffset(unsigned char row);
+
+    VDPBorderColour getBorderColour();
 };
 #endif
 

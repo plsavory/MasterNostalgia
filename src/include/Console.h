@@ -5,8 +5,8 @@
 #ifndef MasterNostalgia_CONSOLE_H
 #define MasterNostalgia_CONSOLE_H
 
-#include <SFML/System.hpp>
-#include <SFML/Graphics.hpp>
+
+#include "VDP.h"
 #include "Config.h"
 
 class Console {
@@ -27,13 +27,14 @@ public:
         }
 
         handleSaveStorage();
+        endFrame();
     };
 
     virtual bool isRunning() = 0;
 
     virtual double tick() = 0;
 
-    virtual sf::Uint8* getVideoOutput() = 0;
+    virtual VDPFrame getVideoOutput() = 0;
 
     virtual void storeUserInput() = 0;
 
@@ -54,6 +55,8 @@ protected:
     virtual double getMachineClicksPerFrame() = 0;
 
     virtual void handleSaveStorage() = 0;
+
+    virtual void endFrame() = 0;
 };
 
 #endif //MasterNostalgia_CONSOLE_H

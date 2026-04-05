@@ -4,10 +4,8 @@
 
 #include "MasterSystemController.h"
 
-MasterSystemController::MasterSystemController() {
-    for (int i = 0; i < 5; i++) {
-        buttons[i] = 0x0;
-    }
+MasterSystemController::MasterSystemController() : buttons{} {
+
 }
 
 void MasterSystemController::setState(bool dPadUp, bool dPadDown, bool dPadLeft, bool dPadRight, bool buttonA,

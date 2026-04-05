@@ -52,8 +52,13 @@ union CPURegister {
     unsigned short whole;
 
     struct {
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+        unsigned char hi;
+        unsigned char lo;
+#else
         unsigned char lo;
         unsigned char hi;
+#endif
     };
 };
 

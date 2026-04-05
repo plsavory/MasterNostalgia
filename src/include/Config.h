@@ -40,6 +40,8 @@ public:
 
     std::string getSaveStateLocation();
 
+    bool getUseStaticBackgroundColour();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -74,6 +76,8 @@ private:
     std::string CRAMSaveLocation;
 
     std::string saveStateLocation;
+
+    bool useStaticBackgroundColour;
 
     PlayerControlConfig *player1Controls;
 

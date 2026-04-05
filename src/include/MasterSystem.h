@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "Cartridge.h"
 #include "Memory.h"
 #include "CPUZ80.h"
@@ -21,7 +22,7 @@ public:
 
     bool isRunning() final;
 
-    sf::Uint8* getVideoOutput() final;
+    VDPFrame getVideoOutput() final;
 
     void storeUserInput() final;
 
@@ -60,6 +61,8 @@ protected:
     double getMachineClicksPerFrame() final;
 
     void handleSaveStorage() final;
+
+    void endFrame() final;
 
     SMSSaveState* saveStates[10];
 };

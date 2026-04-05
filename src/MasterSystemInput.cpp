@@ -3,7 +3,6 @@
 //
 
 #include "MasterSystemInput.h"
-#include "SFML/Window.hpp"
 
 MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
     this->inputInterface = inputInterface;

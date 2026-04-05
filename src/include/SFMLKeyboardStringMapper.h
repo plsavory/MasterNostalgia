@@ -5,10 +5,8 @@
 #ifndef MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H
 #define MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H
 
+#include <SDL3/SDL.h>
 #include <iostream>
-
-#define SDL_Scancode int // TODO SDL port
-#define SDL_SCANCODE_UNKNOWN 0 // TODO SDL port
 
 struct SFMLKeyboardStringMap {
 public:
@@ -21,7 +19,7 @@ public:
 
 private:
     std::string name;
-    int key;
+    SDL_Scancode key;
 };
 
 class SFMLKeyboardStringMapper {
@@ -31,7 +29,7 @@ public:
 
     SDL_Scancode getKey(std::string name);
 
-    std::string getKeyName(int key);
+    std::string getKeyName(SDL_Scancode key);
 
 private:
     std::vector<SFMLKeyboardStringMap> map;

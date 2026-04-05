@@ -17,7 +17,7 @@ bool InputInterface::isKeyboardKeyPressed(int port, PlayerControlKeyboardConfig:
 
     PlayerControlKeyboardConfig *keyboardConfig = playerControls[port]->getKeyboardConfig();
 
-    return keyboardConfig && false; // TODO SDL port
+    return keyboardConfig && SDL_GetKeyboardState(nullptr)[keyboardConfig->getBind(action)];
 }
 
 bool InputInterface::isDPadUpPressed(int port) {

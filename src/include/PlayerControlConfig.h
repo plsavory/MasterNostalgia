@@ -5,8 +5,7 @@
 #ifndef MasterNostalgia_PLAYERCONTROLCONFIG_H
 #define MasterNostalgia_PLAYERCONTROLCONFIG_H
 
-#define SDL_Scancode int // TODO SDL port
-#define SDL_SCANCODE_UNKNOWN 0 // TODO SDL port
+#include <SDL3/SDL.h>
 
 class PlayerControlKeyboardConfig {
 public:

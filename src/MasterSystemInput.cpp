@@ -9,7 +9,6 @@ MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
 }
 
 void MasterSystemInput::setState() {
-    // TODO allow customisable controls
     resetButton = 0x0;
     pauseButton = false; // TODO SDL2 port
 

@@ -33,7 +33,7 @@ void Emulator::init(const std::string &fileName) {
 void Emulator::run() {
 
     // Initialise SDL
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("SDL could not initialize! SDL_Error: %s", SDL_GetError());
         return;
     }

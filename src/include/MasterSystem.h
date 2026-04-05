@@ -47,4 +47,6 @@ private:
 protected:
 
     double getMachineClicksPerFrame() final;
+
+    void endFrame() final;
 };

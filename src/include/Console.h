@@ -25,6 +25,8 @@ public:
         while (currentClicks < machineClicksPerFrame) {
             currentClicks += tick();
         }
+
+        endFrame();
     };
 
     virtual bool isRunning() = 0;
@@ -48,6 +50,8 @@ public:
 protected:
 
     virtual double getMachineClicksPerFrame() = 0;
+
+    virtual void endFrame() = 0;
 };
 
 #endif //MasterNostalgia_CONSOLE_H

@@ -47,8 +47,8 @@ VDP::VDP() {
     isVBlanking = false;
     vCounterJumpCount = 0;
     displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCSmall); // TODO should this be the default? just using it for now.
-    workingBuffer = new sf::Uint8[256 * 224 * 4];
-    outputBuffer = new sf::Uint8[256 * 224 * 4];
+    workingBuffer = new uint8_t[256 * 224 * 4];
+    outputBuffer = new uint8_t[256 * 224 * 4];
     vScroll = 0;
     lineInterruptCounter = 0;
     clearScreen();
@@ -95,15 +95,15 @@ void VDP::handleScanlineChange() {
         handleVCounterJump(currentVCounter);
     }
 
-    if (vCounterJumpCount == 0 && vCounter == displayMode.getActiveDisplayEnd()) {
+    if (vCounterJumpCount == 0 && vCounter == displayMode->getActiveDisplayEnd()) {
         // Entering vertical refresh on the next scanline if we've reached the end of the active display and the vcounter has not jumped
         isVBlanking = true;
         Utils::setBit(7, true, statusRegister);
     }
 
-    if (vCounter <= displayMode.getActiveDisplayEnd()) {
+    if (vCounter <= displayMode->getActiveDisplayEnd()) {
 
-        if (vCounter != displayMode.getActiveDisplayEnd()) {
+        if (vCounter != displayMode->getActiveDisplayEnd()) {
             // Active display - render this scanline
             renderScanline();
         }
@@ -118,9 +118,9 @@ void VDP::handleScanlineChange() {
         }
     }
 
-    if (vCounter >= displayMode.getActiveDisplayEnd()) {
+    if (vCounter >= displayMode->getActiveDisplayEnd()) {
         // Inactive display area
-        if (vCounter != displayMode.getActiveDisplayEnd()) {
+        if (vCounter != displayMode->getActiveDisplayEnd()) {
             // Line interrupt counter should be loaded on the first scanline after the active display period
             lineInterruptCounter = registers[0xA];
         }
@@ -129,6 +129,9 @@ void VDP::handleScanlineChange() {
 
         // Allow the screen resolution to change
         // TODO handle PAL modes
+
+        delete(displayMode);
+        
         switch (getMode()) {
             case 11:
                 displayMode = VDPDisplayMode::getDisplayMode(SMSDisplayMode::NTSCMedium);
@@ -145,7 +148,7 @@ void VDP::handleScanlineChange() {
 }
 
 unsigned short VDP::getNameTableBaseAddress() {
-    if (displayMode.getActiveDisplayEnd() == 192) {
+    if (displayMode->getActiveDisplayEnd() == 192) {
         // Ignore bit 0 and the top nibble
         return ((unsigned short)(registers[0x2] & 0xE)) << 10;
     }
@@ -271,7 +274,7 @@ unsigned char VDP::readVCounter() {
 
 bool VDP::handleVCounterJump(unsigned char currentVCounter) {
 
-    std::vector<VDPDisplayModeVCounterJump> vCounterJumps = displayMode.getVCounterJumps();
+    std::vector<VDPDisplayModeVCounterJump> vCounterJumps = displayMode->getVCounterJumps();
 
     if (vCounterJumpCount >= vCounterJumps.size()) {
         // We've already jumped enough times - do nothing
@@ -304,8 +307,13 @@ void VDP::renderScanline() {
     }
 }
 
-sf::Uint8* VDP::getVideoOutput() {
-    return outputBuffer;
+VDPFrame VDP::getVideoOutput() {
+    return VDPFrame{
+        outputBuffer,
+        getDisplayMode(),
+        false,
+        0
+    };
 }
 
 unsigned short VDP::getSpriteAllocationTableBaseAddress() {
@@ -502,7 +510,7 @@ void VDP::renderSpritesMode4() {
         // Sprite format: byte0 = y, byte1 = x, byte2 = unused, byte3 = pattern id
         int y = vRAM[baseAddress + i];
 
-        if (y == 0xD0 && (displayMode.getActiveDisplayEnd() == 192)) {
+        if (y == 0xD0 && (displayMode->getActiveDisplayEnd() == 192)) {
             break;
         }
 
@@ -648,7 +656,7 @@ void VDP::renderBackgroundMode4() {
                 }
 
                 // Wrap the pixel data if we have exceeded the maximum number of rows
-                currentVRow = currentVRow % (displayMode.getActiveDisplayEnd() == 192 ? 28 : 32);
+                currentVRow = currentVRow % (displayMode->getActiveDisplayEnd() == 192 ? 28 : 32);
             }
 
             unsigned short nameTableOffsetAddress = nameTableBaseAddress + (currentVRow * 64) + (column * 2);
@@ -786,7 +794,7 @@ inline unsigned int VDP::getPixelBitmapIndex(unsigned char x, unsigned char y) {
 
 void VDP::printDebugInfo() {
     // Video Mode
-    std::cout << "Video Mode: " << Utils::formatHexNumber(displayMode.getActiveDisplayEnd()) << std::endl << std::endl;
+    std::cout << "Video Mode: " << Utils::formatHexNumber(displayMode->getActiveDisplayEnd()) << std::endl << std::endl;
 
     // Registers
     std::cout << "Registers: " << std::endl << std::endl;
@@ -840,7 +848,7 @@ void VDP::printDebugInfo() {
     }
 }
 
-VDPDisplayMode VDP::getDisplayMode() {
+VDPDisplayMode* VDP::getDisplayMode() {
     return displayMode;
 }
 

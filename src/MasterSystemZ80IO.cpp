@@ -32,7 +32,7 @@ void MasterSystemZ80IO::write(unsigned char address, unsigned char value) {
 
     if (address <= 0x7F) {
         // Write to SN76489 PSG
-        psg->write(value);
+//        psg->write(value); TODO SDL port
         return;
     }
 

@@ -10,7 +10,7 @@
 
 #include "PSGChannel.h"
 #include "SoundConfig.h"
-#include <SFML/Audio.hpp>
+
 #include <bitset>
 
 enum PSGChannelIndex {
@@ -22,42 +22,42 @@ enum PSGChannelIndex {
 
 class PSG {
 public:
-    PSG(SoundConfig *soundConfig);
-
-    ~PSG();
-
-    void execute(float soundCycles);
-
-    void write(unsigned char data);
-
-private:
-    PSGChannel *channels[4];
-    unsigned short volumeTable[16];
-    unsigned char selectedRegister;
-    bool hasSelectedVolumeRegister;
-
-    float cycles;
-    unsigned long int clockInfo;
-
-    sf::Int16 buffer[BUFFER_SIZE];
-
-    unsigned long currentBufferLocation;
-
-    void playBuffer();
-    void clearBuffer();
-
-    sf::SoundBuffer *outputBuffer;
-    sf::Sound *outputSound;
-    float bufferUpdateLimit ;
-    float currentBufferUpdates;
-
-    inline bool getParity(unsigned short value) {
-        return std::bitset<4>(value).count() % 2 == 0;
-    }
-
-    unsigned short emulateTone(float floor, int channelNumber);
-
-    SoundConfig *soundConfig;
+//    PSG(SoundConfig *soundConfig);
+//
+//    ~PSG();
+//
+//    void execute(float soundCycles);
+//
+//    void write(unsigned char data);
+//
+//private:
+//    PSGChannel *channels[4];
+//    unsigned short volumeTable[16];
+//    unsigned char selectedRegister;
+//    bool hasSelectedVolumeRegister;
+//
+//    float cycles;
+//    unsigned long int clockInfo;
+//
+//    sf::Int16 buffer[BUFFER_SIZE];
+//
+//    unsigned long currentBufferLocation;
+//
+//    void playBuffer();
+//    void clearBuffer();
+//
+//    sf::SoundBuffer *outputBuffer;
+//    sf::Sound *outputSound;
+//    float bufferUpdateLimit ;
+//    float currentBufferUpdates;
+//
+//    inline bool getParity(unsigned short value) {
+//        return std::bitset<4>(value).count() % 2 == 0;
+//    }
+//
+//    unsigned short emulateTone(float floor, int channelNumber);
+//
+//    SoundConfig *soundConfig;
 };
 
 #endif

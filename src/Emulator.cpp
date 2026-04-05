@@ -3,7 +3,7 @@
 
 Emulator::Emulator() {
     system = nullptr;
-    window = nullptr;
+//    window = nullptr; TODO SDL port
     config = new Config();
     inputInterface = new InputInterface(config);
 
@@ -36,8 +36,8 @@ void Emulator::run() {
     setVideoMode((unsigned int)config->getDisplayWidth(), (unsigned int)config->getDisplayHeight());
     setRenderingTexture();
 
-    sf::Keyboard::Key pauseKey = sf::Keyboard::Unknown;
-    sf::Keyboard::Key exitKey = sf::Keyboard::Unknown;
+    int pauseKey = 0; // TODO SDL port
+    int exitKey = 0; // TODO SDL port
 
     if (config->getGeneralControlConfig() && config->getGeneralControlConfig()->getKeyboardConfig()) {
         exitKey = config->getGeneralControlConfig()->getKeyboardConfig()->getExitKey();
@@ -50,37 +50,38 @@ void Emulator::run() {
 
     bool hasFocus = true;
 
-    while (window->isOpen()) {
+    while (true) { // TODO SDL port
 
-        sf::Event event;
-        while (window->pollEvent(event)) {
-
-            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && exitKey != sf::Keyboard::Unknown && event.key.code == exitKey)) {
-                window->close();
-                return;
-            }
-
-            if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
-                system->sendPauseInterrupt();
-            }
-
-            if (event.type == sf::Event::GainedFocus) {
-                hasFocus = true;
-            }
-
-            if (event.type == sf::Event::LostFocus) {
-                hasFocus = false;
-            }
-        }
-
-        if (hasFocus || !pauseEmulationWhenNotInFocus) {
-            system->emulateFrame(hasFocus);
-            videoOutputTexture.update(system->getVideoOutput());
-        }
-
-        window->clear(sf::Color::Black);
-        window->draw(videoOutputSprite);
-        window->display();
+        // TODO SDL port
+//        sf::Event event;
+//        while (window->pollEvent(event)) {
+//
+//            if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && exitKey != sf::Keyboard::Unknown && event.key.code == exitKey)) {
+//                window->close();
+//                return;
+//            }
+//
+//            if (event.type == sf::Event::KeyPressed && pauseKey != sf::Keyboard::Unknown && event.key.code == pauseKey) {
+//                system->sendPauseInterrupt();
+//            }
+//
+//            if (event.type == sf::Event::GainedFocus) {
+//                hasFocus = true;
+//            }
+//
+//            if (event.type == sf::Event::LostFocus) {
+//                hasFocus = false;
+//            }
+//        }
+//
+//        if (hasFocus || !pauseEmulationWhenNotInFocus) {
+//            system->emulateFrame(hasFocus);
+//            videoOutputTexture.update(system->getVideoOutput());
+//        }
+//
+//        window->clear(sf::Color::Black);
+//        window->draw(videoOutputSprite);
+//        window->display();
 
         // Lazy way to debug the VDP...
 //        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
@@ -101,19 +102,19 @@ void Emulator::run() {
             setRenderingTexture();
         }
     }
-    delete(window);
-    window = nullptr;
+//    delete(window); TODO SDL port
+//    window = nullptr; TODO SDL port
 }
 
-void Emulator::setVideoMode(unsigned int width, unsigned int height) {
-    if (window) {
-        window->close();
-        delete(window);
-    }
+void Emulator::setVideoMode(unsigned int width, unsigned int height) { // TODO SDL port
+//    if (window) {
+//        window->close();
+//        delete(window);
+//    }
 
-    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), config->isFullScreenMode() ? sf::Style::Fullscreen : sf::Style::Default);
-    window->setFramerateLimit(60);
-    window->setVerticalSyncEnabled(true);
+//    window = new sf::RenderWindow(sf::VideoMode(width, height, 32), Utils::getVersionString(false), config->isFullScreenMode() ? sf::Style::Fullscreen : sf::Style::Default);
+//    window->setFramerateLimit(60);
+//    window->setVerticalSyncEnabled(true);
 }
 
 void Emulator::setRenderingTexture() {
@@ -124,9 +125,9 @@ void Emulator::setRenderingTexture() {
     float widthScale;
     float heightScale;
 
-    videoOutputTexture.create((int)renderWidth, (int)renderHeight);
-    videoOutputSprite.setTexture(videoOutputTexture);
+    // TODO create SDL output texture
 
+    // Set the position and size of the rendered display
     float xPosition = 0.f;
     float yPosition = 0.f;
 
@@ -145,7 +146,7 @@ void Emulator::setRenderingTexture() {
     }
 
 
-    videoOutputSprite.setScale(widthScale, heightScale);
-    videoOutputSprite.setPosition(xPosition, yPosition);
+//    videoOutputSprite.setScale(widthScale, heightScale);
+//    videoOutputSprite.setPosition(xPosition, yPosition);
 }
 

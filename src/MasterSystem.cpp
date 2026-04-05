@@ -5,7 +5,7 @@ MasterSystem::MasterSystem(InputInterface *inputInterface, Config *config) {
     smsCartridge = new Cartridge();
     smsMemory = new Memory(smsCartridge);
     smsVdp = new VDP();
-    smsPSG = new PSG(config->getSoundConfig());
+//    smsPSG = new PSG(config->getSoundConfig());
     smsInput = new MasterSystemInput(inputInterface);
     z80Io = new MasterSystemZ80IO(smsVdp, smsPSG, smsMemory, smsInput);
     smsCPU = new CPUZ80(smsMemory, z80Io);
@@ -44,7 +44,7 @@ double MasterSystem::tick() {
 
     smsVdp->execute(machineClicks / 2);
 
-    smsPSG->execute(z80ClockCycles);
+//    smsPSG->execute(z80ClockCycles); TODO SDL port
 
     return machineClicks;
 }
@@ -57,7 +57,7 @@ double MasterSystem::getMachineClicksPerFrame() {
     return (float)10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
 }
 
-sf::Uint8* MasterSystem::getVideoOutput() {
+VDPFrame MasterSystem::getVideoOutput() {
     return smsVdp->getVideoOutput();
 }
 
@@ -74,7 +74,7 @@ unsigned short MasterSystem::getCurrentDisplayWidth() {
 }
 
 unsigned short MasterSystem::getCurrentDisplayHeight() {
-    return smsVdp->getDisplayMode().getActiveDisplayEnd();
+    return smsVdp->getDisplayMode()->getActiveDisplayEnd();
 }
 
 unsigned char MasterSystem::getCurrentFrameRate() {

@@ -71,15 +71,15 @@ PlayerControlKeyboardConfig::PlayerControlKeyboardConfig() {
 }
 
 void PlayerControlKeyboardConfig::setDefaults() {
-    keyBinds[Actions::dPadUp] = sf::Keyboard::Up;
-    keyBinds[Actions::dPadDown] = sf::Keyboard::Down;
-    keyBinds[Actions::dPadLeft] = sf::Keyboard::Left;
-    keyBinds[Actions::dPadRight] = sf::Keyboard::Right;
-    keyBinds[Actions::a] = sf::Keyboard::A;
-    keyBinds[Actions::b] = sf::Keyboard::S;
+    keyBinds[Actions::dPadUp] = SDL_SCANCODE_UNKNOWN;
+    keyBinds[Actions::dPadDown] = SDL_SCANCODE_UNKNOWN;
+    keyBinds[Actions::dPadLeft] = SDL_SCANCODE_UNKNOWN;
+    keyBinds[Actions::dPadRight] = SDL_SCANCODE_UNKNOWN;
+    keyBinds[Actions::a] = SDL_SCANCODE_UNKNOWN;
+    keyBinds[Actions::b] = SDL_SCANCODE_UNKNOWN;
 }
 
-sf::Keyboard::Key PlayerControlKeyboardConfig::getBind(int id) {
+SDL_Scancode PlayerControlKeyboardConfig::getBind(int id) {
     return keyBinds[id];
 }
 

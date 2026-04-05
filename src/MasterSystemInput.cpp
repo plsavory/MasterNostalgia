@@ -3,7 +3,6 @@
 //
 
 #include "MasterSystemInput.h"
-#include "SFML/Window.hpp"
 
 MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
     this->inputInterface = inputInterface;
@@ -12,7 +11,7 @@ MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
 void MasterSystemInput::setState() {
     // TODO allow customisable controls
     resetButton = 0x0;
-    pauseButton = sf::Keyboard::isKeyPressed(sf::Keyboard::Return);
+    pauseButton = false; // TODO SDL2 port
 
     controllers[0].setState(
             inputInterface->isDPadUpPressed(0),

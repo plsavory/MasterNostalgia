@@ -66,19 +66,19 @@ json GeneralControlConfigKeyboard::getJson() {
 #endif
 
 GeneralControlConfigKeyboard::GeneralControlConfigKeyboard() {
-    pauseKey = sf::Keyboard::Unknown;
-    exitKey = sf::Keyboard::Unknown;
+//    pauseKey = SDL_SCANCODE_UNKNOWN;
+//    exitKey = SDL_SCANCODE_UNKNOWN;
 }
 
 void GeneralControlConfigKeyboard::setDefaults() {
-    pauseKey = sf::Keyboard::P;
-    exitKey = sf::Keyboard::Escape;
+//    pauseKey = SDL_SCANCODE_UNKNOWN;
+//    exitKey = SDL_SCANCODE_UNKNOWN;
 }
 
-sf::Keyboard::Key GeneralControlConfigKeyboard::getPauseKey() {
+SDL_Scancode GeneralControlConfigKeyboard::getPauseKey() {
     return pauseKey;
 }
 
-sf::Keyboard::Key GeneralControlConfigKeyboard::getExitKey() {
+SDL_Scancode GeneralControlConfigKeyboard::getExitKey() {
     return exitKey;
 }

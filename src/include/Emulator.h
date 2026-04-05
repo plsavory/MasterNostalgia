@@ -6,8 +6,6 @@
 #include "Utils.h"
 #include "MasterSystem.h"
 #include "Exceptions.h"
-#include "SFML/System.hpp"
-#include "SFML/Graphics.hpp"
 #include "InputInterface.h"
 
 /**
@@ -26,7 +24,7 @@ public:
 private:
     MasterSystem *system;
 
-    sf::RenderWindow *window;
+//    sf::RenderWindow *window; TODO SDL port
 
     Config *config;
 
@@ -37,9 +35,7 @@ private:
     unsigned short renderWidth;
     unsigned short renderHeight;
 
-    sf::Texture videoOutputTexture;
-
-    sf::Sprite videoOutputSprite;
+//    sf::Texture videoOutputTexture;
 
     InputInterface *inputInterface;
 };

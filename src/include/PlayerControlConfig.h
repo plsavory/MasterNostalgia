@@ -5,8 +5,8 @@
 #ifndef MasterNostalgia_PLAYERCONTROLCONFIG_H
 #define MasterNostalgia_PLAYERCONTROLCONFIG_H
 
-// TODO should anything SFML related be moved out of this class into an extra layer? Do this later if we need portability between APIs (e.g an SDL version).
-#include <SFML/Window.hpp>
+#define SDL_Scancode int // TODO SDL port
+#define SDL_SCANCODE_UNKNOWN 0 // TODO SDL port
 
 class PlayerControlKeyboardConfig {
 public:
@@ -24,7 +24,7 @@ public:
         b = 5
     };
 
-    sf::Keyboard::Key getBind(int id);
+    SDL_Scancode getBind(int id);
 
 
 #ifdef JSON_CONFIG_FILE
@@ -36,7 +36,7 @@ public:
 #endif
 
 private:
-    sf::Keyboard::Key keyBinds[6];
+    SDL_Scancode keyBinds[6];
 
 #ifdef JSON_CONFIG_FILE
     std::vector<std::string> actionKeys;

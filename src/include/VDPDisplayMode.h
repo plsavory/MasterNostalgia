@@ -73,7 +73,7 @@ public:
         return vCounterJumps;
     }
 
-    static VDPDisplayMode getDisplayMode(SMSDisplayMode mode);
+    static VDPDisplayMode* getDisplayMode(SMSDisplayMode mode);
 
 private:
     unsigned char activeDisplayEnd;

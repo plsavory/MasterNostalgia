@@ -84,12 +84,3 @@ add_executable(${EXECUTABLE_NAME}
         src/SFMLKeyboardStringMapper.cpp
         src/GeneralControlConfig.cpp
         src/SoundConfig.cpp)
-
-find_package(SFML 2.5.1 REQUIRED audio graphics window system )
-
-if (SFML_FOUND)
-    set(SFML_LIBRARIES sfml-audio sfml-graphics sfml-window sfml-system)
-    target_link_libraries(${EXECUTABLE_NAME} ${SFML_LIBRARIES})
-else()
-    message(SFML NOT FOUND)
-endif()

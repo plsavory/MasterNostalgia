@@ -5,8 +5,8 @@
 #ifndef MasterNostalgia_CONSOLE_H
 #define MasterNostalgia_CONSOLE_H
 
-#include <SFML/System.hpp>
-#include <SFML/Graphics.hpp>
+
+#include "VDP.h" // TODO SDL port
 #include "Config.h"
 
 class Console {
@@ -31,7 +31,7 @@ public:
 
     virtual double tick() = 0;
 
-    virtual sf::Uint8* getVideoOutput() = 0;
+    virtual VDPFrame getVideoOutput() = 0;
 
     virtual void storeUserInput() = 0;
 

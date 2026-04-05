@@ -20,7 +20,7 @@ public:
 
     bool isRunning() final;
 
-    sf::Uint8* getVideoOutput() final;
+    VDPFrame getVideoOutput() final;
 
     void storeUserInput() final;
 

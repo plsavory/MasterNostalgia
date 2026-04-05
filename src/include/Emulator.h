@@ -2,6 +2,8 @@
 #define MasterNostalgia_EMULATOR_H
 
 #include <iostream>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include "Config.h"
 #include "Utils.h"
 #include "MasterSystem.h"
@@ -24,18 +26,17 @@ public:
 private:
     MasterSystem *system;
 
-//    sf::RenderWindow *window; TODO SDL port
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+
+    SDL_Texture* m_texture = nullptr;
 
     Config *config;
 
-    void setVideoMode(unsigned int width, unsigned int height);
-
     void setRenderingTexture();
 
-    unsigned short renderWidth;
-    unsigned short renderHeight;
-
-//    sf::Texture videoOutputTexture;
+    int renderWidth;
+    int renderHeight;
 
     InputInterface *inputInterface;
 };

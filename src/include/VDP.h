@@ -15,11 +15,17 @@ struct Mode2Colour {
     unsigned char b;
 };
 
+struct VDPBorderColour {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
 struct VDPFrame {
     uint8_t* pixels;           // Raw RGBA buffer
     const VDPDisplayMode* mode; // Pointer to the mode used for this frame
     bool modeChanged;           // Trigger for SDL_RenderSetLogicalSize
-    uint8_t borderColor;       // The VDP border color register value
+    VDPBorderColour borderColor;       // The VDP border color register value
 };
 
 class VDP {
@@ -155,6 +161,8 @@ private:
     std::vector<Mode2Colour> mode2Colours;
 
     unsigned short getMode2PatternTableOffset(unsigned char row);
+
+    VDPBorderColour getBorderColour();
 };
 #endif
 

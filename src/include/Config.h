@@ -28,6 +28,8 @@ public:
 
     bool getPauseEmulationWhenNotInFocus();
 
+    bool getUseStaticBackgroundColour();
+
     PlayerControlConfig* getPlayer1ControlConfig();
 
     PlayerControlConfig* getPlayer2ControlConfig();
@@ -46,6 +48,8 @@ private:
     bool preserveAspectRatio;
 
     bool pauseEmulationWhenNotInFocus;
+
+    bool useStaticBackgroundColour;
 
     PlayerControlConfig *player1Controls;
 

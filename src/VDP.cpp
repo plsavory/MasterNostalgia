@@ -312,7 +312,7 @@ VDPFrame VDP::getVideoOutput() {
         outputBuffer,
         getDisplayMode(),
         false,
-        0
+        getBorderColour()
     };
 }
 
@@ -595,6 +595,7 @@ void VDP::renderSpritesMode4() {
                 continue;
             }
 
+            // TODO duplicate code, make inline function?
             unsigned char rgb = cRAM[paletteId + 16];
             unsigned char r = getColourValue(rgb & 0x3);
             unsigned char g = getColourValue((rgb >> 2) & 0x3);
@@ -777,9 +778,9 @@ void VDP::fillVideoOutput() {
 }
 
 void VDP::putPixel(unsigned long index, unsigned char r, unsigned char g, unsigned char b) {
-    workingBuffer[index] = r;
+    workingBuffer[index] = b;
     workingBuffer[index + 1] = g;
-    workingBuffer[index + 2] = b;
+    workingBuffer[index + 2] = r;
     workingBuffer[index + 3] = 255;
 }
 
@@ -863,4 +864,19 @@ unsigned short VDP::getMode2PatternTableOffset(unsigned char row) {
     }
 
     return 0;
+}
+
+VDPBorderColour VDP::getBorderColour() {
+
+    if (getMode() == 2) {
+        // TODO implement this properly
+        return VDPBorderColour{0, 0, 0};
+    }
+
+    unsigned char rgb = cRAM[(registers[0x7] << 4) + 16];
+
+    return VDPBorderColour{
+        getColourValue(rgb & 0x3),
+        getColourValue((rgb >> 2) & 0x3),
+        getColourValue((rgb >> 4) & 0x3)};
 }

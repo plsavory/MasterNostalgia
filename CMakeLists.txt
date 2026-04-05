@@ -35,7 +35,8 @@ endif()
 
 add_definitions("-DJSON_CONFIG_FILE")
 
-include_directories(src/include lib)
+find_package(SDL3 REQUIRED)
+include_directories(src/include lib ${SDL3_INCLUDE_DIRS})
 
 add_executable(${EXECUTABLE_NAME}
         src/include/SFMLKeyboardStringMapper.h
@@ -84,3 +85,5 @@ add_executable(${EXECUTABLE_NAME}
         src/SFMLKeyboardStringMapper.cpp
         src/GeneralControlConfig.cpp
         src/SoundConfig.cpp)
+
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3)

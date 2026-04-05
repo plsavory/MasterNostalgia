@@ -13,6 +13,7 @@ Config::Config() {
     fullScreenMode = false;
     preserveAspectRatio = false;
     pauseEmulationWhenNotInFocus = true;
+    useStaticBackgroundColour = false;
 
     player1Controls = new PlayerControlConfig();
     player1Controls->setDefaults();
@@ -58,6 +59,10 @@ int Config::getDisplayHeight() {
 
 bool Config::getPreserveAspectRatio() {
     return preserveAspectRatio;
+}
+
+bool Config::getUseStaticBackgroundColour() {
+    return useStaticBackgroundColour;
 }
 
 bool Config::isFullScreenMode() {
@@ -138,6 +143,10 @@ void Config::readDisplayConfigurationJson(json displayConfigurationJson) {
         preserveAspectRatio = JsonHandler::getBoolean(displayConfigurationJson, "preserveAspectRatio");
     }
 
+    if (JsonHandler::keyExists(displayConfigurationJson, "useStaticBackgroundColour")) {
+       useStaticBackgroundColour = JsonHandler::getBoolean(displayConfigurationJson, "useStaticBackgroundColour");
+    }
+
 }
 
 void Config::readGeneralConfigurationJson(nlohmann::json generalConfigurationJson) {
@@ -202,6 +211,7 @@ json Config::getDisplayConfigurationJson() {
     output["displayHeight"] = displayHeight;
     output["fullScreenMode"] = fullScreenMode;
     output["preserveAspectRatio"] = preserveAspectRatio;
+    output["useStaticBackgroundColour"] = useStaticBackgroundColour;
 
     return output;
 }

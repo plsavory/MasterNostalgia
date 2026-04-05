@@ -56,6 +56,12 @@ void Emulator::run() {
 
     bool pauseEmulationWhenNotInFocus = config->getPauseEmulationWhenNotInFocus();
 
+    bool isFullscreen = config->isFullScreenMode();
+
+    if (isFullscreen) {
+        SDL_SetWindowFullscreen(window, isFullscreen);
+    }
+
 //    bool hasPrintedVdpInfo = false;
 
     bool hasFocus = true;
@@ -91,6 +97,11 @@ void Emulator::run() {
 
                 if (event.key.scancode == exitKey) {
                     running = false;
+                }
+
+                if (event.key.scancode == SDL_SCANCODE_F11) {
+                    isFullscreen = !isFullscreen;
+                    SDL_SetWindowFullscreen(window, isFullscreen);
                 }
             }
         }

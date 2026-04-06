@@ -18,6 +18,13 @@ Emulator::~Emulator() {
 
 void Emulator::init(const std::string &fileName) {
     // TODO detect ROM type and support multiple consoles if we ever get master system support fully working
+
+    // Initialise SDL
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+        SDL_Log("SDL could not initialize! SDL_Error: %s", SDL_GetError());
+        throw GeneralException();
+    }
+
     system = new MasterSystem(inputInterface, config);
 
     bool romLoadResult = system->init(fileName);
@@ -31,12 +38,6 @@ void Emulator::init(const std::string &fileName) {
 }
 
 void Emulator::run() {
-
-    // Initialise SDL
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
-        SDL_Log("SDL could not initialize! SDL_Error: %s", SDL_GetError());
-        return;
-    }
 
     // Create window for video output
     if (!SDL_CreateWindowAndRenderer(Utils::getVersionString(false).c_str(), config->getDisplayWidth(), config->getDisplayHeight(), 0, &window, &renderer)) {

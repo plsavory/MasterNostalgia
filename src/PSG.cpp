@@ -14,16 +14,17 @@ PSG::PSG(SoundConfig *soundConfig) {
     buffer.reserve(2048);
 
     // 1. Define your source (The PSG) and destination (The Speakers)
-    srcSpec = new SDL_AudioSpec ({ SDL_AUDIO_S16LE, 1, 223721 });
-    dstSpec = new SDL_AudioSpec ({ SDL_AUDIO_S16LE, 1, 44100 });
+    SDL_AudioSpec srcSpec = SDL_AudioSpec ({ SDL_AUDIO_S16LE, 1, 223721 });
+    SDL_AudioSpec dstSpec = SDL_AudioSpec ({ SDL_AUDIO_S16LE, 1, 44100 });
+
 
     // 2. Create the stream
-    audioStream = SDL_CreateAudioStream(srcSpec, dstSpec);
+    audioStream = SDL_CreateAudioStream(&srcSpec, &dstSpec);
 
-    SDL_AudioDeviceID devID = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, dstSpec);
+    SDL_AudioDeviceID devID = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     if (devID == 0) {
         // Log error: SDL_GetError()
-        std::cout<<"Unable to get SDL audio device ID"<<std::endl;
+        SDL_Log("SDL could not get audio devices! SDL_Error: %s", SDL_GetError());
     }
 
     // 3. Bind to the DEFAULT playback device
@@ -60,7 +61,7 @@ PSG::PSG(SoundConfig *soundConfig) {
 
     clearBuffer();
 
-    bufferUpdateLimit = ((float)PSG_CLOCK_SPEED / (((float)SAMPLE_RATE / (float)BUFFER_SIZE) + 1)) / (float)BUFFER_SIZE;
+    bufferUpdateLimit = (((float)PSG_CLOCK_SPEED / (((float)SAMPLE_RATE / (float)BUFFER_SIZE) + 1)) / (float)BUFFER_SIZE) * 1.2;
 
     currentBufferUpdates = 0;
 
@@ -95,11 +96,13 @@ void PSG::execute(float soundCycles) {
 
     cycles -= floor;
 
-    short bufferValue = 0;
+    unsigned short bufferValue = 0;
 
     for (int i = 0; i < 3; i++) {
         bufferValue += emulateTone(floor, i);
     }
+
+//    const float CYCLES_PER_SAMPLE = 3579545.0f / 44100.0f;
 
     if (currentBufferUpdates < bufferUpdateLimit) {
         return;
@@ -155,7 +158,7 @@ void PSG::clearBuffer() {
 //    }
 }
 
-short PSG::emulateTone(float floor, int channelNumber) {
+unsigned short PSG::emulateTone(float floor, int channelNumber) {
 
     PSGChannel* channel = channels[channelNumber];
 

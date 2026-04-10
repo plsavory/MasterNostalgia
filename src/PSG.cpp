@@ -61,7 +61,7 @@ PSG::PSG(SoundConfig *soundConfig) {
 
     clearBuffer();
 
-    bufferUpdateLimit = (((float)PSG_CLOCK_SPEED / (((float)SAMPLE_RATE / (float)BUFFER_SIZE) + 1)) / (float)BUFFER_SIZE) * 1.2;
+    bufferUpdateLimit = (((float)PSG_CLOCK_SPEED / (((float)SAMPLE_RATE / (float)BUFFER_SIZE) + 1)) / (float)BUFFER_SIZE);
 
     currentBufferUpdates = 0;
 

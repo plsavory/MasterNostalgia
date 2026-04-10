@@ -37,14 +37,13 @@ bool MasterSystem::init(std::string romFilename) {
 
 double MasterSystem::tick() {
 
-    // TODO - the way that timing works needs to be revamped here, it doesn't seem quite right.
     int z80ClockCycles = smsCPU->execute();
 
     double machineClicks = z80ClockCycles * 3;
 
     smsVdp->execute(machineClicks / 2);
 
-    smsPSG->execute(z80ClockCycles);
+    smsPSG->execute(machineClicks / 6);
 
     return machineClicks;
 }
@@ -54,7 +53,7 @@ bool MasterSystem::isRunning() {
 }
 
 double MasterSystem::getMachineClicksPerFrame() {
-    return (float)10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
+    return 10738580 / 60; // TODO this will need to differ for PAL vs. NTSC
 }
 
 VDPFrame MasterSystem::getVideoOutput() {

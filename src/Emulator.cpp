@@ -123,6 +123,13 @@ void Emulator::run() {
         int consoleDisplayWidth = system->getCurrentDisplayWidth();
         int consoleDisplayHeight = system->getCurrentDisplayHeight();
 
+        // Reflect any screen size changes if needed
+        if (consoleDisplayWidth != renderWidth || consoleDisplayHeight != renderHeight) {
+            renderWidth = consoleDisplayWidth;
+            renderHeight = consoleDisplayHeight;
+            setRenderingTexture();
+        }
+
         if (hasFocus || !pauseEmulationWhenNotInFocus) {
             system->emulateFrame(hasFocus);
 
@@ -148,12 +155,6 @@ void Emulator::run() {
 
         // Final frame swap
         SDL_RenderPresent(renderer);
-
-        if (consoleDisplayWidth != renderWidth || consoleDisplayHeight != renderHeight) {
-            renderWidth = consoleDisplayWidth;
-            renderHeight = consoleDisplayHeight;
-            setRenderingTexture();
-        }
 
         Uint64 elapsedNS = SDL_GetTicksNS() - startNS;
 

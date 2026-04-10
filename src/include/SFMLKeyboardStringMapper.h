@@ -6,6 +6,7 @@
 #define MasterNostalgia_SFMLKEYBOARDSTRINGMAPPER_H
 
 #include <SDL3/SDL.h>
+#include <vector>
 #include <iostream>
 
 struct SFMLKeyboardStringMap {

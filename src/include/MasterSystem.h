@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "Cartridge.h"
 #include "Memory.h"
 #include "CPUZ80.h"

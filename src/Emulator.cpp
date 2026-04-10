@@ -120,6 +120,9 @@ void Emulator::run() {
         SDL_SetRenderDrawColor(renderer, borderColour.r, borderColour.g, borderColour.b, 255);
         SDL_RenderClear(renderer);
 
+        int consoleDisplayWidth = system->getCurrentDisplayWidth();
+        int consoleDisplayHeight = system->getCurrentDisplayHeight();
+
         if (hasFocus || !pauseEmulationWhenNotInFocus) {
             system->emulateFrame(hasFocus);
 
@@ -135,7 +138,7 @@ void Emulator::run() {
             uint8_t* dst = (uint8_t*)pixels;
             uint8_t* src = (uint8_t*)vdpFrame.pixels;
 
-            for (int y = 0; y < 224; ++y) {
+            for (int y = 0; y < consoleDisplayHeight; ++y) {
                 memcpy(dst + (y * pitch), src + (y * (256 * 4)), 256 * 4);
             }
 
@@ -145,9 +148,6 @@ void Emulator::run() {
 
         // Final frame swap
         SDL_RenderPresent(renderer);
-
-        int consoleDisplayWidth = system->getCurrentDisplayWidth();
-        int consoleDisplayHeight = system->getCurrentDisplayHeight();
 
         if (consoleDisplayWidth != renderWidth || consoleDisplayHeight != renderHeight) {
             renderWidth = consoleDisplayWidth;

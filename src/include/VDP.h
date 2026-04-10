@@ -1,6 +1,7 @@
 #ifndef SMS_VDP_H
 #define SMS_VDP_H
 
+#include <cstdint>
 #include "VDPDisplayMode.h"
 
 struct Mode2Colour {

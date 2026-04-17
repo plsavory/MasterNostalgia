@@ -5,12 +5,6 @@
 
 PSG::PSG(SoundConfig *soundConfig) {
 
-//    TODO SDL port
-//    outputBuffer = new sf::SoundBuffer();
-//    outputSound = new sf::Sound();
-//    outputSound->setBuffer(*outputBuffer);
-//    outputSound->setVolume((float)soundConfig->getVolume());
-
     buffer.reserve(2048);
 
     // 1. Define your source (The PSG) and destination (The Speakers)
@@ -72,10 +66,6 @@ PSG::~PSG() {
     for (auto &channel : channels) {
         delete(channel);
     }
-
-//    TODO SDL port
-//    delete(outputSound);
-//    delete(outputBuffer);
 }
 
 void PSG::execute(float soundCycles) {
@@ -152,10 +142,6 @@ void PSG::endFrame() {
 }
 
 void PSG::clearBuffer() {
-    // TODO SDL port
-//    for(int i = 0; i < BUFFER_SIZE; i++) {
-//        buffer[i] = 0;
-//    }
 }
 
 unsigned short PSG::emulateTone(float floor, int channelNumber) {

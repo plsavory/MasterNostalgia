@@ -63,8 +63,6 @@ void Emulator::run() {
         SDL_SetWindowFullscreen(window, isFullscreen);
     }
 
-//    bool hasPrintedVdpInfo = false;
-
     bool hasFocus = true;
     bool running = true;
 
@@ -106,16 +104,6 @@ void Emulator::run() {
                 }
             }
         }
-
-        // Lazy way to debug the VDP...
-//        if (!hasPrintedVdpInfo && sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-//            system->printVDPInformation();
-//            hasPrintedVdpInfo = true;
-//        }
-//
-//        if (hasPrintedVdpInfo && !sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-//            hasPrintedVdpInfo = false;
-//        }
 
         SDL_SetRenderDrawColor(renderer, borderColour.r, borderColour.g, borderColour.b, 255);
         SDL_RenderClear(renderer);

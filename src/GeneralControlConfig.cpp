@@ -3,7 +3,7 @@
 //
 
 #include "GeneralControlConfig.h"
-#include "SFMLKeyboardStringMapper.h"
+#include "SDLKeyboardStringMapper.h"
 
 GeneralControlConfig::GeneralControlConfig() {
     keyboard = nullptr;
@@ -39,7 +39,7 @@ void GeneralControlConfig::setFromConfig(json generalControlConfiguration) {
 }
 
 void GeneralControlConfigKeyboard::setFromConfig(json generalControlKeyboardConfiguration) {
-    SFMLKeyboardStringMapper *mapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *mapper = new SDLKeyboardStringMapper();
 
     if (JsonHandler::keyExists(generalControlKeyboardConfiguration, "pause")) {
         pauseKey = mapper->getKey(JsonHandler::getString(generalControlKeyboardConfiguration, "pause"));
@@ -54,7 +54,7 @@ void GeneralControlConfigKeyboard::setFromConfig(json generalControlKeyboardConf
 
 json GeneralControlConfigKeyboard::getJson() {
     json output;
-    SFMLKeyboardStringMapper *mapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *mapper = new SDLKeyboardStringMapper();
 
     output["exit"] = mapper->getKeyName(exitKey);
     output["pause"] = mapper->getKeyName(pauseKey);

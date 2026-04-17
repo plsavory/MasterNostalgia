@@ -10,7 +10,7 @@ MasterSystemInput::MasterSystemInput(InputInterface *inputInterface) {
 
 void MasterSystemInput::setState() {
     resetButton = 0x0;
-    pauseButton = false; // TODO SDL2 port
+    pauseButton = false;
 
     controllers[0].setState(
             inputInterface->isDPadUpPressed(0),

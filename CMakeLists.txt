@@ -39,7 +39,7 @@ find_package(SDL3 REQUIRED)
 include_directories(src/include lib ${SDL3_INCLUDE_DIRS})
 
 add_executable(${EXECUTABLE_NAME}
-        src/include/SFMLKeyboardStringMapper.h
+        src/include/SDLKeyboardStringMapper.h
         src/include/Cartridge.h
         src/include/CPUZ80.h
         src/include/MasterSystem.h
@@ -82,7 +82,7 @@ add_executable(${EXECUTABLE_NAME}
         src/Config.cpp
         src/PlayerControlConfig.cpp
         src/InputInterface.cpp
-        src/SFMLKeyboardStringMapper.cpp
+        src/SDLKeyboardStringMapper.cpp
         src/GeneralControlConfig.cpp
         src/SoundConfig.cpp)
 

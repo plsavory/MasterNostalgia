@@ -4,7 +4,7 @@
 
 #ifdef JSON_CONFIG_FILE
 #include "JsonHandler.hpp"
-#include "SFMLKeyboardStringMapper.h"
+#include "SDLKeyboardStringMapper.h"
 #endif
 
 #include "PlayerControlConfig.h"
@@ -87,7 +87,7 @@ SDL_Scancode PlayerControlKeyboardConfig::getBind(int id) {
 
 json PlayerControlKeyboardConfig::getJson() {
 
-    SFMLKeyboardStringMapper *keyboardMapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *keyboardMapper = new SDLKeyboardStringMapper();
 
     json output;
 
@@ -99,7 +99,7 @@ json PlayerControlKeyboardConfig::getJson() {
 }
 
 void PlayerControlKeyboardConfig::setFromConfig(json keyboardConfiguration) {
-    SFMLKeyboardStringMapper *keyboardMapper = new SFMLKeyboardStringMapper();
+    SDLKeyboardStringMapper *keyboardMapper = new SDLKeyboardStringMapper();
 
 
     try {

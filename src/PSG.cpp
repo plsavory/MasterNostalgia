@@ -15,21 +15,19 @@ PSG::PSG(SoundConfig *soundConfig) {
     // 2. Create the stream
     audioStream = SDL_CreateAudioStream(&srcSpec, &dstSpec);
 
-    SDL_AudioDeviceID devID = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
-    if (devID == 0) {
-        // Log error: SDL_GetError()
+    audioDeviceID = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+    if (audioDeviceID == 0) {
         SDL_Log("SDL could not get audio devices! SDL_Error: %s", SDL_GetError());
     }
 
-    // 3. Bind to the DEFAULT playback device
-    // In SDL3, this constant replaces the 'GetDefault' function call
-    if (!SDL_BindAudioStream(devID, audioStream)) {
+    // 3. Bind to the opened device
+    if (!SDL_BindAudioStream(audioDeviceID, audioStream)) {
         SDL_Log("SDL could not initialize audio! SDL_Error: %s", SDL_GetError());
     }
 
     // 4. Important: Unpause the device
     // SDL3 audio devices start paused by default!
-    SDL_ResumeAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK);
+    SDL_ResumeAudioDevice(audioDeviceID);
 
     // Initialise channels
     channels[PSGChannelIndex::Tone0] = new PSGChannel(false);
@@ -66,6 +64,8 @@ PSG::~PSG() {
     for (auto &channel : channels) {
         delete(channel);
     }
+    SDL_DestroyAudioStream(audioStream);
+    SDL_CloseAudioDevice(audioDeviceID);
 }
 
 void PSG::execute(float soundCycles) {

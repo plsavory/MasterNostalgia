@@ -42,6 +42,7 @@ void Emulator::run() {
     // Create window for video output
     if (!SDL_CreateWindowAndRenderer(Utils::getVersionString(false).c_str(), config->getDisplayWidth(), config->getDisplayHeight(), 0, &window, &renderer)) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
+        SDL_Quit();
         return;
     }
 
@@ -69,7 +70,7 @@ void Emulator::run() {
     SDL_Event event;
 
     // TODO handle PAL (50.03 Hz)
-    Uint64 targetNS = 1000000000 / 60.08;
+    Uint64 targetNS = (Uint64)(1000000000.0 / 60.08);
 
     VDPBorderColour borderColour = VDPBorderColour{0, 0, 0};
     while (running) {
@@ -152,6 +153,9 @@ void Emulator::run() {
 
     }
 
+    SDL_DestroyTexture(m_texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 }
 
@@ -166,11 +170,12 @@ void Emulator::setRenderingTexture() {
                                   SDL_TEXTUREACCESS_STREAMING,
                                   renderWidth, renderHeight);
 
+    SDL_SetTextureScaleMode(m_texture, SDL_SCALEMODE_NEAREST);
+
     SDL_SetRenderLogicalPresentation(
             renderer,
             renderWidth, renderHeight,
             config->getPreserveAspectRatio() ? SDL_LOGICAL_PRESENTATION_LETTERBOX : SDL_LOGICAL_PRESENTATION_STRETCH
-//            ,SDL_SCALEMODE_NEAREST
     );
 }
 

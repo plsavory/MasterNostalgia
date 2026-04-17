@@ -49,6 +49,7 @@ private:
     void clearBuffer();
 
     SDL_AudioStream *audioStream = nullptr;
+    SDL_AudioDeviceID audioDeviceID = 0;
     float bufferUpdateLimit ;
     float currentBufferUpdates;
 

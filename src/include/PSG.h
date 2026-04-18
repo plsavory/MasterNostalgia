@@ -2,7 +2,7 @@
 #define SMS_PSG_H
 
 #define BUFFER_SIZE 4096
-#define SAMPLE_RATE 223621
+#define SAMPLE_RATE 223721
 
 // 3.3Mhz / 16
 // TODO should this be 223720 ((machine clock/3)/16)? Do a comparison and determine which sounds more correct.
@@ -43,10 +43,6 @@ private:
     unsigned long int clockInfo;
 
     std::vector<int16_t> buffer; // Dynamically sized for one frame
-
-    unsigned long currentBufferLocation;
-
-    void clearBuffer();
 
     SDL_AudioStream *audioStream = nullptr;
     SDL_AudioDeviceID audioDeviceID = 0;

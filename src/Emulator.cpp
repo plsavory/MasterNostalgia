@@ -78,7 +78,7 @@ void Emulator::run() {
         Uint64 startNS = SDL_GetTicksNS();
 
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) { // Note the 'SDL_EVENT_' prefix
+            if (event.type == SDL_EVENT_QUIT) {
                 running = false;
             }
 

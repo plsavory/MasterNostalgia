@@ -1,7 +1,6 @@
 #include "PSG.h"
 #include "Utils.h"
 #include <cmath>
-#include <iostream>
 
 PSG::PSG(SoundConfig *soundConfig) {
 
@@ -50,8 +49,6 @@ PSG::PSG(SoundConfig *soundConfig) {
 
     cycles = 0;
     clockInfo = 0;
-
-    clearBuffer();
 
     bufferUpdateLimit = (((float)PSG_CLOCK_SPEED / (((float)SAMPLE_RATE / (float)BUFFER_SIZE) + 1)) / (float)BUFFER_SIZE);
 
@@ -129,19 +126,11 @@ void PSG::write(unsigned char data) {
 }
 
 void PSG::endFrame() {
-    // 1. Push whatever samples we generated this frame to SDL
-    // No 'loadFromSamples' or 'setBuffer' needed.
     if (!buffer.empty()) {
         SDL_PutAudioStreamData(audioStream, buffer.data(), (int)(buffer.size() * sizeof(int16_t)));
     }
 
-//    std::cout<<"Playing buffer, size: "<<buffer.size()<<std::endl;
-
-    // 2. Clear the counter for the next 1/60th of a second
     buffer.clear();
-}
-
-void PSG::clearBuffer() {
 }
 
 unsigned short PSG::emulateTone(float floor, int channelNumber) {

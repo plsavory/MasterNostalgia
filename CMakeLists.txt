@@ -4,13 +4,13 @@ project(MasterNostalgia)
 set(CMAKE_CXX_STANDARD 14)
 set(EXECUTABLE_NAME "MasterNostalgia")
 
-#if(NOT CMAKE_BUILD_TYPE)
-#    set(CMAKE_BUILD_TYPE Release)
-#endif()
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -O2")
-#set(CMAKE_CXX_FLAGS_DEBUG "-g")
-#set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 execute_process(
         COMMAND git rev-parse --abbrev-ref HEAD
@@ -26,31 +26,14 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_definitions("-DCURRENT_COMMIT=${GIT_COMMIT_HASH}")
-add_definitions("-DCURRENT_BRANCH=${GIT_BRANCH}")
-
 if (NOT ${GIT_BRANCH} STREQUAL "master")
-    add_definitions("-DDISPLAY_BRANCH_IN_VERSION")
+    set(DISPLAY_BRANCH ON)
 endif()
 
-add_definitions("-DJSON_CONFIG_FILE")
-
 find_package(SDL3 REQUIRED)
-include_directories(src/include lib ${SDL3_INCLUDE_DIRS})
 
 add_executable(${EXECUTABLE_NAME}
-        src/include/SDLKeyboardStringMapper.h
-        src/include/Cartridge.h
-        src/include/CPUZ80.h
-        src/include/MasterSystem.h
-        src/include/Memory.h
-        src/include/ProjectInfo.h
-        src/include/PSGChannel.h
-        src/include/PSG.h
-        src/include/Utils.h
-        src/include/VDPDisplayMode.h
         src/VDPDisplayMode.cpp
-        src/include/VDP.h
         src/Cartridge.cpp
         src/CPUInstructionHelpers.cpp
         src/CPUZ80.cpp
@@ -67,17 +50,9 @@ add_executable(${EXECUTABLE_NAME}
         src/Utils.cpp
         src/VDP.cpp
         src/Z80InstructionNames.cpp
-        src/include/Z80InstructionNames.h
-        src/include/Exceptions.h
-        src/include/Console.h
-        src/include/Emulator.h
         src/Emulator.cpp
-        src/include/Z80IO.h
-        src/include/MasterSystemZ80IO.h
         src/MasterSystemZ80IO.cpp
-        src/include/MasterSystemController.h
         src/MasterSystemController.cpp
-        src/include/MasterSystemInput.h
         src/MasterSystemInput.cpp
         src/Config.cpp
         src/PlayerControlConfig.cpp
@@ -85,5 +60,13 @@ add_executable(${EXECUTABLE_NAME}
         src/SDLKeyboardStringMapper.cpp
         src/GeneralControlConfig.cpp
         src/SoundConfig.cpp)
+
+target_include_directories(${EXECUTABLE_NAME} PRIVATE src/include lib)
+
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+        CURRENT_COMMIT=${GIT_COMMIT_HASH}
+        CURRENT_BRANCH=${GIT_BRANCH}
+        JSON_CONFIG_FILE
+        $<$<BOOL:${DISPLAY_BRANCH}>:DISPLAY_BRANCH_IN_VERSION>)
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3)

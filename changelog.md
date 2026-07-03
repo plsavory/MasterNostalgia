@@ -1,0 +1,40 @@
+# MasterNostalgia Changelog
+
+## 2.0.0 - 2026-07-03
+
+- Moved from using SFML2 to SDL3
+- Fixed many audio issues
+- Save states can now be created using Shift + Number key, and loaded using CTRL + Number Key
+- Game save data (CRAM) is now saved into files, and loaded on startup when the same ROM is run again
+- Added a configuration option to run the emulator in PAL/50hz mode
+- Added a configuration option to hide the mouse cursor when it is over the emulator's display
+- Added the ability to respect/display the VDP border colour
+- Fixed a bug with the Z80 CPU INI instruction
+
+## 1.2.1 - 2023-09-16
+
+- Rename the project
+
+## 1.2.0 - 2023-09-12
+
+- Added support for running SG-1000 roms and SMS roms which use VDP mode 2
+- A config.json file is now created by the emulator when it does not already exist
+- Display settings and player controls are now editable through the configuration file
+- Added a configuration option to preserve the original aspect ratio rather than stretching the display, using the "preserveAspectRatio" key in the general object of the config.json file
+- Z80 emulation fixes (DAA instruction and undocumented flag behaviour), now passes all zexall tests
+- Increased emulation speed to more closely match the real system
+- Added partial/experimental sound emulation
+- No longer responds to user input when the window is not in focus
+- Added a configuration option to pause emulation when the window is not in focus (enabled by default)
+
+## 1.1.0 - 2023-06-12
+
+- Fixed issues which prevented the emulator from running on GNU/Linux systems
+- Many emulation bug fixes and improvements
+- Added support for 4Mb ROMs
+- Extensive CPU emulation code refactoring
+- Change rendering scale automatically when the video mode changes
+
+## 1.0.0 - 2023-04-21
+
+- First release which is capable of running some games correctly.

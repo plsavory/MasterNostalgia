@@ -2,6 +2,9 @@
 #include "sys/stat.h"
 #include <iostream>
 #include <fstream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 class DataOutput {
 public:
@@ -227,20 +230,29 @@ void SMSSaveState::writeToFile(const std::string& fileName) {
 
     std::vector<unsigned char> outputVector = output->getData();
 
-    // TODO output to a file
-    unsigned char outputData[outputVector.size()];
-    std::copy(outputVector.begin(), outputVector.end(), outputData);
+    // Create the directory if it does not exist...
+    fs::path filePath = fileName;
+    fs::path dir = filePath.parent_path();
 
-    std::ofstream fileOut(fileName, std::ios::out | std::ios::binary);
-
-    if (!fileOut) {
-        throw IOException(Utils::implodeString({"Unable to save CRAM to file, unable to write to '", fileName, "'"}));
+    std::error_code ec;
+    if (!fs::exists(dir, ec)) {
+        fs::create_directories(dir, ec);
+        if (ec) {
+            throw IOException(Utils::implodeString({"Unable to create save directory '", dir.string(), "'"}));
+        }
     }
 
-    fileOut.write((char *)&outputData, (long)sizeof(outputData));
+    // Create the save file
+    std::ofstream fileOut(fileName, std::ios::out | std::ios::binary);
+    if (!fileOut) {
+        throw IOException(Utils::implodeString({"Unable to write save state to file, unable to write to '", fileName, "'"}));
+    }
+
+    fileOut.write(reinterpret_cast<const char*>(outputVector.data()),
+                  static_cast<std::streamsize>(outputVector.size()));
 
     if (!fileOut.good()) {
-        throw IOException(Utils::implodeString({"Unable to save CRAM to file, unable to write to '", fileName, "'"}));
+        throw IOException(Utils::implodeString({"Unable to write save state to file, unable to write to '", fileName, "'"}));
     }
 
     fileOut.close();

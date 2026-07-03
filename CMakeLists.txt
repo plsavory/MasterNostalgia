@@ -72,4 +72,8 @@ target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
         JSON_CONFIG_FILE
         $<$<BOOL:${DISPLAY_BRANCH}>:DISPLAY_BRANCH_IN_VERSION>)
 
+if(WIN32 AND MINGW)
+        target_compile_definitions(${EXECUTABLE_NAME} PRIVATE SDL_MAIN_HANDLED)
+endif()
+
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3)

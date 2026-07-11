@@ -1,5 +1,9 @@
 # MasterNostalgia Changelog
 
+## 2.0.1 - 2026-07-11
+
+- Fixed a crash when ROM files smaller than 32kb are loaded
+
 ## 2.0.0 - 2026-07-03
 
 - Moved from using SFML2 to SDL3

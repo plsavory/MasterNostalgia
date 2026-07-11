@@ -1,5 +1,5 @@
 #define PROJECT_NAME "MasterNostalgia"
-#define PROJECT_VERSION "2.0.0"
+#define PROJECT_VERSION "2.0.1"
 
 #define MAKE_STRING2(x) #x
 #define MAKE_STRING(x) MAKE_STRING2(x)

@@ -60,8 +60,12 @@ bool Cartridge::load(std::string fileName) {
     std::vector<unsigned char> tempStorage; // temporary storage for data - will be copied into cartridge struct later
 
     romStream >> std::noskipws; // Do not skip white space, we want every single character of the file.
+
     std::copy(istream_iterator(romStream), istream_iterator(),
-              std::back_inserter(tempStorage)); // Copy the contents of the file into the temporary storage vector
+          std::back_inserter(tempStorage));
+
+    // Pad to at least 32KB so fixed offsets like 0x7FF0 are always valid
+    tempStorage.resize(std::max(tempStorage.size(), size_t(0x8000)));
 
     // Locate the ROM header (3 possible locations, might not be 100% needed as it is said to be always located at 7FF0, but check anyway just in case one of some of the cartridges wanted to be special)
     unsigned short romHeaderPossibleLocations[3] = {0x1FF0, 0x3FF0, 0x7FF0};

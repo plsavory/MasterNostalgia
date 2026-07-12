@@ -23,9 +23,17 @@ public:
 
     void setFrequencyWhole(unsigned short value);
 
+    bool getNoiseWhiteMode();
+
+    unsigned char getNoiseShiftRate();
+
+    void resetLFSR();
+
     int counter{};
 
     int polarity;
+
+    unsigned short lfsr{}; // public, following the same pattern as counter/polarity
 
 private:
 

@@ -96,6 +96,8 @@ void PSG::execute(float soundCycles) {
         mixedValue += emulateTone(floor, i);
     }
 
+    mixedValue += emulateNoise(floor, channels[3], channels[2]);
+
     if (currentBufferUpdates < bufferUpdateLimit) {
         return;
     }
@@ -174,6 +176,37 @@ int16_t PSG::emulateTone(float floor, int channelNumber) {
     // The product is computed as int and the result always fits in int16_t
     // because abs(volumeTable[vol]) <= 6000.
     return (int16_t)(volumeTable[channel->getVolume()] * channel->polarity);
+}
+
+int16_t PSG::emulateNoise(float floor, PSGChannel* noise, PSGChannel* tone2) {
+
+    noise->counter -= floor;
+
+    if (noise->counter <= 0) {
+
+        switch (noise->getNoiseShiftRate()) {
+            case 0: noise->counter = 0x10; break;
+            case 1: noise->counter = 0x20; break;
+            case 2: noise->counter = 0x40; break;
+            case 3:
+                noise->counter = tone2->getFrequency() != 0 ? tone2->getFrequency() : 0x10;
+                break;
+        }
+
+        // Sample the output bit before shifting
+        noise->polarity = (noise->lfsr & 1) ? 1 : -1;
+
+        unsigned short feedback;
+        if (noise->getNoiseWhiteMode()) {
+            feedback = (noise->lfsr & 1) ^ ((noise->lfsr >> 3) & 1);
+        } else {
+            feedback = noise->lfsr & 1;
+        }
+
+        noise->lfsr = (noise->lfsr >> 1) | (feedback << 15);
+    }
+
+    return (int16_t)(volumeTable[noise->getVolume()] * noise->polarity);
 }
 
 PSGSaveStateData* PSG::getSaveStateData() {

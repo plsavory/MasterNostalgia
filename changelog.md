@@ -1,5 +1,9 @@
 # MasterNostalgia Changelog
 
+## 2.1.0 - 2026-07-16
+
+- Added emulation for the PSG Noise channel
+
 ## 2.0.1 - 2026-07-11
 
 - Fixed a crash when ROM files smaller than 32kb are loaded

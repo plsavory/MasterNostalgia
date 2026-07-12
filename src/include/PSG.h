@@ -76,6 +76,8 @@ private:
 
     int16_t emulateTone(float floor, int channelNumber);
 
+    int16_t emulateNoise(float floor, PSGChannel *noise, PSGChannel *tone2);
+
     SoundConfig *soundConfig;
 
     float getBufferUpdateLimit();
